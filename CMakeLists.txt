@@ -1,20 +1,28 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.28.0)
+cmake_minimum_required(VERSION 3.28.0)
 project(ITE LANGUAGES CXX)
 
-SET(CMAKE_CXX_STANDARD 23)
-SET(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-FIND_PACKAGE(OpenMP)
+find_package(OpenMP)
 
-INCLUDE(CTest)
+file(
+  DOWNLOAD
+  https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.40.8/CPM.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+  EXPECTED_HASH SHA256=78ba32abdf798bc616bab7c73aac32a17bbd7b06ad9e26a6add69de8f3ae4791
+)
+include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 
-ADD_COMPILE_OPTIONS(
-    -Wall        # All warnings
-    -Wextra      # Extra warnings
-    -Werror      # Treat warnings as errors
+include(CTest)
+
+add_compile_options(
+  -Wall # All warnings
+  -Wextra # Extra warnings
+  -Werror # Treat warnings as errors
 )
 
-INCLUDE(FetchContent)
+include(FetchContent)
 
-ADD_SUBDIRECTORY(src)
-ADD_SUBDIRECTORY(tests)
+add_subdirectory(src)
+add_subdirectory(tests)

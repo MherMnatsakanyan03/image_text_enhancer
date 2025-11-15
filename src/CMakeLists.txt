@@ -1,14 +1,14 @@
-ADD_SUBDIRECTORY(lib)
+add_subdirectory(lib)
 
-ADD_EXECUTABLE(ITE main.cpp)
+add_executable(ITE main.cpp)
 
-TARGET_LINK_LIBRARIES(ITE PRIVATE ITE_Libs)
+target_link_libraries(ITE PRIVATE ITE_Libs)
 
-TARGET_COMPILE_OPTIONS(ITE PRIVATE
+target_compile_options(ITE PRIVATE
     -O3
     -march=native
 )
 
-IF(OpenMP_CXX_FOUND)
-    TARGET_LINK_LIBRARIES(ITE PRIVATE OpenMP::OpenMP_CXX)
-ENDIF()
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(ITE PRIVATE OpenMP::OpenMP_CXX)
+endif()

@@ -1,17 +1,17 @@
-SET(LIB_SRC
+set(LIB_SRC
     DummyLibrary.cpp
     DummyLibrary.hpp
 )
 
-ADD_LIBRARY(ITE_Libs STATIC ${LIB_SRC})
+add_library(ITE_Libs STATIC ${LIB_SRC})
 
 # Link OpenMP if found
-IF(OpenMP_CXX_FOUND)
-    TARGET_LINK_LIBRARIES(ITE_Libs PUBLIC OpenMP::OpenMP_CXX)
-ENDIF()
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(ITE_Libs PUBLIC OpenMP::OpenMP_CXX)
+endif()
 
-TARGET_COMPILE_OPTIONS(ITE_Libs PRIVATE
+target_compile_options(ITE_Libs PRIVATE
     -O3
 )
 
-TARGET_INCLUDE_DIRECTORIES(ITE_Libs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(ITE_Libs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
