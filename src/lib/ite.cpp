@@ -3,36 +3,46 @@
 static void to_grayscale_inplace(CImg<unsigned char>& input_image)
 {
     // Placeholder for actual grayscale conversion logic
+    (void)input_image;
 }
 
 static void binarize_inplace(CImg<unsigned char>& input_image)
 {
     // Placeholder for actual binarization logic
+    (void)input_image;
 }
 
 static void gaussian_denoise_inplace(CImg<unsigned char>& input_image, float sigma)
 {
     // Placeholder for actual Gaussian denoising logic
+    (void)input_image;
+    (void)sigma;
 }
 
 static void dilation_inplace(CImg<unsigned char>& input_image, int kernel_size)
 {
     // Placeholder for actual dilation logic
+    (void)input_image;
+    (void)kernel_size;
 }
 
 static void erosion_inplace(CImg<unsigned char>& input_image, int kernel_size)
 {
     // Placeholder for actual erosion logic
+    (void)input_image;
+    (void)kernel_size;
 }
 
 static void deskew_inplace(CImg<unsigned char>& input_image)
 {
     // Placeholder for actual deskewing logic
+    (void)input_image;
 }
 
 static void contrast_enhancement_inplace(CImg<unsigned char>& input_image)
 {
     // Placeholder for actual contrast enhancement logic
+    (void)input_image;
 }
 
 namespace ite
