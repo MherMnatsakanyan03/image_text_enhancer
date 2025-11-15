@@ -53,6 +53,11 @@ namespace ite
         return image;
     }
 
+    void writeimage(const CImg<unsigned char> &image, std::string filepath)
+    {
+        image.save(filepath.c_str());
+    }
+
     CImg<unsigned char> to_grayscale(const CImg<unsigned char> &input_image)
     {
         CImg<unsigned char> output_image = input_image;

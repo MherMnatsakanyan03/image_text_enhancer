@@ -20,6 +20,14 @@ namespace ite {
     CImg<unsigned char> loadimage(std::string filepath);
 
     /**
+     * @brief Saves an image to a specified file path.
+     * @param image The CImg<unsigned char> object containing the image data to save.
+     * @param filepath The relative or absolute path where the image will be saved.
+     * @throws CImgIOException if the file cannot be written.
+     */
+    void writeimage(const CImg<unsigned char>& image, std::string filepath);
+
+    /**
      * @brief Converts an image to grayscale.
      * If the image is already 1-channel, a copy is returned.
      * @param input_image The source image (can be 1, 3, or 4 channels).

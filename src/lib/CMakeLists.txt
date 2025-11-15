@@ -21,6 +21,7 @@ target_compile_options(ITE_Libs PRIVATE
 
 target_compile_options(ITE_Libs PUBLIC    
     -Dcimg_use_jpeg
+    -Wno-error=format-truncation
 )
 
 target_include_directories(ITE_Libs PUBLIC

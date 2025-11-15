@@ -2,6 +2,7 @@ add_subdirectory(lib)
 
 add_executable(ITE main.cpp)
 
+# Copy resource files to the build directory after building the executable
 add_custom_command(
     TARGET ITE POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
