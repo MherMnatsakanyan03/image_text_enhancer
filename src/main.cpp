@@ -1,12 +1,16 @@
 #include <iostream>
-#include "lib/DummyLibrary.hpp"
+#include "ite.h"
 
 int main() {
-    DummyLibrary dummy;
 
     // Use the library function
-    std::cout << dummy.getGreeting() << std::endl;
-    std::cout << "2 + 3 = " << dummy.add(2, 3) << std::endl;
+    auto img = ite::loadimage("resources/stock_gs200.jpg");
+
+    std::cout << "Image loaded with dimensions: " 
+              << img.width() << "x" 
+              << img.height() << "x" 
+              << img.depth() << "x" 
+              << img.spectrum() << std::endl;
 
     return 0;
 }

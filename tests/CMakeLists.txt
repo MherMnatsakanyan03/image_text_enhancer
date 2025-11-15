@@ -6,16 +6,12 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-SET(Link_Libs
+set(Link_Libs
     PRIVATE
         ITE_Libs
         Catch2::Catch2WithMain # Links the Catch2 implementation
 )
 
-ADD_EXECUTABLE(dummy_test_exec DummyLibrary_Tests.cpp)
-
-# Link the required libraries: DummyLibrary and Catch2's main library
-TARGET_LINK_LIBRARIES(dummy_test_exec ${Link_Libs})
-
-# Enable testing for the executable
-ADD_TEST(NAME dummy_test COMMAND dummy_test_exec)
+add_executable(ite_test ite.tests.cpp)
+target_link_libraries(ite_test ${Link_Libs})
+add_test(NAME ite_test COMMAND ite_test)
