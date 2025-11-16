@@ -28,8 +28,9 @@ int main(int argc, char* argv[]) {
     }
     
     auto gray_img = ite::to_grayscale(img);
+    auto binarized_img = ite::binarize(gray_img);
     
-    ite::writeimage(gray_img, output_path.string());
+    ite::writeimage(binarized_img, output_path.string());
     std::cout << "Image saved to: " << output_path.string() << std::endl;
 
     return 0;

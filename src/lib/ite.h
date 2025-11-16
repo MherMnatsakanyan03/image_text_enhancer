@@ -14,18 +14,18 @@ namespace ite {
     /**
      * @brief Loads an image from a specified file path.
      * @param filepath The relative or absolute path to the image file.
-     * @return A CImg<unsigned char> object containing the image data.
+     * @return A CImg<uint> object containing the image data.
      * @throws CImgIOException if the file cannot be opened or recognized.
      */
-    CImg<unsigned char> loadimage(std::string filepath);
+    CImg<uint> loadimage(std::string filepath);
 
     /**
      * @brief Saves an image to a specified file path.
-     * @param image The CImg<unsigned char> object containing the image data to save.
+     * @param image The CImg<uint> object containing the image data to save.
      * @param filepath The relative or absolute path where the image will be saved.
      * @throws CImgIOException if the file cannot be written.
      */
-    void writeimage(const CImg<unsigned char>& image, std::string filepath);
+    void writeimage(const CImg<uint>& image, std::string filepath);
 
     /**
      * @brief Converts an image to grayscale.
@@ -33,15 +33,16 @@ namespace ite {
      * @param input_image The source image (can be 1, 3, or 4 channels).
      * @return A new 1-channel (grayscale) image.
      */
-    CImg<unsigned char> to_grayscale(const CImg<unsigned char>& input_image);
+    CImg<uint> to_grayscale(const CImg<uint>& input_image);
 
     /**
      * @brief Converts a grayscale image to a binary (black and white) image.
-     * This is critical for OCR. Uses an adaptive thresholding method.
+     * If the image is not grayscale, it is first converted to grayscale.
+     * Uses Sauvola's method for adaptive thresholding.
      * @param input_image The source grayscale image.
      * @return A new 1-channel binary image (values 0 or 255).
      */
-    CImg<unsigned char> binarize(const CImg<unsigned char>& input_image);
+    CImg<uint> binarize(const CImg<uint>& input_image);
 
     /**
      * @brief Applies a Gaussian blur to denoise the image.
@@ -50,7 +51,7 @@ namespace ite {
      * @param sigma The standard deviation of the Gaussian kernel. Larger values mean more blur.
      * @return A new, blurred image.
      */
-    CImg<unsigned char> gaussian_denoise(const CImg<unsigned char>& input_image, float sigma = 1.0f);
+    CImg<uint> gaussian_denoise(const CImg<uint>& input_image, float sigma = 1.0f);
 
     /**
      * @brief Performs morphological dilation on the image.
@@ -59,7 +60,7 @@ namespace ite {
      * @param kernel_size The size of the structuring element (e.g., 3 for a 3x3 kernel).
      * @return A new, dilated image.
      */
-    CImg<unsigned char> dilation(const CImg<unsigned char>& input_image, int kernel_size = 3);
+    CImg<uint> dilation(const CImg<uint>& input_image, int kernel_size = 3);
     
     /**
      * @brief Performs morphological erosion on the image.
@@ -68,7 +69,7 @@ namespace ite {
      * @param kernel_size The size of the structuring element (e.g., 3 for a 3x3 kernel).
      * @return A new, eroded image.
      */
-    CImg<unsigned char> erosion(const CImg<unsigned char>& input_image, int kernel_size = 3);
+    CImg<uint> erosion(const CImg<uint>& input_image, int kernel_size = 3);
 
     /**
      * @brief Detects and corrects for skew (rotation) in the image.
@@ -76,7 +77,7 @@ namespace ite {
      * @param input_image The source image (typically grayscale).
      * @return A new, deskewed image.
      */
-    CImg<unsigned char> deskew(const CImg<unsigned char>& input_image);
+    CImg<uint> deskew(const CImg<uint>& input_image);
 
     /**
      * @brief Enhances the contrast of the image.
@@ -84,7 +85,7 @@ namespace ite {
      * @param input_image The source image (typically grayscale).
      * @return A new, high-contrast image.
      */
-    CImg<unsigned char> contrast_enhancement(const CImg<unsigned char>& input_image);
+    CImg<uint> contrast_enhancement(const CImg<uint>& input_image);
 
     /**
      * @brief Runs the full pipeline for text enhancement.
@@ -95,6 +96,6 @@ namespace ite {
      * @param kernel_size The structuring element size for morphological operations (default 3).
      * @return A new, enhanced image ready for OCR.
      */
-    CImg<unsigned char> enhance(const CImg<unsigned char>& input_image, float sigma = 1.0f, int kernel_size = 3);
+    CImg<uint> enhance(const CImg<uint>& input_image, float sigma = 1.0f, int kernel_size = 3);
 
 }
