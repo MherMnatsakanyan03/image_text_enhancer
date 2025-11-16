@@ -1,45 +1,86 @@
 #include "ite.h"
+#include <iostream>
+#include <omp.h>
 
-static void to_grayscale_inplace(CImg<unsigned char>& input_image)
+const float WEIGHT_R = 0.299f;
+const float WEIGHT_G = 0.587f;
+const float WEIGHT_B = 0.114f;
+
+/**
+ * @brief (Internal) Converts an image to grayscale, in-place.
+ * Uses the standard luminance formula.
+ */
+static void to_grayscale_inplace(CImg<unsigned char> &input_image)
 {
-    // Placeholder for actual grayscale conversion logic
-    (void)input_image;
+    if (input_image.spectrum() == 1)
+    {
+        return; // Already grayscale
+    }
+
+    // Create a new image with the correct 1-channel dimensions
+    CImg<unsigned char> gray_image(input_image.width(), input_image.height(), input_image.depth(), 1);
+
+#pragma omp parallel for collapse(2)
+    for (int z = 0; z < input_image.depth(); ++z)
+    {
+        for (int y = 0; y < input_image.height(); ++y)
+        {
+            for (int x = 0; x < input_image.width(); ++x)
+            {
+                // Read all 3 channels
+                unsigned char r = input_image(x, y, z, 0);
+                unsigned char g = input_image(x, y, z, 1);
+                unsigned char b = input_image(x, y, z, 2);
+                // Calculate and set the new pixel value
+                gray_image(x, y, z, 0) = static_cast<unsigned char>(std::round(WEIGHT_R * r + WEIGHT_G * g + WEIGHT_B * b));
+            }
+        }
+    }
+
+    // Assign the new 1-channel image to the input reference
+    input_image = gray_image;
 }
 
-static void binarize_inplace(CImg<unsigned char>& input_image)
+// TODO: Implement the actual image processing algorithms below
+static void binarize_inplace(CImg<unsigned char> &input_image)
 {
     // Placeholder for actual binarization logic
     (void)input_image;
 }
 
-static void gaussian_denoise_inplace(CImg<unsigned char>& input_image, float sigma)
+// TODO: Implement the actual image processing algorithms below
+static void gaussian_denoise_inplace(CImg<unsigned char> &input_image, float sigma)
 {
     // Placeholder for actual Gaussian denoising logic
     (void)input_image;
     (void)sigma;
 }
 
-static void dilation_inplace(CImg<unsigned char>& input_image, int kernel_size)
+// TODO: Implement the actual image processing algorithms below
+static void dilation_inplace(CImg<unsigned char> &input_image, int kernel_size)
 {
     // Placeholder for actual dilation logic
     (void)input_image;
     (void)kernel_size;
 }
 
-static void erosion_inplace(CImg<unsigned char>& input_image, int kernel_size)
+// TODO: Implement the actual image processing algorithms below
+static void erosion_inplace(CImg<unsigned char> &input_image, int kernel_size)
 {
     // Placeholder for actual erosion logic
     (void)input_image;
     (void)kernel_size;
 }
 
-static void deskew_inplace(CImg<unsigned char>& input_image)
+// TODO: Implement the actual image processing algorithms below
+static void deskew_inplace(CImg<unsigned char> &input_image)
 {
     // Placeholder for actual deskewing logic
     (void)input_image;
 }
 
-static void contrast_enhancement_inplace(CImg<unsigned char>& input_image)
+// TODO: Implement the actual image processing algorithms below
+static void contrast_enhancement_inplace(CImg<unsigned char> &input_image)
 {
     // Placeholder for actual contrast enhancement logic
     (void)input_image;

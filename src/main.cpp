@@ -27,7 +27,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Created directory: " << output_dir.string() << std::endl;
     }
     
-    ite::writeimage(img, output_path.string());
+    auto gray_img = ite::to_grayscale(img);
+    
+    ite::writeimage(gray_img, output_path.string());
     std::cout << "Image saved to: " << output_path.string() << std::endl;
 
     return 0;
