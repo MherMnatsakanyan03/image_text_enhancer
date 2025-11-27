@@ -159,7 +159,12 @@ static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma)
  */
 static void dilation_inplace(CImg<uint> &input_image, int kernel_size)
 {
-     if (kernel_size <= 1) return;
+    if(input_image.spectrum() != 1)
+    {
+        throw std::runtime_error("Dilation requires a binary image.");
+    }
+
+    if (kernel_size <= 1) return;
 
     CImg<uint> source = input_image;
 
