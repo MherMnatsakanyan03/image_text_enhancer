@@ -145,17 +145,76 @@ static void binarize_inplace(CImg<uint> &input_image, int window_size = 15, floa
     input_image = output_image;
 }
 
+/**
+ * @brief (Internal) Applies Gaussian denoising to an image, in-place.
+ * Uses CImg's built-in blur function with neumann boundary conditions and isotropic blur.
+ */
 static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma)
 {
-    input_image.blur(sigma);
+    input_image.blur(sigma, 1, true);
 }
 
-// TODO: Implement the actual image processing algorithms below
+/**
+ * @brief (Internal) Applies dilation to a binary image, in-place.
+ */
 static void dilation_inplace(CImg<uint> &input_image, int kernel_size)
 {
-    // Placeholder for actual dilation logic
-    (void)input_image;
-    (void)kernel_size;
+    if (input_image.spectrum() != 1)
+    {
+        throw std::runtime_error("Dilation requires a single-channel image.");
+    }
+    
+    if (kernel_size <= 1) return;
+
+    CImg<uint> source = input_image;
+
+    int r = kernel_size / 2;
+    int w = input_image.width();
+    int h = input_image.height();
+    int d = input_image.depth();
+
+#pragma omp parallel for collapse(2)
+    for (int i_d = 0; i_d < d; ++i_d)
+    {
+        for (int i_h = 0; i_h < h; ++i_h)
+        {
+            for (int i_w = 0; i_w < w; ++i_w)
+            {
+                // If the pixel is already white, it stays white (dilation only adds white)
+                if (source(i_w, i_h, i_d) == 255)
+                {
+                    continue;
+                }
+
+                // If pixel is black, check neighbors
+                bool hit = false;
+
+                // Scan neighborhood
+                for (int k_h = -r; k_h <= r && !hit; ++k_h)
+                {
+                    for (int k_w = -r; k_w <= r && !hit; ++k_w)
+                    {
+                        int n_w = i_w + k_w;
+                        int n_h = i_h + k_h;
+
+                        // Boundary check
+                        if (n_w >= 0 && n_w < w && n_h >= 0 && n_h < h)
+                        {
+                            if (source(n_w, n_h, i_d) == 255)
+                            {
+                                hit = true;
+                            }
+                        }
+                    }
+                }
+
+                if (hit)
+                {
+                    input_image(i_w, i_h, i_d) = 255;
+                }
+            }
+        }
+    }
 }
 
 // TODO: Implement the actual image processing algorithms below
