@@ -7,11 +7,11 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
     SECTION("Diffuses energy from a single hot pixel (Impulse Response)")
     {
         // GIVEN: A 5x5 black image with one white pixel in the center
-        CImg<double> input(5, 5, 1, 1, 0); // Fill with 0
+        CImg<uint> input(5, 5, 1, 1, 0); // Fill with 0
         input(2, 2) = 255; // Set center to max
 
         // WHEN: We apply a gaussian blur with sigma 1.0
-        CImg<double> output = ite::gaussian_denoise(input, 1.0f);
+        CImg<uint> output = ite::gaussian_denoise(input, 1.0f);
 
         // THEN: The center value decreases and neighbors increase
         // The energy spreads out like a bell curve
@@ -37,10 +37,10 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
     {
         // GIVEN: An image where every pixel is gray (100)
         // Blurring a flat color should result in the same flat color
-        CImg<double> input(5, 5, 1, 1, 100);
+        CImg<uint> input(5, 5, 1, 1, 100);
 
         // WHEN: We apply a strong blur
-        CImg<double> output = ite::gaussian_denoise(input, 5.0f);
+        CImg<uint> output = ite::gaussian_denoise(input, 5.0f);
 
         // THEN: The image should remain identical
         CHECK(output(0, 0) == 100);
@@ -51,13 +51,13 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
     SECTION("Sigma 0 produces no change")
     {
         // GIVEN: A checkerboard-like image
-        CImg<double> input(3, 3, 1, 1, 
+        CImg<uint> input(3, 3, 1, 1, 
                          0, 255, 0,
                          255, 0, 255,
                          0, 255, 0);
         
         // WHEN: We blur with sigma 0
-        CImg<double> output = ite::gaussian_denoise(input, 0.0f);
+        CImg<uint> output = ite::gaussian_denoise(input, 0.0f);
 
         // THEN: Output should match input exactly
         CHECK(output(0, 0) == 0);
