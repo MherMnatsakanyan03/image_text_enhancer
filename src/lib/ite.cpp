@@ -168,15 +168,6 @@ static void erosion_inplace(CImg<uint> &input_image, int kernel_size)
         throw std::runtime_error("Erosion requires a grayscale image.");
     }
 
-    // Check that all pixel values are either 0 or 255 (binary image)
-    cimg_for(input_image, ptr, uint)
-    {
-        if (*ptr != 0 && *ptr != 255)
-        {
-            throw std::runtime_error("Erosion requires a binary image (pixel values must be 0 or 255).");
-        }
-    }
-
     if (kernel_size <= 1)
         return;
 
