@@ -163,6 +163,11 @@ static void dilation_inplace(CImg<uint> &input_image, int kernel_size)
  */
 static void erosion_inplace(CImg<uint> &input_image, int kernel_size)
 {
+    if (input_image.spectrum() != 1)
+    {
+        throw std::runtime_error("Erosion requires a binary image.");
+    }
+    
     if (kernel_size <= 1) return;
 
     CImg<uint> source = input_image;
