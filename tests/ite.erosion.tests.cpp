@@ -2,7 +2,7 @@
 #include <CImg.h>
 #include <catch2/catch_test_macros.hpp>
 
-TEST_CASE("erosion: Thickens dark regions", "[ite][erosion]")
+TEST_CASE("erosion: Shrinks bright regions", "[ite][erosion]")
 {
     SECTION("Shrinks a 3x3 white block inside a 5x5 black grid (Kernel Size 3)")
     {
