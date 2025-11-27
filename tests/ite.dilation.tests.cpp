@@ -4,7 +4,7 @@
 
 TEST_CASE("dilation: Thickens bright regions", "[ite][dilation]")
 {
-    SECTION("Shrinks a 3x3 black hole inside a 5x5 white grid (Kernel Size 3)")
+    SECTION("Expands white border into 3x3 black region (Kernel Size 3)")
     {
         // GIVEN: A 5x5 image, mostly white (255)
         // With a 3x3 black square (0) in the middle
