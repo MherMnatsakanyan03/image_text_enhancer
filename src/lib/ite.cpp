@@ -217,12 +217,68 @@ static void dilation_inplace(CImg<uint> &input_image, int kernel_size)
     }
 }
 
-// TODO: Implement the actual image processing algorithms below
+/**
+ * @brief (Internal) Applies erosion to a binary image, replacing the original image.
+ */
 static void erosion_inplace(CImg<uint> &input_image, int kernel_size)
 {
-    // Placeholder for actual erosion logic
-    (void)input_image;
-    (void)kernel_size;
+    if (input_image.spectrum() != 1)
+    {
+        throw std::runtime_error("Erosion requires a grayscale image.");
+    }
+
+    if (kernel_size <= 1)
+        return;
+
+    CImg<uint> source = input_image;
+
+    int r = kernel_size / 2;
+    int w = input_image.width();
+    int h = input_image.height();
+    int d = input_image.depth();
+
+#pragma omp parallel for collapse(2)
+    for (int i_d = 0; i_d < d; ++i_d)
+    {
+        for (int i_h = 0; i_h < h; ++i_h)
+        {
+            for (int i_w = 0; i_w < w; ++i_w)
+            {
+                // If the pixel is already black, it stays black (erosion only removes white)
+                if (source(i_w, i_h, i_d) == 0)
+                {
+                    continue;
+                }
+
+                // If pixel is white, check neighbors
+                bool hit = false;
+
+                // Scan neighborhood
+                for (int k_h = -r; k_h <= r && !hit; ++k_h)
+                {
+                    for (int k_w = -r; k_w <= r && !hit; ++k_w)
+                    {
+                        int n_w = i_w + k_w;
+                        int n_h = i_h + k_h;
+
+                        // Boundary check
+                        if (n_w >= 0 && n_w < w && n_h >= 0 && n_h < h)
+                        {
+                            if (source(n_w, n_h, i_d) == 0)
+                            {
+                                hit = true;
+                            }
+                        }
+                    }
+                }
+
+                if (hit)
+                {
+                    input_image(i_w, i_h, i_d) = 0;
+                }
+            }
+        }
+    }
 }
 
 // TODO: Implement the actual image processing algorithms below
