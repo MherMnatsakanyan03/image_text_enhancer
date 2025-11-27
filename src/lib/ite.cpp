@@ -147,9 +147,7 @@ static void binarize_inplace(CImg<uint> &input_image, int window_size = 15, floa
 
 static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma)
 {
-    // Placeholder for actual Gaussian denoising logic
-    (void)input_image;
-    (void)sigma;
+    input_image.blur(sigma);
 }
 
 // TODO: Implement the actual image processing algorithms below
