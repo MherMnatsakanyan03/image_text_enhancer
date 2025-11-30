@@ -26,13 +26,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Created directory: " << output_dir.string() << std::endl;
     }
     
-    auto gray_img = ite::to_grayscale(img);
-    auto denoised_img = ite::gaussian_denoise(gray_img, 1);
-    auto binarized_img = ite::binarize(denoised_img);
-    auto binarized_no_denoise_img = ite::binarize(gray_img);
+    auto enhanced_img = ite::enhance(img, 0.8f, 1, 3);
     
-    ite::writeimage(binarized_img, (output_dir / "binarized_denoised_image.jpg").string());
-    ite::writeimage(binarized_no_denoise_img, (output_dir / "binarized_image.jpg").string());
+    ite::writeimage(enhanced_img, (output_dir / "enhanced.jpg").string());
     std::cout << "Images saved to: " << output_dir.string() << std::endl;
 
     return 0;
