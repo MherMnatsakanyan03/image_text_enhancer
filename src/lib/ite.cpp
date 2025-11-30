@@ -540,25 +540,34 @@ namespace ite
     {
         CImg<uint> l_image = input_image;
 
+        // Preparation & Alignment
         to_grayscale_inplace(l_image);
-        if (do_deskew)
-        {
+        if (do_deskew) {
             deskew_inplace(l_image);
         }
+
+        // Analog Processing (Soft)
+        // Blur and Contrast help prepare the signal for binarization.
         gaussian_denoise_inplace(l_image, sigma);
         contrast_enhancement_inplace(l_image);
+
+        // Digital Conversion (Hard)
         binarize_inplace(l_image);
-        if (do_dilation)
-        {
+
+        // Cleanup (Crucial Change Here!) 
+        // Remove noise NOW, while it's small, before we try to thicken the text.
+        if (do_despeckle) {
+            despeckle_inplace(l_image, despeckle_threshold, diagonal_connections);
+        }
+
+        // Shape Repair (Morphologicals)
+        // Now that noise is gone, we can safely dilate (thicken) the text
+        // without worrying about blowing up dust specks.
+        if (do_dilation) {
             dilation_inplace(l_image, kernel_size);
         }
-        if (do_erosion)
-        {
+        if (do_erosion) {
             erosion_inplace(l_image, kernel_size);
-        }
-        if (do_despeckle)
-        {
-            despeckle_inplace(l_image, despeckle_threshold, diagonal_connections);
         }
 
         return l_image;
