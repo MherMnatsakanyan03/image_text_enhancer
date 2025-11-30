@@ -46,3 +46,8 @@ add_test(NAME erosion_test COMMAND erosion_test)
 add_executable(contrast_enhancement_test ite.contrast.tests.cpp)
 target_link_libraries(contrast_enhancement_test ${Link_Libs})
 add_test(NAME contrast_enhancement_test COMMAND contrast_enhancement_test)
+
+# Despeckling tests
+add_executable(despeckling_test ite.despeckle.tests.cpp)
+target_link_libraries(despeckling_test ${Link_Libs})
+add_test(NAME despeckling_test COMMAND despeckling_test)

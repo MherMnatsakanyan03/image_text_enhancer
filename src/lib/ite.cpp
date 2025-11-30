@@ -1,6 +1,7 @@
 #include "ite.h"
 #include <iostream>
 #include <omp.h>
+#include <vector>
 
 const float WEIGHT_R = 0.299f;
 const float WEIGHT_G = 0.587f;
@@ -163,8 +164,11 @@ static void dilation_inplace(CImg<uint> &input_image, int kernel_size)
     {
         throw std::runtime_error("Dilation requires a single-channel image.");
     }
-    
-    if (kernel_size <= 1) return;
+
+    if (kernel_size <= 1)
+    {
+        return;
+    }
 
     CImg<uint> source = input_image;
 
@@ -288,11 +292,149 @@ static void deskew_inplace(CImg<uint> &input_image)
     (void)input_image;
 }
 
-// TODO: Implement the actual image processing algorithms below
+/**
+ * @brief (Internal) Robust Linear Contrast Stretching.
+ * Clips the bottom 1% and top 1% of intensities to ignore outliers,
+ * then stretches the remaining range to 0-255.
+ */
 static void contrast_enhancement_inplace(CImg<uint> &input_image)
 {
-    // Placeholder for actual contrast enhancement logic
-    (void)input_image;
+    if (input_image.is_empty())
+    {
+        return;
+    }
+
+    // Compute Histogram (to find percentiles)
+    // CImg histogram is fast and safe.
+    const CImg<uint> hist = input_image.get_histogram(256, 0, 255);
+    const uint total_pixels = input_image.size();
+
+    // Find lower (1%) and upper (99%) cutoffs
+    const uint cutoff = total_pixels / 100; // 1% threshold
+
+    uint min_val = 0;
+    uint count = 0;
+    // find brightest pixel above cutoff
+    for (int i = 0; i < 256; ++i)
+    {
+        count += hist[i];
+        if (count > cutoff)
+        {
+            min_val = i;
+            break;
+        }
+    }
+
+    // find darkest pixel below cutoff
+    uint max_val = 255;
+    count = 0;
+    for (int i = 255; i >= 0; --i)
+    {
+        count += hist[i];
+        if (count > cutoff)
+        {
+            max_val = i;
+            break;
+        }
+    }
+
+    // Safety check: if image is solid color, min might equal max
+    if (max_val <= min_val)
+    {
+        return;
+    }
+
+    // Apply the stretch
+    // Formula: 255 * (val - min) / (max - min)
+    const float scale = 255.0f / (max_val - min_val);
+
+#pragma omp parallel for
+    for (uint i = 0; i < total_pixels; ++i)
+    {
+        uint val = input_image[i];
+
+        if (val <= min_val)
+        {
+            input_image[i] = 0;
+        }
+        else if (val >= max_val)
+        {
+            input_image[i] = 255;
+        }
+        else
+        {
+            input_image[i] = (val - min_val) * scale;
+        }
+    }
+}
+
+/**
+ * @brief (Internal) Removes small connected components (speckles) from the image.
+ * Assumes the input is binary (0 and 255).
+ * @param input_image The image to process.
+ * @param size_threshold Components smaller than this number of pixels will be removed.
+ */
+static void despeckle_inplace(CImg<uint> &input_image, uint threshold, bool diagonal_connections = true)
+{
+    if (threshold <= 0)
+        return;
+
+// Invert image so Text/Noise becomes White (255) and Background becomes Black (0).
+// CImg's label() function tracks non-zero regions.
+#pragma omp parallel for
+    for (uint i = 0; i < input_image.size(); ++i)
+    {
+        input_image[i] = (input_image[i] == 0) ? 255 : 0;
+    }
+
+    // Label connected components.
+    // This assigns a unique integer ID (1, 2, 3...) to every distinct blob.
+    // 0 is background.
+    // true = 8-connectivity (diagonal pixels connect), false = 4-connectivity
+    CImg<uint> labels = input_image.get_label(diagonal_connections);
+
+    // Count the size of each component.
+    uint max_label = labels.max();
+    if (max_label == 0)
+    {
+        // Image was completely empty (or full), revert inversion and return
+        input_image.fill(255);
+        return;
+    }
+
+    std::vector<uint> sizes(max_label + 1, 0);
+
+    // Iterate over the label image to count pixels per label
+    // (This part is hard to parallelize efficiently due to random access writes)
+    cimg_for(labels, ptr, uint)
+    {
+        sizes[*ptr]++;
+    }
+
+// Filter: If a label is too small, turn it off (Black -> 0) in our inverted map
+#pragma omp parallel for collapse(2)
+    for (int z = 0; z < input_image.depth(); ++z)
+    {
+        for (int y = 0; y < input_image.height(); ++y)
+        {
+            for (int x = 0; x < input_image.width(); ++x)
+            {
+                uint label_id = labels(x, y, z);
+                // If it's a valid object (id > 0) AND it's smaller than threshold
+                if (label_id > 0 && sizes[label_id] < threshold)
+                {
+                    input_image(x, y, z) = 0; // Erase it (in inverted space)
+                }
+            }
+        }
+    }
+
+// Invert back to original (Black Text, White Background)
+#pragma omp parallel for
+    for (uint i = 0; i < input_image.size(); ++i)
+    {
+        input_image[i] = (input_image[i] == 255) ? 0 : 255;
+    }
 }
 
 namespace ite
@@ -376,17 +518,48 @@ namespace ite
         return output_image;
     }
 
-    CImg<uint> enhance(const CImg<uint> &input_image, float sigma, int kernel_size)
+    CImg<uint> despeckle(const CImg<uint> &input_image, uint threshold, bool diagonal_connections)
+    {
+        CImg<uint> output_image = input_image;
+
+        despeckle_inplace(output_image, threshold, diagonal_connections);
+
+        return output_image;
+    }
+
+    CImg<uint> enhance(
+        const CImg<uint> &input_image,
+        float sigma,
+        int kernel_size,
+        int despeckle_threshold,
+        bool diagonal_connections,
+        bool do_erosion,
+        bool do_dilation,
+        bool do_despeckle,
+        bool do_deskew)
     {
         CImg<uint> l_image = input_image;
 
         to_grayscale_inplace(l_image);
-        deskew_inplace(l_image);
+        if (do_deskew)
+        {
+            deskew_inplace(l_image);
+        }
         gaussian_denoise_inplace(l_image, sigma);
         contrast_enhancement_inplace(l_image);
         binarize_inplace(l_image);
-        dilation_inplace(l_image, kernel_size);
-        erosion_inplace(l_image, kernel_size);
+        if (do_dilation)
+        {
+            dilation_inplace(l_image, kernel_size);
+        }
+        if (do_erosion)
+        {
+            erosion_inplace(l_image, kernel_size);
+        }
+        if (do_despeckle)
+        {
+            despeckle_inplace(l_image, despeckle_threshold, diagonal_connections);
+        }
 
         return l_image;
     }
