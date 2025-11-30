@@ -285,11 +285,84 @@ static void erosion_inplace(CImg<uint> &input_image, int kernel_size)
     }
 }
 
-// TODO: Implement the actual image processing algorithms below
+/**
+ * @brief (Internal) Deskews the image using the Projection Profile method.
+ * Finds the angle that maximizes the variance of horizontal row sums.
+ */
 static void deskew_inplace(CImg<uint> &input_image)
 {
-    // Placeholder for actual deskewing logic
-    (void)input_image;
+    // Work on a smaller copy for speed (width ~600px)
+    // Processing the full-res image for every angle guess is too slow.
+    float scale_factor = 600.0f / input_image.width();
+    if (scale_factor >= 1.0f) scale_factor = 1.0f; // Don't upscale small images
+
+    int new_w = input_image.width() * scale_factor;
+    int new_h = input_image.height() * scale_factor;
+    
+    CImg<uint> work = input_image.get_resize(new_w, new_h, 1, 1);
+
+    // Pre-processing: Make text bright for counting
+    // Assume standard "Black Text on White Background" -> Invert it.
+    if (work.spectrum() > 1) {
+        // If somehow it's color, flatten it first
+        work = work.get_channel(0); 
+    }
+    
+    cimg_for(work, ptr, uint) { *ptr = 255 - *ptr; }
+    
+    // Threshold to binary (simple mean threshold is sufficient for structure)
+    work.threshold(work.mean());
+
+    // Search for the best angle
+    // Scans typically skew < 10 degrees. We search +/- 15 to be safe.
+    double best_angle = 0.0;
+    double max_variance = -1.0;
+
+    #pragma omp parallel for
+    for (int i = -30; i <= 30; ++i) {
+        double angle = i * 0.5; // Steps of 0.5 degrees
+        
+        // Rotate the work image
+        // 1 = Linear interpolation
+        // 0 = Boundary condition (Black). Since we inverted, Background is Black (0)
+        CImg<uint> rot = work.get_rotate(angle, 1, 0); 
+        
+        // Compute Projection Profile (Sum of rows)
+        double sum_sq = 0.0;
+        double sum = 0.0;
+        
+        cimg_forY(rot, y) {
+            double row_sum = 0.0;
+            cimg_forX(rot, x) {
+                row_sum += rot(x, y); // Pixel is either 0 or 255
+            }
+            sum += row_sum;
+            sum_sq += row_sum * row_sum;
+        }
+        
+        // Calculate Variance of the row sums
+        // Var = E[X^2] - (E[X])^2
+        // We want to maximize this.
+        double mean = sum / rot.height();
+        double variance = (sum_sq / rot.height()) - (mean * mean);
+
+        #pragma omp critical
+        {
+            if (variance > max_variance) {
+                max_variance = variance;
+                best_angle = angle;
+            }
+        }
+    }
+
+    // Apply correction to the original full-res image
+    // Only rotate if the skew is significant (> 0.1 degrees)
+    if (std::abs(best_angle) > 0.1) {
+        // Use Linear interpolation (1) or Cubic (2) for quality.
+        // Boundary 1 (Neumann) repeats edge pixels. 
+        // For a white page, this fills the new corners with white
+        input_image.rotate(best_angle, 2, 0);
+    }
 }
 
 /**
