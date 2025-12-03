@@ -304,7 +304,6 @@ static void deskew_inplace(CImg<uint> &input_image)
     // Pre-processing: Make text bright for counting
     // Assume standard "Black Text on White Background" -> Invert it.
     if (work.spectrum() > 1) {
-        // If somehow it's color, flatten it first
         work = work.get_channel(0); 
     }
     
@@ -378,7 +377,6 @@ static void contrast_enhancement_inplace(CImg<uint> &input_image)
     }
 
     // Compute Histogram (to find percentiles)
-    // CImg histogram is fast and safe.
     const CImg<uint> hist = input_image.get_histogram(256, 0, 255);
     const uint total_pixels = input_image.size();
 
@@ -478,7 +476,8 @@ static void despeckle_inplace(CImg<uint> &input_image, uint threshold, bool diag
     std::vector<uint> sizes(max_label + 1, 0);
 
     // Iterate over the label image to count pixels per label
-    // (This part is hard to parallelize efficiently due to random access writes)
+    // ptr points to a number in labels at each pixel which we
+    // use as index in our sized vector
     cimg_for(labels, ptr, uint)
     {
         sizes[*ptr]++;
