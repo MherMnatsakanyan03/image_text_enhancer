@@ -59,3 +59,4 @@ The example with these parameters results in the following enhancement:
 
 - [Mher Mnatsakanyan](mailto:mher.mnatsakanyan@uni-jena.de)
 - [Leonard Teschner](mailto:leonard.teschner@uni-jena.de)
+- [Daniel Motz](mailto:daniel.motz@uni-jena.de)
