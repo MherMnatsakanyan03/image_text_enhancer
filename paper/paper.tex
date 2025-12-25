@@ -67,7 +67,7 @@ The five-finger pattern \cite{macgilchrist2014}:
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{entity resolution, data cleansing, programming contest}
+\keywords{noise reduction, background removal, image filter}
 
 
 %%
@@ -77,82 +77,36 @@ The five-finger pattern \cite{macgilchrist2014}:
 
 \let\thefootnote\relax\footnotetext{AEPRO 2026, March 1, Jena, Germany. Copyright \copyright 2026 for this paper by its authors. Use permitted under Creative Commons License Attribution 4.0 International (CC BY 4.0).}
 
-
 \section{Introduction}
-
+\label{sec:intro}
 
 \subsection{Background}
+\label{sec:background}
+Motivation:
+- Viele handschriftliche oder gedruckte Dokumente werden heutzutage mit dem Smartphone, oder im Zuge der Digitalisierung mit Druckern gescannt. Dabei entstehen häufig Bilder mit schlechter Qualität, die schwer lesbar, für Mensch und Maschine sind. Schlechte Qualität ist in diesem Kontext durch schlechte Beleuchtung, Schatten, Verzerrungen, Rauschen oder ungleichmäßigen Kontrast gekennzeichnet.
+- Solche Bilder sind problematisch, wenn sie weiterverwendet werden sollen, beispielsweise um sie zu archivieren, zu drucken oder mittels OCR in maschinenlesbaren Text umzuwandeln.
 
 \subsection{Related Work}
+\label{sec:related-work}
 
 \subsection{Our Contributions}
+\label{sec:our-contributions}
+- kostenloses Tool/executable um die Qualität von gescannten Bildern zu verbessern, bevor sie beispielsweise versendet, gedruckt oder archiviert werden.
+- Verbessert die Arbeit der Related Work, durch ... %%TODO: konkretisieren
+- Kann beispielsweise für die Digitalisierung von Büchern, Dokumenten und handschriftlichen Akten oder Notizen genutzt werden. So wird eine gute, digitale lesbarkeit und wiedervenwendung ermöglicht.
 
 \subsection{Outline}
-
-
+\label{sec:outline}
+Dieses Paper ist wie folgt gegliedert: In Abschnitt \ref{sec:algorithm} beschreiben wir den entwickelten Algorithmus. In Abschnitt \ref{sec:experiments} zeigen wir die performance unseres Algorithmus anhand von Experimenten. Abschließend fassen wir in Abschnitt \ref{sec:conclusions} unsere Ergebnisse zusammen und geben einen Ausblick auf mögliche zukünftige Arbeiten.
 
 \section{The Algorithm}
-
-\subsection{Internal Representation of Mock Labels}
-\label{sub:sec:internal}
-
-In Figure~\ref{fig:integer:sets} we convert the mock labels to sorted integer sets.
-
-
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{./graphics/integer_sets.pdf}
-  \caption{Conversion of mock camera labels to sorted integer sets. 
-We map each unique token (key) in camera labels to a unique value. 
-Based on these key-value-mappings, we convert camera labels to sorted integer sets. 
-A camera can have different names in different countries. Therefore, repeating IDs reference the same cameras (see, for example, ID=3).} 
-  \label{fig:integer:sets}
-\end{figure}
-
-\subsection{Efficient Preprocessing of Input Data}
-\label{sub:sec:preprocessing}
-
-The following findings are important to speed up preprocessing of the input data:
-
-\begin{itemize}
-\item Reading many small files concurrently, with multiple threads (compared to a single thread), takes advantage of the internal parallelism of SSDs and thus leads to higher throughput \cite{Zhuang2016}.
-
-\item C-string manipulation functions are often significantly faster than their C++ pendants. For example, locating substrings with \texttt{strstr} is around five times faster than using the C++ \texttt{std::string} function \texttt{find}.
-
-\item Hardcoding regular expressions with \emph{while, for, switch} or \emph{if-else} statements results in faster execution times than using standard RegEx libraries, where regular expressions are compiled at runtime into state machines.
-
-\item Changing strings in place, instead of treating them as immutable objects, eliminates allocation and copying overhead.
-
-\end{itemize}
-
+\label{sec:algorithm}
 
 \section{Experiments}
-
-Table~\ref{tab:results} shows the running times of the resolution step of the five best placed teams.
-
-
-\begin{table}[htbp]
-  \caption{Comparison of the F-measure and the running times of the resolution step of the five best placed teams. The input data for the resolution step consisted of 29{,}787 in JSON formatted e-commerce websites. Measurements were taken on a
-laptop running Ubuntu 19.04 with 16 GB of RAM and two Intel Core i5-4310U CPUs. The underlying SSD was a 500\,GB 860 EVO mSATA. We cleared the page cache, dentries, and inodes before each run to avoid reading the input data from RAM instead of the SSD.}
-  \label{tab:results}
-\resizebox{\columnwidth}{!}{
-  \begin{tabular}{lcrr}
-    \toprule
-    Team& Language & F-measure & Running time (s)\\
-    \midrule
-	PictureMe (\textbf{this paper}) &C++& 0.99 & \textbf{0.61}\\
-    DBGroup@UniMoRe &Python& 0.99 & 10.65\\
-    DBGroup@SUSTech &C++& 0.99 & 22.13\\
-    eats\_shoots\_and\_leaves &Python& 0.99 & 28.66\\
-    DBTHU &Python& 0.99& 63.21\\
-  \bottomrule
-\end{tabular}
-}
-\end{table}
-
+\label{sec:experiments}
 
 \section{Conclusions}
+\label{sec:conclusions}
 
 %%
 %% The next two lines define the bibliography style to be used, and

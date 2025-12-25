@@ -323,36 +323,6 @@ INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/libertine/TS1LinuxLibertineT-
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/libertine/TS1LinuxLibertineT-TLF.fd
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/libertine/TS1LinuxLibertineT-TLF.fd
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ts1.tfm
-INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/./graphics/integer_sets.pdf
-INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/./graphics/integer_sets.pdf
-INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/./graphics/integer_sets.pdf
-INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/./graphics/integer_sets.pdf
-INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/./graphics/integer_sets.pdf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ot1.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ot1.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/nxlmi.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/nxlmi7.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxsy.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxsy7.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxexx.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxexx.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam7.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/nxlmia.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/nxlmia.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxsym.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxsym.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxsyc.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxsyc.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxexa.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/ntxexa.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/inconsolata/t1zi4.fd
-INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/inconsolata/t1zi4.fd
-INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/inconsolata/t1zi4.fd
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/inconsolata/t1-zi4r-4.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
@@ -382,19 +352,9 @@ INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertine
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-ts1.vf
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ts1--base.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/newtx/ntxsy.vf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txsys.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/newtx/txex-bar.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineTI-tlf-t1.vf
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1--base.tfm
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc
 INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.aux
 INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.out
 INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.out
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb
-INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/newtx/txsys.pfb
