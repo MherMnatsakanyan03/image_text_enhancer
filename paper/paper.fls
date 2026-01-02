@@ -323,6 +323,10 @@ INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/libertine/TS1LinuxLibertineT-
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/libertine/TS1LinuxLibertineT-TLF.fd
 INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/libertine/TS1LinuxLibertineT-TLF.fd
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ts1.tfm
+INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.bbl
+INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.bbl
+INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.bbl
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 INPUT /usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
@@ -352,9 +356,13 @@ INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertine
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineT-tlf-ts1.vf
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineT-tlf-ts1--base.tfm
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/vf/public/libertine/LinLibertineTI-tlf-t1.vf
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/libertine/LinLibertineTI-tlf-t1--base.tfm
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc
 INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.aux
 INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.out
 INPUT /Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.out
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb
 INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb

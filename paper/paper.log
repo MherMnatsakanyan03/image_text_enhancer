@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.18)  25 DEC 2025 19:20
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.18)  26 DEC 2025 10:10
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -881,13 +881,16 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
 
-Overfull \hbox (3.00787pt too wide) in paragraph at lines 94--97
+Overfull \hbox (3.00787pt too wide) in paragraph at lines 99--103
 \T1/LinuxLibertineT-TLF/m/n/9 (-20) - kosten-loses Tool/executable um die Qual-it�t von ges-can-nten Bildern
  []
 
 
 
-No file paper.bbl.
+(/Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.bbl
+LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/it' will be
+(Font)              scaled to size 7.0pt on input line 52.
+)
 
 Package natbib Warning: There were undefined citations.
 
@@ -903,27 +906,27 @@ File: se-pdfdoc.def 2019/11/29 v1.12 stringenc: PDFDocEncoding
 File: se-utf8.def 2019/11/29 v1.12 stringenc: UTF-8
 ) [1.1{/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_25tcsq.enc}{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_76gpa5.enc}
 
-{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}] (/Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.aux)
+{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_nh77jq.enc}{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_naooyc.enc}{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/libertine/lbtn_7grukw.enc}] (/Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `paper.out' has not changed.
-(rerunfilecheck)             Checksum: 036897596DECFC547BB9091D3E2CE42E;1102.
+(rerunfilecheck)             Checksum: 21C2FA82FC5CE6253844DEBA713D4352;1197.
  ) 
 Here is how much of TeX's memory you used:
- 20786 strings out of 473190
- 335075 string characters out of 5715799
- 809869 words of memory out of 5000000
- 43388 multiletter control sequences out of 15000+600000
- 641235 words of font info for 159 fonts, out of 8000000 for 9000
+ 20860 strings out of 473190
+ 337386 string characters out of 5715799
+ 820085 words of memory out of 5000000
+ 43421 multiletter control sequences out of 15000+600000
+ 649521 words of font info for 180 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
  90i,11n,131p,1138b,606s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb>
-Output written on "/Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.pdf" (1 page, 256625 bytes).
+</usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb>
+Output written on "/Users/leonard/Library/CloudStorage/OneDrive-Persönlich/Uni/9_Semester_ws2526_Master/Algorithm Engineering/image_text_enhancer/paper/paper.pdf" (1 page, 317937 bytes).
 PDF statistics:
- 89 PDF objects out of 1000 (max. 8388607)
- 74 compressed objects within 1 object stream
- 18 named destinations out of 1000 (max. 500000)
- 49241 words of extra memory for PDF output out of 51595 (max. 10000000)
+ 110 PDF objects out of 1000 (max. 8388607)
+ 93 compressed objects within 1 object stream
+ 23 named destinations out of 1000 (max. 500000)
+ 53345 words of extra memory for PDF output out of 61914 (max. 10000000)
 
