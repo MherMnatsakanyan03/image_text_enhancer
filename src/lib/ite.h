@@ -1,8 +1,7 @@
 #pragma once
-#include "CImg.h"
 #include <string>
+#include "CImg.h"
 
-// Use the CImg library namespace.
 using namespace cimg_library;
 
 /**
@@ -11,14 +10,13 @@ using namespace cimg_library;
  */
 namespace ite
 {
-
     /**
      * @brief Loads an image from a specified file path.
      * @param filepath The relative or absolute path to the image file.
      * @return A CImg<uint> object containing the image data.
      * @throws CImgIOException if the file cannot be opened or recognized.
      */
-    CImg<uint> loadimage(std::string filepath);
+    CImg<uint> loadimage(const std::string &filepath);
 
     /**
      * @brief Saves an image to a specified file path.
@@ -26,7 +24,7 @@ namespace ite
      * @param filepath The relative or absolute path where the image will be saved.
      * @throws CImgIOException if the file cannot be written.
      */
-    void writeimage(const CImg<uint> &image, std::string filepath);
+    CImg<uint> writeimage(const CImg<uint> &image, const std::string &filepath);
 
     /**
      * @brief Converts an image to grayscale.
@@ -113,15 +111,6 @@ namespace ite
      * @param do_deskew Whether to perform deskewing (default true).
      * @return A new, enhanced image ready for OCR.
      */
-    CImg<uint> enhance(
-        const CImg<uint> &input_image,
-        float sigma = 1.0f,
-        int kernel_size = 3,
-        int despeckle_threshold = 5,
-        bool diagonal_connections = true,
-        bool do_erosion = false,
-        bool do_dilation = true,
-        bool do_despeckle = true,
-        bool do_deskew = true);
-
-}
+    CImg<uint> enhance(const CImg<uint> &input_image, float sigma = 1.0f, int kernel_size = 3, int despeckle_threshold = 5, bool diagonal_connections = true,
+                       bool do_erosion = false, bool do_dilation = true, bool do_despeckle = true, bool do_deskew = true);
+} // namespace ite

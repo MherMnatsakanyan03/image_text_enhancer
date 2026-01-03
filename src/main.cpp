@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
             std::cout << "Loaded: " << in_path.filename().string() << " (" << img.width() << "x" << img.height() << "x" << img.depth() << "x" << img.spectrum()
                       << ")\n";
 
-            auto output_img = ite::enhance(img, 1.0f, 1, 5, true, true, false, true, true);
+            auto output_img = ite::enhance(img, 1.0f, 1, 2, true, true, false, true, true);
 
             // Save with the same filename into output/
             std::filesystem::path out_path = output_dir / in_path.filename();
