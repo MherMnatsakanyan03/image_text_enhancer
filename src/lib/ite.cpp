@@ -5,14 +5,14 @@
 #include <iostream>
 #include <vector>
 
-const float WEIGHT_R = 0.299f;
-const float WEIGHT_G = 0.587f;
-const float WEIGHT_B = 0.114f;
+constexpr float WEIGHT_R = 0.299f;
+constexpr float WEIGHT_G = 0.587f;
+constexpr float WEIGHT_B = 0.114f;
 
 /**
  * @brief (Internal) Computes the Summed-A+rea Table (Integral Image).
  */
-static CImg<double> calculate_integral_image(const CImg<double>& src)
+static CImg<double> calculate_integral_image(const CImg<double> &src)
 {
     CImg<double> integral_img(src.width(), src.height(), src.depth(), src.spectrum(), 0);
 
@@ -44,9 +44,7 @@ static CImg<double> calculate_integral_image(const CImg<double>& src)
 /**
  * @brief (Internal) Computes the sum of a region from an integral image.
  */
-static double get_area_sum(const CImg<double>& integral_img,
-                           int x1, int y1, int z, int c,
-                           int x2, int y2)
+static double get_area_sum(const CImg<double> &integral_img, int x1, int y1, int z, int c, int x2, int y2)
 {
     // Get sum at all four corners of the rectangle, handling boundary conditions
     const double D = integral_img(x2, y2, z, c);
@@ -62,7 +60,7 @@ static double get_area_sum(const CImg<double>& integral_img,
  * @brief (Internal) Converts an image to grayscale, in-place.
  * Uses the standard luminance formula.
  */
-static void to_grayscale_inplace(CImg<uint>& input_image)
+static void to_grayscale_inplace(CImg<uint> &input_image)
 {
     if (input_image.spectrum() == 1)
     {
@@ -97,8 +95,7 @@ static void to_grayscale_inplace(CImg<uint>& input_image)
  * @brief (Internal) Converts a grayscale image to a binary (black and white) image, in-place.
  * Uses Sauvola's method for adaptive thresholding.
  */
-static void binarize_inplace(CImg<uint>& input_image, const int window_size = 15, const float k = 0.2f,
-                             const float delta = 0.0f)
+static void binarize_inplace(CImg<uint> &input_image, const int window_size = 15, const float k = 0.2f, const float delta = 0.0f)
 {
     if (input_image.spectrum() != 1)
     {
@@ -153,15 +150,12 @@ static void binarize_inplace(CImg<uint>& input_image, const int window_size = 15
  * @brief (Internal) Applies Gaussian denoising to an image, in-place.
  * Uses CImg's built-in blur function with neumann boundary conditions and isotropic blur.
  */
-static void gaussian_denoise_inplace(CImg<uint>& input_image, float sigma)
-{
-    input_image.blur(sigma, 1, true);
-}
+static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma) { input_image.blur(sigma, 1, true); }
 
 /**
  * @brief (Internal) Applies dilation to a binary image, in-place.
  */
-static void dilation_inplace(CImg<uint>& input_image, int kernel_size)
+static void dilation_inplace(CImg<uint> &input_image, int kernel_size)
 {
     if (input_image.spectrum() != 1)
     {
@@ -227,7 +221,7 @@ static void dilation_inplace(CImg<uint>& input_image, int kernel_size)
 /**
  * @brief (Internal) Applies erosion to a binary image, replacing the original image.
  */
-static void erosion_inplace(CImg<uint>& input_image, int kernel_size)
+static void erosion_inplace(CImg<uint> &input_image, int kernel_size)
 {
     if (input_image.spectrum() != 1)
     {
@@ -288,13 +282,10 @@ static void erosion_inplace(CImg<uint>& input_image, int kernel_size)
     }
 }
 
-static unsigned char clamp_u8(uint v)
-{
-    return (v > 255u) ? 255u : (unsigned char)v;
-}
+static unsigned char clamp_u8(uint v) { return (v > 255u) ? 255u : (unsigned char)v; }
 
 // Fast-ish border mean (assume background lives near borders).
-static double border_mean_u8(const CImg<unsigned char>& g)
+static double border_mean_u8(const CImg<unsigned char> &g)
 {
     const int W = g.width(), H = g.height();
     if (W <= 0 || H <= 0)
@@ -333,7 +324,7 @@ static double border_mean_u8(const CImg<unsigned char>& g)
     return cnt ? (double)sum / (double)cnt : 0.0;
 }
 
-static int otsu_threshold_u8(const CImg<unsigned char>& g)
+static int otsu_threshold_u8(const CImg<unsigned char> &g)
 {
     int hist[256] = {0};
     const int W = g.width(), H = g.height();
@@ -383,14 +374,10 @@ static int otsu_threshold_u8(const CImg<unsigned char>& g)
 
 // Score: variance of horizontal projection profile (row sums) on a stable central ROI.
 // Binary pixels are 0/1. Rotate with nearest-neighbor to preserve sparsity and speed.
-static double score_angle_variance(
-    const CImg<unsigned char>& bin,
-    int roi_x0, int roi_y0, int roi_w, int roi_h,
-    double angle_deg
-    )
+static double score_angle_variance(const CImg<unsigned char> &bin, int roi_x0, int roi_y0, int roi_w, int roi_h, double angle_deg)
 {
     // interpolation=0 (nearest), boundary=0 (Dirichlet 0). We ignore borders anyway via ROI.
-    CImg<unsigned char> rot = bin.get_rotate(angle_deg, /*interpolation*/0, /*boundary*/0);
+    CImg<unsigned char> rot = bin.get_rotate(angle_deg, /*interpolation*/ 0, /*boundary*/ 0);
 
     const int W = rot.width();
     const unsigned char* p = rot.data();
@@ -415,11 +402,8 @@ static double score_angle_variance(
     return sum_sq * invH - mean * mean;
 }
 
-static std::pair<double, double> search_best_angle(
-    const CImg<unsigned char>& bin,
-    int roi_x0, int roi_y0, int roi_w, int roi_h,
-    double start_deg, double end_deg, double step_deg
-    )
+static std::pair<double, double> search_best_angle(const CImg<unsigned char> &bin, int roi_x0, int roi_y0, int roi_w, int roi_h, double start_deg,
+                                                   double end_deg, double step_deg)
 {
     if (step_deg <= 0.0)
         return {0.0, -1.0};
@@ -470,7 +454,7 @@ static std::pair<double, double> search_best_angle(
  * - OpenMP reduction with per-thread best (minimal contention)
  * - final rotate uses Neumann boundary to avoid black corners
  */
-static void deskew_inplace(CImg<uint>& input_image)
+static void deskew_inplace(CImg<uint> &input_image)
 {
     const int inW = input_image.width();
     const int inH = input_image.height();
@@ -620,15 +604,13 @@ static void deskew_inplace(CImg<uint>& input_image)
     //  - improvement over 0° is meaningful (avoid random rotations on low-text/noisy pages)
     const double abs_a = std::abs(best_angle);
     const bool angle_ok = (abs_a > 0.05);
-    const bool improve_ok =
-        (best_score > base_score + 1e-9) &&
-        (base_score <= 0.0 ? true : (best_score >= base_score * 1.002)); // ~0.2% gain
+    const bool improve_ok = (best_score > base_score + 1e-9) && (base_score <= 0.0 ? true : (best_score >= base_score * 1.002)); // ~0.2% gain
 
     if (angle_ok && improve_ok)
     {
         // interpolation=2 (cubic) for quality.
         // boundary=1 (Neumann): repeat edge pixels to avoid black corners regardless of background.
-        input_image.rotate(best_angle, /*interpolation*/2, /*boundary*/1);
+        input_image.rotate(best_angle, /*interpolation*/ 2, /*boundary*/ 1);
     }
 }
 
@@ -637,7 +619,7 @@ static void deskew_inplace(CImg<uint>& input_image)
  * Clips the bottom 1% and top 1% of intensities to ignore outliers,
  * then stretches the remaining range to 0-255.
  */
-static void contrast_enhancement_inplace(CImg<uint>& input_image)
+static void contrast_enhancement_inplace(CImg<uint> &input_image)
 {
     if (input_image.is_empty())
     {
@@ -714,7 +696,7 @@ static void contrast_enhancement_inplace(CImg<uint>& input_image)
  * @param threshold Components smaller than this number of pixels will be removed.
  * @param diagonal_connections
  */
-static void despeckle_inplace(CImg<uint>& input_image, const uint threshold, bool diagonal_connections = true)
+static void despeckle_inplace(CImg<uint> &input_image, const uint threshold, bool diagonal_connections = true)
 {
     if (threshold <= 0)
         return;
@@ -747,10 +729,7 @@ static void despeckle_inplace(CImg<uint>& input_image, const uint threshold, boo
     // Iterate over the label image to count pixels per label
     // ptr points to a number in labels at each pixel which we
     // use as index in our sized vector
-    cimg_for(labels, ptr, uint)
-    {
-        sizes[*ptr]++;
-    }
+    cimg_for(labels, ptr, uint) { sizes[*ptr]++; }
 
     // Filter: If a label is too small, turn it off (Black -> 0) in our inverted map
 #pragma omp parallel for collapse(2)
@@ -778,15 +757,9 @@ static void despeckle_inplace(CImg<uint>& input_image, const uint threshold, boo
     }
 }
 
-static int clampi(int v, int lo, int hi)
-{
-    return (v < lo) ? lo : (v > hi) ? hi : v;
-}
+static int clampi(int v, int lo, int hi) { return (v < lo) ? lo : (v > hi) ? hi : v; }
 
-static float clampf(float v, float lo, float hi)
-{
-    return (v < lo) ? lo : (v > hi) ? hi : v;
-}
+static float clampf(float v, float lo, float hi) { return (v < lo) ? lo : (v > hi) ? hi : v; }
 
 static uint clamp_u8_from_float(float v)
 {
@@ -802,7 +775,7 @@ static uint clamp_u8_from_float(float v)
  * Fast separable Gaussian blur (Neumann/replicate boundary), in-place.
  * Extra memory: O(max(w,h)) per thread (row/col scratch).
  */
-static void gaussian_blur_inplace_omp(CImg<uint>& img, float sigma, int truncate = 3)
+static void gaussian_blur_inplace_omp(CImg<uint> &img, float sigma, int truncate = 3)
 {
     if (img.is_empty() || sigma <= 0.0f)
         return;
@@ -829,7 +802,7 @@ static void gaussian_blur_inplace_omp(CImg<uint>& img, float sigma, int truncate
             sum += v;
         }
         const float invsum = 1.0f / sum;
-        for (float& v : kernel)
+        for (float &v : kernel)
             v *= invsum;
     }
 
@@ -864,7 +837,7 @@ static void gaussian_blur_inplace_omp(CImg<uint>& img, float sigma, int truncate
                     for (int x = r; x < w - r; ++x)
                     {
                         float acc = 0.0f;
-#pragma omp simd reduction(+:acc)
+#pragma omp simd reduction(+ : acc)
                         for (int k = -r; k <= r; ++k)
                         {
                             acc += kernel[k + r] * (float)row[x + k];
@@ -922,7 +895,7 @@ static void gaussian_blur_inplace_omp(CImg<uint>& img, float sigma, int truncate
                     for (int y = r; y < h - r; ++y)
                     {
                         float acc = 0.0f;
-#pragma omp simd reduction(+:acc)
+#pragma omp simd reduction(+ : acc)
                         for (int k = -r; k <= r; ++k)
                         {
                             acc += kernel[k + r] * (float)base[(size_t)(y + k) * w + x];
@@ -958,14 +931,9 @@ static void gaussian_blur_inplace_omp(CImg<uint>& img, float sigma, int truncate
 // Parallel: OpenMP over (channel, depth, row-block).
 
 // In-place adaptive Gaussian blur
-static void adaptive_gaussian_blur_inplace_omp(
-    CImg<uint>& img,
-    float sigma_low,
-    float sigma_high,
-    float edge_thresh, // gradient threshold controlling blend (typical 30..80 for 8-bit)
-    int truncate = 3,
-    int block_h = 64
-    )
+static void adaptive_gaussian_blur_inplace_omp(CImg<uint> &img, float sigma_low, float sigma_high,
+                                               float edge_thresh, // gradient threshold controlling blend (typical 30..80 for 8-bit)
+                                               int truncate = 3, int block_h = 64)
 {
     if (img.is_empty())
         return;
@@ -1033,7 +1001,7 @@ static void adaptive_gaussian_blur_inplace_omp(
                 {
                     const int by = (y - y0) + 1; // offset into lowbuf (accounts for halo)
                     const uint* r_up = lowbuf.data() + (size_t)(by - 1) * w;
-                    const uint* r_mid = lowbuf.data() + (size_t)(by) * w;
+                    const uint* r_mid = lowbuf.data() + (size_t)(by)*w;
                     const uint* r_down = lowbuf.data() + (size_t)(by + 1) * w;
 
                     uint* out = low_base + (size_t)y * w;
@@ -1091,7 +1059,7 @@ static void adaptive_gaussian_blur_inplace_omp(
 }
 
 // --------- Median-of-9 (3x3) fast network ----------
-static inline void pix_sort(uint& a, uint& b)
+static inline void pix_sort(uint &a, uint &b)
 {
     if (a > b)
     {
@@ -1101,9 +1069,7 @@ static inline void pix_sort(uint& a, uint& b)
     }
 }
 
-static inline uint median9(uint p0, uint p1, uint p2,
-                           uint p3, uint p4, uint p5,
-                           uint p6, uint p7, uint p8)
+static inline uint median9(uint p0, uint p1, uint p2, uint p3, uint p4, uint p5, uint p6, uint p7, uint p8)
 {
     // Proven correct "opt_med9" style network
     pix_sort(p1, p2);
@@ -1129,27 +1095,20 @@ static inline uint median9(uint p0, uint p1, uint p2,
 }
 
 // ---------- Histogram helpers for adaptive median ----------
-static inline void hist_add(std::array<uint16_t, 256>& hist,
-                            std::array<uint8_t, 256>& touched,
-                            int& ntouched,
-                            uint v)
+static inline void hist_add(std::array<uint16_t, 256> &hist, std::array<uint8_t, 256> &touched, int &ntouched, uint v)
 {
     const uint8_t b = (uint8_t)v;
     if (hist[b]++ == 0)
         touched[ntouched++] = b;
 }
 
-static inline void hist_reset(std::array<uint16_t, 256>& hist,
-                              const std::array<uint8_t, 256>& touched,
-                              int ntouched)
+static inline void hist_reset(std::array<uint16_t, 256> &hist, const std::array<uint8_t, 256> &touched, int ntouched)
 {
     for (int i = 0; i < ntouched; ++i)
         hist[touched[i]] = 0;
 }
 
-static inline void hist_min_med_max(const std::array<uint16_t, 256>& hist,
-                                    int total,
-                                    uint& zmin, uint& zmed, uint& zmax)
+static inline void hist_min_med_max(const std::array<uint16_t, 256> &hist, int total, uint &zmin, uint &zmed, uint &zmax)
 {
     // min
     int i = 0;
@@ -1187,7 +1146,7 @@ static inline void hist_min_med_max(const std::array<uint16_t, 256>& hist,
  *   max_window_size: odd >=3 (typical 5/7/9)
  *   block_h: row-block height for cache + in-place safety
  */
-static void adaptive_median_filter_inplace_omp(CImg<uint>& img, int max_window_size = 7, int block_h = 64)
+static void adaptive_median_filter_inplace_omp(CImg<uint> &img, int max_window_size = 7, int block_h = 64)
 {
     if (img.is_empty())
         return;
@@ -1241,7 +1200,7 @@ static void adaptive_median_filter_inplace_omp(CImg<uint>& img, int max_window_s
                     uint* out = base + (size_t)y * w;
 
                     const uint* r_m1 = src.data() + (size_t)(by - 1) * w;
-                    const uint* r_0 = src.data() + (size_t)(by) * w;
+                    const uint* r_0 = src.data() + (size_t)(by)*w;
                     const uint* r_p1 = src.data() + (size_t)(by + 1) * w;
 
                     for (int x = 0; x < w; ++x)
@@ -1335,7 +1294,7 @@ static void adaptive_median_filter_inplace_omp(CImg<uint>& img, int max_window_s
 
 // ===================== Noise / edge estimators (parallel + histogram based) =====================
 
-static float estimate_noise_sigma_mad_diffs_omp(const CImg<uint>& gray, int step = 2)
+static float estimate_noise_sigma_mad_diffs_omp(const CImg<uint> &gray, int step = 2)
 {
     // Robust sigma estimate from median absolute differences (horizontal+vertical).
     // For Gaussian noise: median(|diff|) ≈ 0.6745 * sigma * sqrt(2)
@@ -1400,7 +1359,7 @@ static float estimate_noise_sigma_mad_diffs_omp(const CImg<uint>& gray, int step
     return (denom > 0.0f) ? ((float)med / denom) : 0.0f;
 }
 
-static float estimate_gradient_percentile_omp(const CImg<uint>& gray, float pct = 0.75f, int step = 2)
+static float estimate_gradient_percentile_omp(const CImg<uint> &gray, float pct = 0.75f, int step = 2)
 {
     // Gradient magnitude approx = |dx| + |dy| in [0..510]. Histogram percentile.
     const int w = gray.width(), h = gray.height();
@@ -1470,7 +1429,7 @@ struct AdaptiveGaussianParams
     float edge_thresh;
 };
 
-static AdaptiveGaussianParams choose_sigmas_for_text_enhancement(const CImg<uint>& gray)
+static AdaptiveGaussianParams choose_sigmas_for_text_enhancement(const CImg<uint> &gray)
 {
     // Require grayscale 1-channel image.
     const float noise = estimate_noise_sigma_mad_diffs_omp(gray, 2);
@@ -1495,7 +1454,7 @@ static AdaptiveGaussianParams choose_sigmas_for_text_enhancement(const CImg<uint
     return {sigma_low, sigma_high, edge_thresh};
 }
 
-static int choose_adaptive_median_max_window(const CImg<uint>& gray)
+static int choose_adaptive_median_max_window(const CImg<uint> &gray)
 {
     // Pick max window size based on estimated noise.
     const float noise = estimate_noise_sigma_mad_diffs_omp(gray, 2);
@@ -1516,19 +1475,16 @@ namespace ite
         return image;
     }
 
-    void writeimage(const CImg<uint>& image, std::string filepath)
-    {
-        image.save(filepath.c_str());
-    }
+    void writeimage(const CImg<uint> &image, std::string filepath) { image.save(filepath.c_str()); }
 
-    CImg<uint> to_grayscale(const CImg<uint>& input_image)
+    CImg<uint> to_grayscale(const CImg<uint> &input_image)
     {
         CImg<uint> output_image = input_image;
         to_grayscale_inplace(output_image);
         return output_image;
     }
 
-    CImg<uint> binarize(const CImg<uint>& input_image)
+    CImg<uint> binarize(const CImg<uint> &input_image)
     {
         CImg<uint> output_image = input_image;
 
@@ -1539,84 +1495,77 @@ namespace ite
         return output_image;
     }
 
-    CImg<uint> gaussian_blur(const CImg<uint>& input_image, float sigma, int truncate)
+    CImg<uint> gaussian_blur(const CImg<uint> &input_image, float sigma, int truncate)
     {
         CImg<uint> output_image = input_image;
         gaussian_blur_inplace_omp(output_image, sigma, truncate);
         return output_image;
     }
 
-    CImg<uint> gaussian_blur_std(const CImg<uint>& input_image, float sigma)
+    CImg<uint> gaussian_blur_std(const CImg<uint> &input_image, float sigma)
     {
         CImg<uint> output_image = input_image;
         gaussian_denoise_inplace(output_image, sigma);
         return output_image;
     }
 
-    CImg<uint> adaptive_median_filter(const CImg<uint>& input_image, int block_h)
+    CImg<uint> adaptive_median_filter(const CImg<uint> &input_image, int block_h)
     {
         CImg<uint> output_image = input_image;
         adaptive_median_filter_inplace_omp(output_image, block_h);
         return output_image;
     }
 
-    CImg<uint> gaussian_denoise(const CImg<uint>& input_image, float sigma)
+    CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma)
     {
         CImg<uint> output_image = input_image;
         gaussian_blur_inplace_omp(output_image, sigma, /*truncate=*/3);
         return output_image;
     }
 
-    CImg<uint> adaptive_gaussian_blur(
-        const CImg<uint>& input_image,
-        float sigma_low,
-        float sigma_high,
-        float edge_thresh,
-        int truncate,
-        int block_h
-        )
+    CImg<uint> adaptive_gaussian_blur(const CImg<uint> &input_image, float sigma_low, float sigma_high, float edge_thresh, int truncate, int block_h)
     {
         CImg<uint> output_image = input_image;
         adaptive_gaussian_blur_inplace_omp(output_image, sigma_low, sigma_high, edge_thresh, truncate, block_h);
         return output_image;
     }
 
-    CImg<uint> dilation(const CImg<uint>& input_image, int kernel_size)
+    CImg<uint> dilation(const CImg<uint> &input_image, int kernel_size)
     {
         CImg<uint> output_image = input_image;
         dilation_inplace(output_image, kernel_size);
         return output_image;
     }
 
-    CImg<uint> erosion(const CImg<uint>& input_image, int kernel_size)
+    CImg<uint> erosion(const CImg<uint> &input_image, int kernel_size)
     {
         CImg<uint> output_image = input_image;
         erosion_inplace(output_image, kernel_size);
         return output_image;
     }
 
-    CImg<uint> deskew(const CImg<uint>& input_image)
+    CImg<uint> deskew(const CImg<uint> &input_image)
     {
         CImg<uint> output_image = input_image;
         deskew_inplace(output_image);
         return output_image;
     }
 
-    CImg<uint> contrast_enhancement(const CImg<uint>& input_image)
+    CImg<uint> contrast_enhancement(const CImg<uint> &input_image)
     {
         CImg<uint> output_image = input_image;
         contrast_enhancement_inplace(output_image);
         return output_image;
     }
 
-    CImg<uint> despeckle(const CImg<uint>& input_image, uint threshold, bool diagonal_connections)
+    CImg<uint> despeckle(const CImg<uint> &input_image, uint threshold, bool diagonal_connections)
     {
         CImg<uint> output_image = input_image;
         despeckle_inplace(output_image, threshold, diagonal_connections);
         return output_image;
     }
 
-    CImg<uint> median_filter_adaptive(const CImg<uint>& input_image, int max_window_size, int block_h)
+    CImg<uint> median_filter_adaptive(const CImg<uint> &input_image, int max_window_size, int block_h)
     {
         CImg<uint> out = input_image;
         adaptive_median_filter_inplace_omp(out, max_window_size, block_h);
@@ -1624,27 +1573,13 @@ namespace ite
     }
 
     // Auto-choose max window size for adaptive median
-    int choose_median_max_window_for_text(const CImg<uint>& gray_image)
-    {
-        return choose_adaptive_median_max_window(gray_image);
-    }
+    int choose_median_max_window_for_text(const CImg<uint> &gray_image) { return choose_adaptive_median_max_window(gray_image); }
 
     // Auto-choose sigmas/thresholds for adaptive Gaussian blur
-    AdaptiveGaussianParams choose_sigmas_for_text(const CImg<uint>& gray_image)
-    {
-        return choose_sigmas_for_text_enhancement(gray_image);
-    }
+    AdaptiveGaussianParams choose_sigmas_for_text(const CImg<uint> &gray_image) { return choose_sigmas_for_text_enhancement(gray_image); }
 
-    CImg<uint> enhance(
-        const CImg<uint>& input_image,
-        float sigma,
-        int kernel_size,
-        int despeckle_threshold,
-        bool diagonal_connections,
-        bool do_erosion,
-        bool do_dilation,
-        bool do_despeckle,
-        bool do_deskew)
+    CImg<uint> enhance(const CImg<uint> &input_image, float sigma, int kernel_size, int despeckle_threshold, bool diagonal_connections, bool do_erosion,
+                       bool do_dilation, bool do_despeckle, bool do_deskew)
     {
         CImg<uint> l_image = input_image;
 
@@ -1701,4 +1636,4 @@ namespace ite
 
         return l_image;
     }
-}
+} // namespace ite

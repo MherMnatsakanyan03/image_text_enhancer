@@ -7,13 +7,10 @@ AlignConsecutiveDeclarations: false
 AlignOperands: false
 AlignTrailingComments: false
 AlwaysBreakTemplateDeclarations: Yes
-
-# <<< WICHTIG: Öffnende { in nächste Zeile >>>
 BreakBeforeBraces: Allman
-
 BreakConstructorInitializers: AfterColon
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit: 120
+ColumnLimit: 160
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 IncludeCategories:
   - Regex: '^<.*'
@@ -37,4 +34,5 @@ SpacesInConditionalStatement: false
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 TabWidth: 4
+ReferenceAlignment: Right
 ...
