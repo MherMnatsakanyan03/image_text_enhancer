@@ -1,13 +1,13 @@
 FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        v3.11.0
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.11.0
 )
 
 FetchContent_MakeAvailable(Catch2)
 
 set(Link_Libs
-    PRIVATE
+        PRIVATE
         ITE_Libs
         Catch2::Catch2WithMain # Links the Catch2 implementation
 )
@@ -26,7 +26,8 @@ add_ite_test(contrast_enhancement_test color/ite.contrast.tests.cpp)
 add_ite_test(binarization_test binarization/ite.binarize.tests.cpp)
 
 # Denoising tests
-add_ite_test(denoising_test filters/ite.denoise.tests.cpp)
+add_ite_test(simple_gaussian_test filters/ite.simple_gaussian.tests.cpp)
+add_ite_test(adaptive_gaussian_test filters/ite.adaptive_gaussian.tests.cpp)
 add_ite_test(despeckling_test filters/ite.despeckle.tests.cpp)
 
 # Deskew tests

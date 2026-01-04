@@ -11,15 +11,15 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
         input(2, 2) = 255; // Set center to max
 
         // WHEN: We apply a gaussian blur with sigma 1.0
-        CImg<uint> output = ite::gaussian_denoise(input, 1.0f);
+        CImg<uint> output = ite::simple_gaussian_blur(input, 1.0f);
 
         // THEN: The center value decreases and neighbors increase
         // The energy spreads out like a bell curve
         CHECK(output(2, 2) < 255); // Center lost energy to neighbors
         // Check whether the sum is approximately conserved
         double total_output = output.sum();
-        
-        CHECK(total_output > 200);  // Ensure we retained most of the energy
+
+        CHECK(total_output > 200); // Ensure we retained most of the energy
         CHECK(total_output <= 255); // Energy should not increase
 
         // Check that immediate neighbors received energy
@@ -40,7 +40,7 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
         CImg<uint> input(5, 5, 1, 1, 100);
 
         // WHEN: We apply a strong blur
-        CImg<uint> output = ite::gaussian_denoise(input, 5.0f, 1);
+        CImg<uint> output = ite::simple_gaussian_blur(input, 5.0f, 1);
 
         // THEN: The image should remain identical
         CHECK(output(0, 0) == 100);
@@ -51,13 +51,10 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
     SECTION("Sigma 0 produces no change")
     {
         // GIVEN: A checkerboard-like image
-        CImg<uint> input(3, 3, 1, 1, 
-                         0, 255, 0,
-                         255, 0, 255,
-                         0, 255, 0);
-        
+        CImg<uint> input(3, 3, 1, 1, 0, 255, 0, 255, 0, 255, 0, 255, 0);
+
         // WHEN: We blur with sigma 0
-        CImg<uint> output = ite::gaussian_denoise(input, 0.0f, 1);
+        CImg<uint> output = ite::simple_gaussian_blur(input, 0.0f, 1);
 
         // THEN: Output should match input exactly
         CHECK(output(0, 0) == 0);

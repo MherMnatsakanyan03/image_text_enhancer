@@ -23,7 +23,7 @@ namespace ite::filters
     // In-place adaptive Gaussian blur
     void adaptive_gaussian_blur_omp(CImg<uint> &img, float sigma_low, float sigma_high,
                                     float edge_thresh, // gradient threshold controlling blend (typical 30..80 for 8-bit)
-                                    int truncate = 3, int block_h = 64)
+                                    int truncate, int block_h)
     {
         if (img.is_empty())
             return;

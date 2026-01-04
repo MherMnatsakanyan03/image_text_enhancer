@@ -44,14 +44,27 @@ namespace ite
     CImg<uint> binarize(const CImg<uint> &input_image);
 
     /**
-     * @brief Applies a Gaussian blur to denoise the image.
+     * @brief Applies a simple Gaussian blur to denoise the image.
      * Best used on a grayscale image before binarization.
      * @param input_image The source image.
      * @param sigma The standard deviation of the Gaussian kernel. Larger values mean more blur.
-     * * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 1 = Neumann).
+     * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 1 = Neumann).
      * @return A new, blurred image.
      */
-    CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma = 1.0f, int boundary_conditions = 1);
+    CImg<uint> simple_gaussian_blur(const CImg<uint> &input_image, float sigma = 1.0f, int boundary_conditions = 1);
+
+    /**
+     * @brief Applies an adaptive Gaussian blur to the image.
+     * This method blurs less around edges and more in flat regions.
+     * @param input_image The source image.
+     * @param sigma_low The standard deviation for edge regions.
+     * @param sigma_high The standard deviation for flat regions.
+     * @param edge_thresh The variance threshold to distinguish edges.
+     * @param truncate Factor to determine kernel size from sigma (default: 3).
+     * @param block_h Height of the blocks for parallel processing (default: 64).
+     * @return A new, adaptively blurred image.
+     */
+    CImg<uint> adaptive_gaussian_blur(const CImg<uint> &input_image, float sigma_low, float sigma_high, float edge_thresh, int truncate = 3, int block_h = 64);
 
     /**
      * @brief Performs morphological dilation on the image.
