@@ -18,7 +18,8 @@ namespace ite::filters
      *
      * @param image The image to blur (modified in-place).
      * @param sigma The standard deviation of the Gaussian kernel.
+     * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 0 = Dirichlet).
      */
-    void gaussian_blur(CImg<uint> &image, float sigma = 1.0f);
+    void gaussian_blur(CImg<uint> &image, float sigma = 1.0f, int boundary_conditions = 0);
 
 } // namespace ite::filters

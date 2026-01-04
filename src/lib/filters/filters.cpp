@@ -8,163 +8,10 @@
 namespace ite::filters
 {
 
-    void gaussian_blur(CImg<uint> &image, float sigma)
+    void gaussian_blur(CImg<uint> &image, float sigma, int boundary_conditions)
     {
-        // CImg blur: sigma, boundary_conditions (1=neumann), is_gaussian (true)
-        image.blur(sigma, 1, true);
-    }
-
-    /**
-     * Fast separable Gaussian blur (Neumann/replicate boundary), in-place.
-     * Extra memory: O(max(w,h)) per thread (row/col scratch).
-     */
-    void gaussian_blur_omp(CImg<uint> &img, float sigma, int truncate = 3)
-    {
-        if (img.is_empty() || sigma <= 0.0f)
-            return;
-
-        const int w = img.width();
-        const int h = img.height();
-        const int d = img.depth();
-        const int s = img.spectrum();
-
-        if (w <= 1 && h <= 1)
-            return;
-
-        const int r = std::max(1, (int)std::ceil((float)truncate * sigma));
-        const int ksz = 2 * r + 1;
-
-        std::vector<float> kernel(ksz);
-        {
-            const float inv2s2 = 1.0f / (2.0f * sigma * sigma);
-            float sum = 0.0f;
-            for (int i = -r; i <= r; ++i)
-            {
-                float v = std::exp(-(float)(i * i) * inv2s2);
-                kernel[i + r] = v;
-                sum += v;
-            }
-            const float invsum = 1.0f / sum;
-            for (float &v : kernel)
-                v *= invsum;
-        }
-
-        // --- Horizontal pass (write back in-place; safe with per-row scratch)
-#pragma omp parallel default(none) shared(img, kernel, w, h, d, s, r)
-        {
-            std::vector<float> tmp((size_t)w);
-
-#pragma omp for collapse(3) schedule(static)
-            for (int c = 0; c < s; ++c)
-            {
-                for (int z = 0; z < d; ++z)
-                {
-                    for (int y = 0; y < h; ++y)
-                    {
-                        uint* base = img.data(0, 0, z, c);
-                        uint* row = base + (size_t)y * w;
-
-                        // Left edge
-                        for (int x = 0; x < std::min(r, w); ++x)
-                        {
-                            float acc = 0.0f;
-                            for (int k = -r; k <= r; ++k)
-                            {
-                                const int xx = utils::clampi(x + k, 0, w - 1);
-                                acc += kernel[k + r] * (float)row[xx];
-                            }
-                            tmp[x] = acc;
-                        }
-
-                        // Center (no clamps)
-                        for (int x = r; x < w - r; ++x)
-                        {
-                            float acc = 0.0f;
-#pragma omp simd reduction(+ : acc)
-                            for (int k = -r; k <= r; ++k)
-                            {
-                                acc += kernel[k + r] * (float)row[x + k];
-                            }
-                            tmp[x] = acc;
-                        }
-
-                        // Right edge
-                        for (int x = std::max(w - r, 0); x < w; ++x)
-                        {
-                            float acc = 0.0f;
-                            for (int k = -r; k <= r; ++k)
-                            {
-                                const int xx = utils::clampi(x + k, 0, w - 1);
-                                acc += kernel[k + r] * (float)row[xx];
-                            }
-                            tmp[x] = acc;
-                        }
-
-                        // Write back
-                        for (int x = 0; x < w; ++x)
-                            row[x] = utils::clamp_float_to_u8(tmp[x]);
-                    }
-                }
-            }
-        }
-
-        // --- Vertical pass (must buffer full column results before writing to avoid read-after-write)
-#pragma omp parallel default(none) shared(img, kernel, w, h, d, s, r)
-        {
-            std::vector<float> tmp((size_t)h);
-
-#pragma omp for collapse(3) schedule(static)
-            for (int c = 0; c < s; ++c)
-            {
-                for (int z = 0; z < d; ++z)
-                {
-                    for (int x = 0; x < w; ++x)
-                    {
-                        uint* base = img.data(0, 0, z, c);
-
-                        // Top edge
-                        for (int y = 0; y < std::min(r, h); ++y)
-                        {
-                            float acc = 0.0f;
-                            for (int k = -r; k <= r; ++k)
-                            {
-                                const int yy = utils::clampi(y + k, 0, h - 1);
-                                acc += kernel[k + r] * (float)base[(size_t)yy * w + x];
-                            }
-                            tmp[y] = acc;
-                        }
-
-                        // Center (no clamps)
-                        for (int y = r; y < h - r; ++y)
-                        {
-                            float acc = 0.0f;
-#pragma omp simd reduction(+ : acc)
-                            for (int k = -r; k <= r; ++k)
-                            {
-                                acc += kernel[k + r] * (float)base[(size_t)(y + k) * w + x];
-                            }
-                            tmp[y] = acc;
-                        }
-
-                        // Bottom edge
-                        for (int y = std::max(h - r, 0); y < h; ++y)
-                        {
-                            float acc = 0.0f;
-                            for (int k = -r; k <= r; ++k)
-                            {
-                                const int yy = utils::clampi(y + k, 0, h - 1);
-                                acc += kernel[k + r] * (float)base[(size_t)yy * w + x];
-                            }
-                            tmp[y] = acc;
-                        }
-
-                        // Write back
-                        for (int y = 0; y < h; ++y)
-                            base[(size_t)y * w + x] = utils::clamp_float_to_u8(tmp[y]);
-                    }
-                }
-            }
-        }
+        // CImg blur: sigma, boundary_conditions (0=Dirichlet), is_gaussian (true)
+        image.blur(sigma, boundary_conditions, true);
     }
 
     // ================= Adaptive Gaussian blur (edge-adaptive blend of two Gaussians) =================
@@ -207,11 +54,11 @@ namespace ite::filters
 
         // 1) Compute the high-sigma blur into a single extra image
         CImg<uint> high = img;
-        gaussian_blur_omp(high, sigma_high, truncate);
+        gaussian_blur(high, sigma_high, truncate);
 
         // 2) Compute the low-sigma blur in-place (img becomes "low")
         if (sigma_low > 0.0f)
-            gaussian_blur_omp(img, sigma_low, truncate);
+            gaussian_blur(img, sigma_low, truncate);
 
         // 3) Blend using edge strength from the low-blur image (row-block buffering => safe in-place write)
         const float invT = (edge_thresh > 1e-6f) ? (1.0f / edge_thresh) : 0.0f;
