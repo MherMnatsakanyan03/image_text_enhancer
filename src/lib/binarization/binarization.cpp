@@ -13,13 +13,13 @@ namespace ite::binarization
     {
         if (input_image.spectrum() != 1)
         {
-            throw std::runtime_error("Sauvola binarization requires a grayscale image.");
+            throw std::runtime_error("Sauvola requires a grayscale image.");
         }
 
-        CImg<double> img_double = input_image;
+        CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
 
         CImg<double> integral_img = core::calculate_integral_image(img_double);
-        CImg<double> integral_sq_img = core::calculate_integral_image(img_double.get_sqr());
+        CImg<double> integral_sq_img = core::calculate_integral_image(img_double.get_sqr()); // Integral of (pixel*pixel)
 
         CImg<uint> output_image(input_image.width(), input_image.height(), input_image.depth(), 1);
         const float R = 128.0f; // Max std. dev (for normalization)
@@ -38,7 +38,7 @@ namespace ite::binarization
                     const int x2 = std::min(input_image.width() - 1, x + w_half);
                     const int y2 = std::min(input_image.height() - 1, y + w_half);
 
-                    const double N = (x2 - x1 + 1) * (y2 - y1 + 1);
+                    const double N = (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
 
                     // Get sum and sum of squares from integral images
                     const double sum = core::get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
@@ -56,6 +56,8 @@ namespace ite::binarization
                 }
             }
         }
+
+        input_image = output_image;
     }
 
     int compute_otsu_threshold(const CImg<unsigned char> &g)
