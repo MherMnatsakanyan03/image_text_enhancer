@@ -13,6 +13,7 @@ namespace ite::core
             // First row
             for (int x = 0; x < src.width(); ++x)
             {
+                // Add current pixel to the sum of previous pixels in the row
                 integral_img(x, 0, z, c) = src(x, 0, z, c) + (x > 0 ? integral_img(x - 1, 0, z, c) : 0.0);
             }
             // Remaining rows
@@ -21,6 +22,7 @@ namespace ite::core
                 double row_sum = 0.0;
                 for (int x = 0; x < src.width(); ++x)
                 {
+                    // Add current pixel to the sum of previous pixels in the row
                     row_sum += src(x, y, z, c);
                     integral_img(x, y, z, c) = row_sum + integral_img(x, y - 1, z, c);
                 }
