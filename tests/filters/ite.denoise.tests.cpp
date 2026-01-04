@@ -40,7 +40,7 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
         CImg<uint> input(5, 5, 1, 1, 100);
 
         // WHEN: We apply a strong blur
-        CImg<uint> output = ite::gaussian_denoise(input, 5.0f);
+        CImg<uint> output = ite::gaussian_denoise(input, 5.0f, 1);
 
         // THEN: The image should remain identical
         CHECK(output(0, 0) == 100);
@@ -57,7 +57,7 @@ TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
                          0, 255, 0);
         
         // WHEN: We blur with sigma 0
-        CImg<uint> output = ite::gaussian_denoise(input, 0.0f);
+        CImg<uint> output = ite::gaussian_denoise(input, 0.0f, 1);
 
         // THEN: Output should match input exactly
         CHECK(output(0, 0) == 0);

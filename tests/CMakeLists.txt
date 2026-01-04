@@ -12,42 +12,26 @@ set(Link_Libs
         Catch2::Catch2WithMain # Links the Catch2 implementation
 )
 
-# Grayscale tests
-add_executable(grayscale_test ite.grayscale.tests.cpp)
-target_link_libraries(grayscale_test ${Link_Libs})
-add_test(NAME grayscale_test COMMAND grayscale_test)
+function(add_ite_test test_name test_source)
+    add_executable(${test_name} ${test_source})
+    target_link_libraries(${test_name} ${Link_Libs})
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endfunction()
+
+# Color tests
+add_ite_test(grayscale_test color/ite.grayscale.tests.cpp)
+add_ite_test(contrast_enhancement_test color/ite.contrast.tests.cpp)
 
 # Binarization tests
-add_executable(binarization_test ite.binarize.tests.cpp)
-target_link_libraries(binarization_test ${Link_Libs})
-add_test(NAME binarization_test COMMAND binarization_test)
+add_ite_test(binarization_test binarization/ite.binarize.tests.cpp)
 
 # Denoising tests
-add_executable(denoising_test ite.denoise.tests.cpp)
-target_link_libraries(denoising_test ${Link_Libs})
-add_test(NAME denoising_test COMMAND denoising_test)
+add_ite_test(denoising_test filters/ite.denoise.tests.cpp)
+add_ite_test(despeckling_test filters/ite.despeckle.tests.cpp)
 
 # Deskew tests
-add_executable(deskew_test ite.deskew.tests.cpp)
-target_link_libraries(deskew_test ${Link_Libs})
-add_test(NAME deskew_test COMMAND deskew_test)
+add_ite_test(deskew_test geometry/ite.deskew.tests.cpp)
 
-# Dilation tests
-add_executable(dilation_test ite.dilation.tests.cpp)
-target_link_libraries(dilation_test ${Link_Libs})
-add_test(NAME dilation_test COMMAND dilation_test)
-
-# Erosion tests
-add_executable(erosion_test ite.erosion.tests.cpp)
-target_link_libraries(erosion_test ${Link_Libs})
-add_test(NAME erosion_test COMMAND erosion_test)
-
-# Contrast enhancement tests
-add_executable(contrast_enhancement_test ite.contrast.tests.cpp)
-target_link_libraries(contrast_enhancement_test ${Link_Libs})
-add_test(NAME contrast_enhancement_test COMMAND contrast_enhancement_test)
-
-# Despeckling tests
-add_executable(despeckling_test ite.despeckle.tests.cpp)
-target_link_libraries(despeckling_test ${Link_Libs})
-add_test(NAME despeckling_test COMMAND despeckling_test)
+# Morphology tests
+add_ite_test(dilation_test morphology/ite.dilation.tests.cpp)
+add_ite_test(erosion_test morphology/ite.erosion.tests.cpp)
