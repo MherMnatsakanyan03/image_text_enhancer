@@ -112,8 +112,7 @@ namespace ite
     // Full Enhancement Pipeline
     // ============================================================================
 
-    CImg<uint> enhance(const CImg<uint> &input_image, float sigma, int kernel_size, int despeckle_threshold, bool diagonal_connections, bool do_erosion,
-                       bool do_dilation, bool do_despeckle, bool do_deskew)
+    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt)
     {
         CImg<uint> result = input_image;
 
@@ -121,7 +120,7 @@ namespace ite
         color::to_grayscale_rec601(result);
 
         // 2. Deskew if requested
-        if (do_deskew)
+        if (opt.do_deskew)
         {
             geometry::deskew_projection_profile(result);
         }
@@ -130,28 +129,28 @@ namespace ite
         color::contrast_linear_stretch(result);
 
         // 4. Optional denoising (currently disabled in pipeline, but sigma is available)
-        (void)sigma; // Reserved for future use
-        // filters::gaussian_blur(result, sigma);
+        (void)opt.sigma; // Reserved for future use
+        // filters::gaussian_blur(result, opt.sigma);
         // filters::median_denoise(result, 3);
 
         // 5. Binarization
-        binarization::binarize_sauvola(result, 15, 0.2f, 4.0f);
+        binarization::binarize_sauvola(result, 15, 0.2f, 0.0f);
 
         // 6. Despeckle if requested
-        if (do_despeckle)
+        if (opt.do_despeckle)
         {
-            morphology::despeckle_ccl(result, static_cast<uint>(despeckle_threshold), diagonal_connections);
+            morphology::despeckle_ccl(result, static_cast<uint>(opt.despeckle_threshold), opt.diagonal_connections);
         }
 
         // 7. Morphological operations
-        if (do_dilation)
+        if (opt.do_dilation)
         {
-            morphology::dilation_square(result, kernel_size);
+            morphology::dilation_square(result, opt.kernel_size);
         }
 
-        if (do_erosion)
+        if (opt.do_erosion)
         {
-            morphology::erosion_square(result, kernel_size);
+            morphology::erosion_square(result, opt.kernel_size);
         }
 
         return result;

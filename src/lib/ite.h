@@ -98,20 +98,77 @@ namespace ite
     CImg<uint> despeckle(const CImg<uint> &input_image, uint threshold, bool diagonal_connections = true);
 
     /**
-     * @brief Runs the full pipeline for text enhancement.
-     * Applies a logical sequence of operations (e.g., grayscale, denoise, binarize)
-     * to produce an image optimized for OCR.
-     * @param input_image The original, unprocessed image.
-     * @param sigma The standard deviation for Gaussian denoising (default 1.0f).
-     * @param kernel_size The structuring element size for morphological operations (default 3).
-     * @param despeckle_threshold The size threshold for despeckling (default 5).
-     * @param diagonal_connections Whether to consider diagonal connections in despeckling (default true).
-     * @param do_erosion Whether to perform erosion (default false).
-     * @param do_dilation Whether to perform dilation (default true).
-     * @param do_despeckle Whether to perform despeckling (default true).
-     * @param do_deskew Whether to perform deskewing (default true).
-     * @return A new, enhanced image ready for OCR.
+     * @brief Options for the `enhance` function.
      */
-    CImg<uint> enhance(const CImg<uint> &input_image, float sigma = 1.0f, int kernel_size = 3, int despeckle_threshold = 5, bool diagonal_connections = true,
-                       bool do_erosion = false, bool do_dilation = true, bool do_despeckle = true, bool do_deskew = true);
+    struct EnhanceOptions
+    {
+        /** @brief The standard deviation for Gaussian denoising (default 1.0f). */
+        float sigma = 1.0f;
+        /** @brief The structuring element size for morphological operations (default 3). */
+        int kernel_size = 5;
+        /** @brief The size threshold for despeckling (default 5). */
+        int despeckle_threshold = 0;
+
+        /** @brief Whether to consider diagonal connections in despeckling (default true). */
+        bool diagonal_connections = true;
+        /** @brief Whether to perform erosion (default false). */
+        bool do_erosion = false;
+        /** @brief Whether to perform dilation (default true). */
+        bool do_dilation = false;
+        /** @brief Whether to perform despeckling (default true). */
+        bool do_despeckle = true;
+        /** @brief Whether to perform deskewing (default true). */
+        bool do_deskew = false;
+
+        // Optional: convenience fluent setters
+        EnhanceOptions &Sigma(float v)
+        {
+            sigma = v;
+            return *this;
+        }
+        EnhanceOptions &KernelSize(int v)
+        {
+            kernel_size = v;
+            return *this;
+        }
+        EnhanceOptions &DespeckleThreshold(int v)
+        {
+            despeckle_threshold = v;
+            return *this;
+        }
+        EnhanceOptions &DiagonalConnections(bool v)
+        {
+            diagonal_connections = v;
+            return *this;
+        }
+        EnhanceOptions &Erosion(bool v = true)
+        {
+            do_erosion = v;
+            return *this;
+        }
+        EnhanceOptions &Dilation(bool v = true)
+        {
+            do_dilation = v;
+            return *this;
+        }
+        EnhanceOptions &Despeckle(bool v = true)
+        {
+            do_despeckle = v;
+            return *this;
+        }
+        EnhanceOptions &Deskew(bool v = true)
+        {
+            do_deskew = v;
+            return *this;
+        }
+    };
+
+    /**
+     * @brief Runs the full pipeline for text enhancement.
+     * This is a convenience function that chains together the most common operations.
+     * @param input_image The source image.
+     * @param opt The enhancement options.
+     * @return An enhanced image, ready for OCR.
+     */
+    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt = {});
 } // namespace ite
