@@ -102,13 +102,11 @@ namespace ite
      */
     struct EnhanceOptions
     {
+        // --- Gaussian Denoising Options ---
         /** @brief The standard deviation for Gaussian denoising (default 1.0f). */
         float sigma = 1.0f;
-        /** @brief The structuring element size for morphological operations (default 3). */
-        int kernel_size = 5;
-        /** @brief The size threshold for despeckling (default 5). */
-        int despeckle_threshold = 0;
 
+        // --- Morphology Options ---
         /** @brief Whether to consider diagonal connections in despeckling (default true). */
         bool diagonal_connections = true;
         /** @brief Whether to perform erosion (default false). */
@@ -117,8 +115,22 @@ namespace ite
         bool do_dilation = false;
         /** @brief Whether to perform despeckling (default true). */
         bool do_despeckle = true;
+        /** @brief The structuring element size for morphological operations (default 3). */
+        int kernel_size = 5;
+        /** @brief The size threshold for despeckling (default 5). */
+        int despeckle_threshold = 0;
+
+        // --- Geometry Options ---
         /** @brief Whether to perform deskewing (default true). */
         bool do_deskew = false;
+
+        // --- Sauvola Binarization Options ---
+        /** @brief The size of the local window for Sauvola binarization (default: 15). */
+        int sauvola_window_size = 15;
+        /** @brief The sensitivity parameter 'k' for Sauvola binarization (default: 0.2f). */
+        float sauvola_k = 0.2f;
+        /** @brief The optional offset 'delta' for Sauvola binarization (default: 0.0f). */
+        float sauvola_delta = 0.0f;
 
         // Optional: convenience fluent setters
         EnhanceOptions &Sigma(float v)
@@ -159,6 +171,21 @@ namespace ite
         EnhanceOptions &Deskew(bool v = true)
         {
             do_deskew = v;
+            return *this;
+        }
+        EnhanceOptions &SauvolaWindowSize(int v)
+        {
+            sauvola_window_size = v;
+            return *this;
+        }
+        EnhanceOptions &SauvolaK(float v)
+        {
+            sauvola_k = v;
+            return *this;
+        }
+        EnhanceOptions &SauvolaDelta(float v)
+        {
+            sauvola_delta = v;
             return *this;
         }
     };

@@ -134,7 +134,7 @@ namespace ite
         // filters::median_denoise(result, 3);
 
         // 5. Binarization
-        binarization::binarize_sauvola(result, 15, 0.2f, 0.0f);
+        binarization::binarize_sauvola(result, opt.sauvola_window_size, opt.sauvola_k, opt.sauvola_delta);
 
         // 6. Despeckle if requested
         if (opt.do_despeckle)
