@@ -90,10 +90,17 @@ Motivation:
 \label{sec:related-work}
 
 drei Paper wurden uns empfohlen:\\
-- Adaptive Thresholding Methods for Documents Image Binarization \cite{adaptive_threshilding_methods_bataineh_2011}: \\
+- Adaptive Thresholding Methods for Documents Image Binarization \cite{adaptive_threshilding_methods_bataineh_2011}: Das Bild wird in Fenster aufgeteilt. Fuer jedes Fenster wird ein Thresholdingvalue $T$ berechnet. In jedem Fenster wird die minimum $\sigma_{min}$ und maximum $\sigma_{max}$ Standardabweichungen aller Fenster verwendet, um adaptiv den Threshold $T$ zu bestimmen. Jeder Pixelwert $i(x, y)$ des Fensters wird anschliessend mit dem Threshold verglichen: Ist der Wert kleiner wird der Pixel schwarz und sonst weiss.\\
+\begin{gather}
+  T = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\\
+  \sigma_{adaptive} = \frac{\sigma_W-\sigma_{min}}{\sigma_{max}-\sigma_{min}}\\
+  I(x,y)= \begin{cases}
+    black, & \text{if } i(x,y) < T\\
+    white, & \text{otherwise}
+  \end{cases}
+\end{gather}
 - Adaptive Thresholding using the Integral Image \cite{adaptive_thresholding_integral_image_bradley_roth_2007}\\
 - Binarization of historical document images using the local maximum and minimum \cite{Binarization_historical_document_images_local_maximum_minimum_su_2010}
-
 \subsection{Our Contributions}
 \label{sec:our-contributions}
 - kostenloses Tool/executable um die Qualität von gescannten Bildern zu verbessern, bevor sie beispielsweise versendet, gedruckt oder archiviert werden.
@@ -107,6 +114,8 @@ Dieses Paper ist wie folgt gegliedert: In Abschnitt \ref{sec:algorithm} beschrei
 
 \section{The Algorithm}
 \label{sec:algorithm}
+
+
 
 \section{Experiments}
 \label{sec:experiments}
