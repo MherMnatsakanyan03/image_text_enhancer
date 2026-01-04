@@ -17,6 +17,16 @@ static bool is_image_file(const std::filesystem::path &p)
 
 int main(int argc, char* argv[])
 {
+    // Print OpenMP status
+    std::cout << "cimg_use_openmp = " << cimg_use_openmp << "\n";
+    std::cout << "CImg openmp_mode() = " << cimg::openmp_mode() << "\n";
+
+#ifdef _OPENMP
+    std::cout << "_OPENMP = " << _OPENMP << "\n";
+#else
+    std::cout << "_OPENMP is NOT defined\n";
+#endif
+
     // Get the path to the directory the executable is in
     std::filesystem::path executable_path = (argc > 0) ? std::filesystem::canonical(argv[0]) : (std::filesystem::current_path() / "ITE");
     std::filesystem::path base_dir = executable_path.parent_path();
