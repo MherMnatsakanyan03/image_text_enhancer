@@ -48,9 +48,10 @@ namespace ite
      * Best used on a grayscale image before binarization.
      * @param input_image The source image.
      * @param sigma The standard deviation of the Gaussian kernel. Larger values mean more blur.
+     * * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 1 = Neumann).
      * @return A new, blurred image.
      */
-    CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma = 1.0f);
+    CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma = 1.0f, int boundary_conditions = 1);
 
     /**
      * @brief Performs morphological dilation on the image.

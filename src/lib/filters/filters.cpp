@@ -10,7 +10,7 @@ namespace ite::filters
 
     void gaussian_blur(CImg<uint> &image, float sigma, int boundary_conditions)
     {
-        // CImg blur: sigma, boundary_conditions (0=Dirichlet), is_gaussian (true)
+        // CImg blur: sigma, boundary_conditions (0=Dirichlet, 1=Neumann, ...), is_gaussian (true)
         image.blur(sigma, boundary_conditions, true);
     }
 

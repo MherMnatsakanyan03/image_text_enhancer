@@ -101,10 +101,10 @@ namespace ite
     // Filters / Denoising
     // ============================================================================
 
-    CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma)
+    CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma, int boundary_conditions)
     {
         CImg<uint> result = input_image;
-        filters::gaussian_blur(result, sigma);
+        filters::gaussian_blur(result, sigma, boundary_conditions);
         return result;
     }
 
