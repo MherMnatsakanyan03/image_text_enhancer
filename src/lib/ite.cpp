@@ -104,7 +104,7 @@ namespace ite
     CImg<uint> simple_gaussian_blur(const CImg<uint> &input_image, float sigma, int boundary_conditions)
     {
         CImg<uint> result = input_image;
-        filters::gaussian_blur(result, sigma, boundary_conditions);
+        filters::simple_gaussian_blur(result, sigma, boundary_conditions);
         return result;
     }
 
@@ -121,6 +121,9 @@ namespace ite
 
     CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt)
     {
+        // fix boundary conditions
+        constexpr int boundary_conditions = 0; // Dirichlet for blurs in enhancement pipeline
+
         CImg<uint> result = input_image;
 
         // 1. Convert to grayscale
@@ -142,11 +145,11 @@ namespace ite
         }
         else if (opt.do_gaussian_blur)
         {
-            filters::gaussian_blur(result, opt.sigma);
+            filters::simple_gaussian_blur(result, opt.sigma, boundary_conditions);
         }
         if (opt.do_median_blur)
         {
-            filters::median_blur(result, opt.median_kernel_size, opt.median_threshold);
+            filters::simple_median_blur(result, opt.median_kernel_size, opt.median_threshold);
         }
 
         // 5. Binarization

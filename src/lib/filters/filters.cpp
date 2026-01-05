@@ -8,7 +8,7 @@
 namespace ite::filters
 {
 
-    void gaussian_blur(CImg<uint> &image, float sigma, int boundary_conditions)
+    void simple_gaussian_blur(CImg<uint> &image, float sigma, int boundary_conditions)
     {
         // CImg blur: sigma, boundary_conditions (0=Dirichlet, 1=Neumann, ...), is_gaussian (true)
         image.blur(sigma, boundary_conditions, true);
@@ -17,6 +17,7 @@ namespace ite::filters
     // ================= Adaptive Gaussian blur (edge-adaptive blend of two Gaussians) =================
     // Idea: compute a low-sigma blur (preserve edges) and a high-sigma blur (smooth flats),
     // then blend per-pixel using an edge strength measure (fast gradient).
+    // The border condition is "replicate".
     // Space/time efficient: 1 extra full image (high blur) + per-thread row-block buffer; 2 separable blurs + 1 blend pass.
     // Parallel: OpenMP over (channel, depth, row-block).
 
@@ -37,7 +38,7 @@ namespace ite::filters
         {
             // degenerate: just do a normal blur (or nothing)
             if (sigma_low > 0.0f)
-                gaussian_blur(img, sigma_low);
+                simple_gaussian_blur(img, sigma_low);
             return;
         }
 
@@ -45,7 +46,7 @@ namespace ite::filters
         if (!(sigma_high > sigma_low) || sigma_high <= 0.0f)
         {
             if (sigma_low > 0.0f)
-                gaussian_blur(img, sigma_low);
+                simple_gaussian_blur(img, sigma_low);
             return;
         }
 
@@ -54,11 +55,11 @@ namespace ite::filters
 
         // 1) Compute the high-sigma blur into a single extra image
         CImg<uint> high = img;
-        gaussian_blur(high, sigma_high, truncate);
+        simple_gaussian_blur(high, sigma_high, truncate);
 
         // 2) Compute the low-sigma blur in-place (img becomes "low")
         if (sigma_low > 0.0f)
-            gaussian_blur(img, sigma_low, truncate);
+            simple_gaussian_blur(img, sigma_low, truncate);
 
         // 3) Blend using edge strength from the low-blur image (row-block buffering => safe in-place write)
         const float invT = (edge_thresh > 1e-6f) ? (1.0f / edge_thresh) : 0.0f;
@@ -148,7 +149,7 @@ namespace ite::filters
         }
     }
 
-    void median_blur(CImg<uint> &image, int kernel_size, unsigned int threshold)
+    void simple_median_blur(CImg<uint> &image, int kernel_size, unsigned int threshold)
     {
         image.blur_median(kernel_size, threshold);
     }

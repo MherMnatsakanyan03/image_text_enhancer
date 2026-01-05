@@ -20,7 +20,7 @@ namespace ite::filters
      * @param sigma The standard deviation of the Gaussian kernel.
      * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 1 = Neumann).
      */
-    void gaussian_blur(CImg<uint> &image, float sigma = 1.0f, int boundary_conditions = 1);
+    void simple_gaussian_blur(CImg<uint> &image, float sigma = 1.0f, int boundary_conditions = 1);
 
 
     /**
@@ -48,6 +48,6 @@ namespace ite::filters
      * @param image The image to blur (modified in-place).
      * @param kernel_size The size of the median filter kernel.
      */
-void median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
+void simple_median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
 
 } // namespace ite::filters
