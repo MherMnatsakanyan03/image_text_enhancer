@@ -136,7 +136,11 @@ namespace ite
         color::contrast_linear_stretch(result);
 
         // 4. Denoising
-        if (opt.do_gaussian_blur)
+        if (opt.do_adaptive_gaussian_blur)
+        {
+            filters::adaptive_gaussian_blur_omp(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh);
+        }
+        else if (opt.do_gaussian_blur)
         {
             filters::gaussian_blur(result, opt.sigma);
         }

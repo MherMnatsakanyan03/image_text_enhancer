@@ -120,8 +120,16 @@ namespace ite
         bool do_gaussian_blur = false;
         /** @brief Whether to perform median denoising (default false). */
         bool do_median_denoise = false;
+        /** @brief Whether to perform adaptive Gaussian denoising (default false). */
+        bool do_adaptive_gaussian_blur = false;
         /** @brief The standard deviation for Gaussian denoising (default 1.0f). */
         float sigma = 1.0f;
+        /** @brief The low standard deviation for adaptive Gaussian denoising (default 0.5f). */
+        float adaptive_sigma_low = 0.5f;
+        /** @brief The high standard deviation for adaptive Gaussian denoising (default 2.0f). */
+        float adaptive_sigma_high = 2.0f;
+        /** @brief The edge threshold for adaptive Gaussian denoising (default 30.0f). */
+        float adaptive_edge_thresh = 30.0f;
         /** @brief The kernel size for median denoising (default 3). */
         int median_kernel_size = 3;
         /** @brief The threshold for median denoising (default 0). */
@@ -164,9 +172,29 @@ namespace ite
             do_median_denoise = v;
             return *this;
         }
+        EnhanceOptions &AdaptiveGaussianBlur(bool v = true)
+        {
+            do_adaptive_gaussian_blur = v;
+            return *this;
+        }
         EnhanceOptions &Sigma(float v)
         {
             sigma = v;
+            return *this;
+        }
+        EnhanceOptions &AdaptiveSigmaLow(float v)
+        {
+            adaptive_sigma_low = v;
+            return *this;
+        }
+        EnhanceOptions &AdaptiveSigmaHigh(float v)
+        {
+            adaptive_sigma_high = v;
+            return *this;
+        }
+        EnhanceOptions &AdaptiveEdgeThresh(float v)
+        {
+            adaptive_edge_thresh = v;
             return *this;
         }
         EnhanceOptions &MedianKernelSize(int v)
