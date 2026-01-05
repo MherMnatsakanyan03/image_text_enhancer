@@ -148,4 +148,9 @@ namespace ite::filters
         }
     }
 
+    void median_denoise(CImg<uint> &image, int kernel_size, unsigned int threshold)
+    {
+        image.blur_median(kernel_size, threshold);
+    }
+
 } // namespace ite::filters

@@ -65,6 +65,8 @@ int main(int argc, char* argv[])
                       << ")\n";
 
             auto output_img = ite::enhance(img, ite::EnhanceOptions{}
+                                                     .GaussianBlur(false)
+                                                     .MedianBlur(true)
                                                      .Sigma(1.0f)
                                                      .KernelSize(1)
                                                      .DespeckleThreshold(2)

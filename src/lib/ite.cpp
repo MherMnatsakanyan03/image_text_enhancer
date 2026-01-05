@@ -135,10 +135,15 @@ namespace ite
         // 3. Contrast enhancement
         color::contrast_linear_stretch(result);
 
-        // 4. Optional denoising (currently disabled in pipeline, but sigma is available)
-        (void)opt.sigma; // Reserved for future use
-        // filters::gaussian_blur(result, opt.sigma);
-        // filters::median_denoise(result, 3);
+        // 4. Denoising
+        if (opt.do_gaussian_blur)
+        {
+            filters::gaussian_blur(result, opt.sigma);
+        }
+        if (opt.do_median_denoise)
+        {
+            filters::median_denoise(result, opt.median_kernel_size, opt.median_threshold);
+        }
 
         // 5. Binarization
         binarization::binarize_sauvola(result, opt.sauvola_window_size, opt.sauvola_k, opt.sauvola_delta);

@@ -116,8 +116,16 @@ namespace ite
     struct EnhanceOptions
     {
         // --- Gaussian Denoising Options ---
+        /** @brief Whether to perform Gaussian denoising (default false). */
+        bool do_gaussian_blur = false;
+        /** @brief Whether to perform median denoising (default false). */
+        bool do_median_denoise = false;
         /** @brief The standard deviation for Gaussian denoising (default 1.0f). */
         float sigma = 1.0f;
+        /** @brief The kernel size for median denoising (default 3). */
+        int median_kernel_size = 3;
+        /** @brief The threshold for median denoising (default 0). */
+        unsigned int median_threshold = 0;
 
         // --- Morphology Options ---
         /** @brief Whether to consider diagonal connections in despeckling (default true). */
@@ -146,9 +154,29 @@ namespace ite
         float sauvola_delta = 0.0f;
 
         // Optional: convenience fluent setters
+        EnhanceOptions &GaussianBlur(bool v = true)
+        {
+            do_gaussian_blur = v;
+            return *this;
+        }
+        EnhanceOptions &MedianBlur(bool v = true)
+        {
+            do_median_denoise = v;
+            return *this;
+        }
         EnhanceOptions &Sigma(float v)
         {
             sigma = v;
+            return *this;
+        }
+        EnhanceOptions &MedianKernelSize(int v)
+        {
+            median_kernel_size = v;
+            return *this;
+        }
+        EnhanceOptions &MedianThreshold(unsigned int v)
+        {
+            median_threshold = v;
             return *this;
         }
         EnhanceOptions &KernelSize(int v)
