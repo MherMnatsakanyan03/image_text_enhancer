@@ -26,7 +26,7 @@ namespace ite::geometry
      *
      * @param image The image to deskew (modified in-place).
      */
-    void deskew_projection_profile(CImg<uint> &image);
+    void deskew_projection_profile(CImg<uint> &input_image, int boundary_conditions = 1);
 
     /**
      * @brief Detects the skew angle without applying the correction.

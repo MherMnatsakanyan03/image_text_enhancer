@@ -90,10 +90,10 @@ namespace ite
     // Geometric Transformations
     // ============================================================================
 
-    CImg<uint> deskew(const CImg<uint> &input_image)
+    CImg<uint> deskew(const CImg<uint> &input_image, int boundary_conditions)
     {
         CImg<uint> result = input_image;
-        geometry::deskew_projection_profile(result);
+        geometry::deskew_projection_profile(result, boundary_conditions);
         return result;
     }
 
@@ -121,9 +121,6 @@ namespace ite
 
     CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt)
     {
-        // fix boundary conditions
-        constexpr int boundary_conditions = 0; // Dirichlet for blurs in enhancement pipeline
-
         CImg<uint> result = input_image;
 
         // 1. Convert to grayscale
@@ -132,7 +129,7 @@ namespace ite
         // 2. Deskew if requested
         if (opt.do_deskew)
         {
-            geometry::deskew_projection_profile(result);
+            geometry::deskew_projection_profile(result, opt.boundary_conditions);
         }
 
         // 3. Contrast enhancement
@@ -141,11 +138,11 @@ namespace ite
         // 4. Denoising
         if (opt.do_adaptive_gaussian_blur)
         {
-            filters::adaptive_gaussian_blur_omp(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh);
+            filters::adaptive_gaussian_blur_omp(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, 8, opt.boundary_conditions);
         }
         else if (opt.do_gaussian_blur)
         {
-            filters::simple_gaussian_blur(result, opt.sigma, boundary_conditions);
+            filters::simple_gaussian_blur(result, opt.sigma, opt.boundary_conditions);
         }
         if (opt.do_median_blur)
         {

@@ -24,7 +24,7 @@ namespace ite::filters
     // In-place adaptive Gaussian blur
     void adaptive_gaussian_blur_omp(CImg<uint> &img, float sigma_low, float sigma_high,
                                     float edge_thresh, // gradient threshold controlling blend (typical 30..80 for 8-bit)
-                                    int truncate, int block_h)
+                                    int block_h, int boundary_conditions)
     {
         if (img.is_empty())
             return;
@@ -38,7 +38,7 @@ namespace ite::filters
         {
             // degenerate: just do a normal blur (or nothing)
             if (sigma_low > 0.0f)
-                simple_gaussian_blur(img, sigma_low);
+                simple_gaussian_blur(img, sigma_low, boundary_conditions);
             return;
         }
 
@@ -46,7 +46,7 @@ namespace ite::filters
         if (!(sigma_high > sigma_low) || sigma_high <= 0.0f)
         {
             if (sigma_low > 0.0f)
-                simple_gaussian_blur(img, sigma_low);
+                simple_gaussian_blur(img, sigma_low, boundary_conditions);
             return;
         }
 
@@ -55,11 +55,11 @@ namespace ite::filters
 
         // 1) Compute the high-sigma blur into a single extra image
         CImg<uint> high = img;
-        simple_gaussian_blur(high, sigma_high, truncate);
+        simple_gaussian_blur(high, sigma_high, boundary_conditions);
 
         // 2) Compute the low-sigma blur in-place (img becomes "low")
         if (sigma_low > 0.0f)
-            simple_gaussian_blur(img, sigma_low, truncate);
+            simple_gaussian_blur(img, sigma_low, boundary_conditions);
 
         // 3) Blend using edge strength from the low-blur image (row-block buffering => safe in-place write)
         const float invT = (edge_thresh > 1e-6f) ? (1.0f / edge_thresh) : 0.0f;

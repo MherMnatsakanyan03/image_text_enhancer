@@ -80,7 +80,7 @@ namespace ite::geometry
         return {best_angle, best_score};
     }
 
-    void deskew_projection_profile(CImg<uint> &input_image)
+    void deskew_projection_profile(CImg<uint> &input_image, int boundary_conditions)
     {
         const int inW = input_image.width();
         const int inH = input_image.height();
@@ -221,7 +221,7 @@ namespace ite::geometry
 
         if (angle_ok && improve_ok)
         {
-            input_image.rotate(best_angle, 2, 1);
+            input_image.rotate(best_angle, 2, boundary_conditions);
         }
     }
 

@@ -96,9 +96,10 @@ namespace ite
      * @brief Enhances the contrast of the image.
      * This helps separate text from the background. Uses histogram equalization.
      * @param input_image The source image (typically grayscale).
+     * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 1 = Neumann).
      * @return A new, high-contrast image.
      */
-    CImg<uint> contrast_enhancement(const CImg<uint> &input_image);
+    CImg<uint> contrast_enhancement(const CImg<uint> &input_image, int boundary_conditions = 1);
 
     /**
      * @brief Removes small connected components (speckles) from a binary image.
@@ -115,6 +116,9 @@ namespace ite
      */
     struct EnhanceOptions
     {
+        /** brief Boundary conditions for filters (default 1, Neumann). See CImg::blur() for details. */
+        int boundary_conditions = 1;
+
         // --- Gaussian Denoising Options ---
         /** @brief Whether to perform Gaussian denoising (default false). */
         bool do_gaussian_blur = false;
@@ -161,7 +165,12 @@ namespace ite
         /** @brief The optional offset 'delta' for Sauvola binarization (default: 0.0f). */
         float sauvola_delta = 0.0f;
 
-        // Optional: convenience fluent setters
+        EnhanceOptions &BoundaryConditions(int v)
+        {
+            boundary_conditions = v;
+            return *this;
+        }
+
         EnhanceOptions &GaussianBlur(bool v = true)
         {
             do_gaussian_blur = v;

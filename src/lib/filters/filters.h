@@ -35,19 +35,15 @@ namespace ite::filters
      * @param sigma_low The standard deviation of the kernel for edge regions.
      * @param sigma_high The standard deviation of the kernel for flat regions.
      * @param edge_thresh The variance threshold to differentiate between edge and flat regions.
-     * @param truncate Factor to determine kernel size from sigma (default: 3).
      * @param block_h Height of the blocks for parallel processing (default: 64).
      */
-    void adaptive_gaussian_blur_omp(CImg<uint> &img, float sigma_low, float sigma_high,
-                                float edge_thresh,
-                                int truncate = 3, int block_h = 64);
-
+    void adaptive_gaussian_blur_omp(CImg<uint> &img, float sigma_low, float sigma_high, float edge_thresh, int block_h = 64, int boundary_conditions = 1);
 
     /**
      * @brief Applies median denoising to an image in-place.
      * @param image The image to blur (modified in-place).
      * @param kernel_size The size of the median filter kernel.
      */
-void simple_median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
+    void simple_median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
 
 } // namespace ite::filters
