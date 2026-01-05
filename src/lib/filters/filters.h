@@ -45,9 +45,9 @@ namespace ite::filters
 
     /**
      * @brief Applies median denoising to an image in-place.
-     * @param image The image to denoise (modified in-place).
+     * @param image The image to blur (modified in-place).
      * @param kernel_size The size of the median filter kernel.
      */
-void median_denoise(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
+void median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
 
 } // namespace ite::filters

@@ -9,7 +9,7 @@
 #include "catch2/generators/catch_generators.hpp"
 #include "catch2/generators/catch_generators_range.hpp"
 
-TEST_CASE("adaptive_gaussian_blur: behaves correctly in extremes and preserves edges", "[ite][denoise]")
+TEST_CASE("adaptive_gaussian_blur: behaves correctly in extremes and preserves edges", "[ite][blur]")
 {
     constexpr int truncate = 3;
     constexpr int block_h = 16;

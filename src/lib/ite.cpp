@@ -144,9 +144,9 @@ namespace ite
         {
             filters::gaussian_blur(result, opt.sigma);
         }
-        if (opt.do_median_denoise)
+        if (opt.do_median_blur)
         {
-            filters::median_denoise(result, opt.median_kernel_size, opt.median_threshold);
+            filters::median_blur(result, opt.median_kernel_size, opt.median_threshold);
         }
 
         // 5. Binarization

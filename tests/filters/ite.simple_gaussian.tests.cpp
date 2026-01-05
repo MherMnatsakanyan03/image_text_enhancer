@@ -2,7 +2,7 @@
 #include <CImg.h>
 #include <catch2/catch_test_macros.hpp>
 
-TEST_CASE("gaussian_denoise: Applies Gaussian blur", "[ite][denoise]")
+TEST_CASE("gaussian_blur: Applies Gaussian blur", "[ite][blur]")
 {
     SECTION("Diffuses energy from a single hot pixel (Impulse Response)")
     {

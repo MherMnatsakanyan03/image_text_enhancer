@@ -44,7 +44,7 @@ namespace ite
     CImg<uint> binarize(const CImg<uint> &input_image);
 
     /**
-     * @brief Applies a simple Gaussian blur to denoise the image.
+     * @brief Applies a simple Gaussian blur to blur the image.
      * Best used on a grayscale image before binarization.
      * @param input_image The source image.
      * @param sigma The standard deviation of the Gaussian kernel. Larger values mean more blur.
@@ -119,7 +119,7 @@ namespace ite
         /** @brief Whether to perform Gaussian denoising (default false). */
         bool do_gaussian_blur = false;
         /** @brief Whether to perform median denoising (default false). */
-        bool do_median_denoise = false;
+        bool do_median_blur = false;
         /** @brief Whether to perform adaptive Gaussian denoising (default false). */
         bool do_adaptive_gaussian_blur = false;
         /** @brief The standard deviation for Gaussian denoising (default 1.0f). */
@@ -169,7 +169,7 @@ namespace ite
         }
         EnhanceOptions &MedianBlur(bool v = true)
         {
-            do_median_denoise = v;
+            do_median_blur = v;
             return *this;
         }
         EnhanceOptions &AdaptiveGaussianBlur(bool v = true)
