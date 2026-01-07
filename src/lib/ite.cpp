@@ -115,6 +115,13 @@ namespace ite
         return result;
     }
 
+    CImg<uint> adaptive_median_filter(const CImg<uint> &input_image, int max_window_size, int block_h)
+    {
+        CImg<uint> result = input_image;
+        filters::adaptive_median_filter(result, max_window_size, block_h);
+        return result;
+    }
+
     // ============================================================================
     // Full Enhancement Pipeline
     // ============================================================================
@@ -147,6 +154,10 @@ namespace ite
         if (opt.do_median_blur)
         {
             filters::simple_median_blur(result, opt.median_kernel_size, opt.median_threshold);
+        }
+        if (opt.do_adaptive_median)
+        {
+            filters::adaptive_median_filter(result, opt.adaptive_median_max_window);
         }
 
         // 5. Binarization

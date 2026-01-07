@@ -67,6 +67,17 @@ namespace ite
     CImg<uint> adaptive_gaussian_blur(const CImg<uint> &input_image, float sigma_low, float sigma_high, float edge_thresh, int truncate = 3, int block_h = 64);
 
     /**
+     * @brief Applies an adaptive median filter to the image.
+     * Excellent for removing impulse noise (salt-and-pepper) while preserving edges.
+     * Starts with a 3x3 window and expands when detecting impulse noise.
+     * @param input_image The source image.
+     * @param max_window_size Maximum window size (must be odd, >= 3, typical: 5, 7, or 9).
+     * @param block_h Height of the blocks for parallel processing (default: 64).
+     * @return A new, filtered image.
+     */
+    CImg<uint> adaptive_median_filter(const CImg<uint> &input_image, int max_window_size = 7, int block_h = 64);
+
+    /**
      * @brief Performs morphological dilation on the image.
      * This operation thickens bright regions. On a binary image, it connects broken character parts.
      * @param input_image The source image (typically binary).
@@ -124,6 +135,8 @@ namespace ite
         bool do_gaussian_blur = false;
         /** @brief Whether to perform median denoising (default false). */
         bool do_median_blur = false;
+        /** @brief Whether to perform adaptive median filtering (default false). */
+        bool do_adaptive_median = false;
         /** @brief Whether to perform adaptive Gaussian denoising (default false). */
         bool do_adaptive_gaussian_blur = false;
         /** @brief The standard deviation for Gaussian denoising (default 1.0f). */
@@ -138,6 +151,8 @@ namespace ite
         int median_kernel_size = 3;
         /** @brief The threshold for median denoising (default 0). */
         unsigned int median_threshold = 0;
+        /** @brief Maximum window size for adaptive median filter (must be odd, default 7). */
+        int adaptive_median_max_window = 7;
 
         // --- Morphology Options ---
         /** @brief Whether to consider diagonal connections in despeckling (default true). */
@@ -181,6 +196,11 @@ namespace ite
             do_median_blur = v;
             return *this;
         }
+        EnhanceOptions &AdaptiveMedian(bool v = true)
+        {
+            do_adaptive_median = v;
+            return *this;
+        }
         EnhanceOptions &AdaptiveGaussianBlur(bool v = true)
         {
             do_adaptive_gaussian_blur = v;
@@ -214,6 +234,11 @@ namespace ite
         EnhanceOptions &MedianThreshold(unsigned int v)
         {
             median_threshold = v;
+            return *this;
+        }
+        EnhanceOptions &AdaptiveMedianMaxWindow(int v)
+        {
+            adaptive_median_max_window = v;
             return *this;
         }
         EnhanceOptions &KernelSize(int v)

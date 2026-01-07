@@ -47,6 +47,20 @@ namespace ite::filters
     void simple_median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
 
     /**
+     * @brief Applies adaptive median filtering to an image in-place using OpenMP.
+     *
+     * The adaptive median filter is excellent for removing impulse noise (salt-and-pepper)
+     * while preserving edges and fine details. It starts with a 3x3 window and expands
+     * up to max_window_size when detecting impulse noise, leaving non-impulse pixels unchanged.
+     * This makes it ideal for scan speckle removal in text images.
+     *
+     * @param img The image to filter (modified in-place).
+     * @param max_window_size Maximum window size (must be odd, >= 3, typical: 5, 7, or 9).
+     * @param block_h Height of the blocks for parallel processing (default: 64).
+     */
+    void adaptive_median_filter(CImg<uint> &img, int max_window_size = 7, int block_h = 64);
+
+    /**
      * @brief Parameters for adaptive Gaussian blur.
      *
      * Contains the sigma values and edge threshold for adaptive Gaussian blurring.

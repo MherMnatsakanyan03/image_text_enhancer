@@ -404,7 +404,7 @@ namespace ite::filters
      *   max_window_size: odd >=3 (typical 5/7/9)
      *   block_h: row-block height for cache + in-place safety
      */
-    void adaptive_median_filter(CImg<uint> &img, int max_window_size = 7, int block_h = 64)
+    void adaptive_median_filter(CImg<uint> &img, int max_window_size, int block_h)
     {
         if (img.is_empty())
             return;
