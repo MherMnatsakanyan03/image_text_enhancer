@@ -1,5 +1,7 @@
 #include "filters.h"
 
+#include <array>
+#include <cstdint>
 #include <vector>
 
 #include "core/utils.h"
@@ -149,9 +151,162 @@ namespace ite::filters
         }
     }
 
-    void simple_median_blur(CImg<uint> &image, int kernel_size, unsigned int threshold)
+    // ===================== Noise / edge estimators (parallel + histogram based) =====================
+
+    float estimate_noise_sigma_mad_diffs_omp(const CImg<uint> &gray, int step = 2)
     {
-        image.blur_median(kernel_size, threshold);
+        // Robust sigma estimate from median absolute differences (horizontal+vertical).
+        // For Gaussian noise: median(|diff|) ≈ 0.6745 * sigma * sqrt(2)
+        const int w = gray.width(), h = gray.height();
+        if (w < 2 || h < 2)
+            return 0.0f;
+        if (step < 1)
+            step = 1;
+
+        std::array<uint64_t, 256> hist{}; // global
+
+#pragma omp parallel
+        {
+            std::array<uint64_t, 256> local{};
+#pragma omp for schedule(static)
+            for (int y = 0; y < h; y += step)
+            {
+                const uint* row = gray.data(0, y, 0, 0);
+                for (int x = 0; x < w - 1; x += step)
+                {
+                    uint a = row[x], b = row[x + 1];
+                    uint d = (a > b) ? (a - b) : (b - a);
+                    local[(uint8_t)d]++;
+                }
+            }
+#pragma omp for schedule(static)
+            for (int y = 0; y < h - 1; y += step)
+            {
+                const uint* row = gray.data(0, y, 0, 0);
+                const uint* row2 = gray.data(0, y + 1, 0, 0);
+                for (int x = 0; x < w; x += step)
+                {
+                    uint a = row[x], b = row2[x];
+                    uint d = (a > b) ? (a - b) : (b - a);
+                    local[(uint8_t)d]++;
+                }
+            }
+#pragma omp critical
+            {
+                for (int i = 0; i < 256; ++i)
+                    hist[i] += local[i];
+            }
+        }
+
+        uint64_t total = 0;
+        for (int i = 0; i < 256; ++i)
+            total += hist[i];
+        if (total == 0)
+            return 0.0f;
+
+        const uint64_t target = (total + 1) / 2;
+        uint64_t cum = 0;
+        int med = 0;
+        for (; med < 256; ++med)
+        {
+            cum += hist[med];
+            if (cum >= target)
+                break;
+        }
+
+        const float denom = 0.6745f * std::sqrt(2.0f);
+        return (denom > 0.0f) ? ((float)med / denom) : 0.0f;
     }
+
+    float estimate_gradient_percentile_omp(const CImg<uint> &gray, float pct = 0.75f, int step = 2)
+    {
+        // Gradient magnitude approx = |dx| + |dy| in [0..510]. Histogram percentile.
+        const int w = gray.width(), h = gray.height();
+        if (w < 2 || h < 2)
+            return 0.0f;
+        if (step < 1)
+            step = 1;
+        pct = utils::clampf(pct, 0.0f, 1.0f);
+
+        constexpr int GMAX = 510;
+        std::array<uint64_t, GMAX + 1> hist{};
+
+#pragma omp parallel
+        {
+            std::array<uint64_t, GMAX + 1> local{};
+#pragma omp for schedule(static)
+            for (int y = 0; y < h - 1; y += step)
+            {
+                const uint* row = gray.data(0, y, 0, 0);
+                const uint* row2 = gray.data(0, y + 1, 0, 0);
+                for (int x = 0; x < w - 1; x += step)
+                {
+                    uint a = row[x];
+                    uint dx = (a > row[x + 1]) ? (a - row[x + 1]) : (row[x + 1] - a);
+                    uint dy = (a > row2[x]) ? (a - row2[x]) : (row2[x] - a);
+                    uint g = dx + dy;
+                    if (g > (uint)GMAX)
+                        g = (uint)GMAX;
+                    local[g]++;
+                }
+            }
+#pragma omp critical
+            {
+                for (int i = 0; i <= GMAX; ++i)
+                    hist[i] += local[i];
+            }
+        }
+
+        uint64_t total = 0;
+        for (int i = 0; i <= GMAX; ++i)
+            total += hist[i];
+        if (total == 0)
+            return 0.0f;
+
+        const uint64_t target = (uint64_t)std::ceil(pct * (double)total);
+        uint64_t cum = 0;
+        int val = 0;
+        for (; val <= GMAX; ++val)
+        {
+            cum += hist[val];
+            if (cum >= target)
+                break;
+        }
+        return (float)val;
+    }
+
+    // ===================== Choose sigmas (good defaults for text enhancement) =====================
+    // These are heuristics designed to:
+    //   - keep sigma_low small to preserve stroke edges,
+    //   - increase sigma_high with noise to smooth background/texture,
+    //   - set edge_thresh from gradient distribution so edges stay sharp.
+
+
+    AdaptiveGaussianParams choose_sigmas_for_text_enhancement(const CImg<uint> &gray)
+    {
+        // Require grayscale 1-channel image.
+        const float noise = estimate_noise_sigma_mad_diffs_omp(gray, 2);
+        const float g75 = estimate_gradient_percentile_omp(gray, 0.75f, 2);
+        const float g90 = estimate_gradient_percentile_omp(gray, 0.90f, 2);
+
+        // Base sigmas from noise (bounded to stay text-friendly)
+        float sigma_low = utils::clampf(0.45f + 0.030f * noise, 0.50f, 1.25f);
+        float sigma_high = utils::clampf(1.10f + 0.060f * noise, 1.10f, 2.80f);
+
+        // If image is already blurry (weak strong-grad), be more conservative
+        if (g90 < 70.0f)
+        {
+            sigma_low *= 0.85f;
+            sigma_high *= 0.85f;
+        }
+
+        // Edge threshold for adaptive blend: tie to gradient distribution.
+        // Higher => more pixels treated as "flat" (more high-sigma smoothing).
+        float edge_thresh = utils::clampf(std::max(25.0f, 0.90f * g75), 25.0f, 160.0f);
+
+        return {sigma_low, sigma_high, edge_thresh};
+    }
+
+    void simple_median_blur(CImg<uint> &image, int kernel_size, unsigned int threshold) { image.blur_median(kernel_size, threshold); }
 
 } // namespace ite::filters

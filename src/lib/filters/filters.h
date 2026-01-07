@@ -46,4 +46,31 @@ namespace ite::filters
      */
     void simple_median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
 
+    /**
+     * @brief Parameters for adaptive Gaussian blur.
+     *
+     * Contains the sigma values and edge threshold for adaptive Gaussian blurring.
+     */
+    struct AdaptiveGaussianParams
+    {
+        float sigma_low;    ///< Standard deviation for edge regions (preserves details)
+        float sigma_high;   ///< Standard deviation for flat regions (smooths noise)
+        float edge_thresh;  ///< Gradient threshold for edge detection
+    };
+
+    /**
+     * @brief Automatically chooses adaptive Gaussian blur parameters for text enhancement.
+     *
+     * Analyzes the input grayscale image to estimate noise and edge characteristics,
+     * then computes optimal sigma_low, sigma_high, and edge_thresh values for
+     * text enhancement. The heuristics are designed to:
+     *   - Keep sigma_low small to preserve stroke edges
+     *   - Increase sigma_high with noise to smooth background/texture
+     *   - Set edge_thresh from gradient distribution so edges stay sharp
+     *
+     * @param gray A grayscale (1-channel) image to analyze.
+     * @return AdaptiveGaussianParams struct with optimal parameters.
+     */
+    AdaptiveGaussianParams choose_sigmas_for_text_enhancement(const CImg<uint> &gray);
+
 } // namespace ite::filters

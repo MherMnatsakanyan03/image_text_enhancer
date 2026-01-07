@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include "filters/filters.h"
 #include "ite.h"
 
 static bool is_image_file(const std::filesystem::path &p)
@@ -64,9 +65,19 @@ int main(int argc, char* argv[])
             std::cout << "Loaded: " << in_path.filename().string() << " (" << img.width() << "x" << img.height() << "x" << img.depth() << "x" << img.spectrum()
                       << ")\n";
 
+            ite::filters::AdaptiveGaussianParams ad_gauss_params = ite::filters::choose_sigmas_for_text_enhancement(img);
+
+            std::cout << " Chosen Adaptive Gaussian Params: "
+                      << " sigma_low=" << ad_gauss_params.sigma_low
+                      << " sigma_high=" << ad_gauss_params.sigma_high
+                      << " edge_thresh=" << ad_gauss_params.edge_thresh << "\n";
+
             auto output_img = ite::enhance(img, ite::EnhanceOptions{}
-                                                     .GaussianBlur(false)
-                                                     .MedianBlur(true)
+                                                     .AdaptiveGaussianBlur(true)
+                                                     .AdaptiveEdgeThresh(10)
+                                                     .AdaptiveSigmaLow(ad_gauss_params.sigma_low)
+                                                     .AdaptiveSigmaHigh(ad_gauss_params.sigma_high)
+                                                     .MedianBlur(false)
                                                      .Sigma(1.0f)
                                                      .KernelSize(1)
                                                      .DespeckleThreshold(2)
