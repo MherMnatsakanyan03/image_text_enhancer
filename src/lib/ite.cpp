@@ -146,6 +146,95 @@ static void binarize_inplace(CImg<uint> &input_image, int window_size = 15, floa
     input_image = output_image;
 }
 
+
+/**
+ * @brief (Internal) Converts a grayscale image to a binary (black and white) image, in-place.
+ * Uses simple global mean thresholding.
+ */
+static void adaptive_binarize_inplace(CImg<uint> &input_image, int window_size = 15)
+{
+    if (input_image.spectrum() != 1)
+    {
+        throw std::runtime_error("Adaptive Binarization requires a grayscale image.");
+    }
+
+    CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
+    CImg<double> integral_img = calculate_integral_image(img_double);
+    CImg<double> integral_sq_img = calculate_integral_image(img_double.get_sqr()); // Integral of (pixel*pixel)
+
+    // create array to store std deviation values for each window
+    CImg<double> std_dev_image(input_image.width(), input_image.height(), input_image.depth(), 1);
+
+    CImg<uint> output_image(input_image.width(), input_image.height(), input_image.depth(), 1);
+    const int w_half = window_size / 2;
+    const double mean_global = img_double.mean();
+
+    // First pass: Calculate local std. deviation for each window
+    // ToDo: Parallelize this loop and only compute std. deviation once per window
+    for (int z = 0; z < input_image.depth(); ++z)
+    {
+        for (int y = 0; y < input_image.height(); ++y)
+        {
+            for (int x = 0; x < input_image.width(); ++x)
+            {
+                // Define the local window (clamp to edges)
+                const int x1 = std::max(0, x - w_half);
+                const int y1 = std::max(0, y - w_half);
+                const int x2 = std::min(input_image.width() - 1, x + w_half);
+                const int y2 = std::min(input_image.height() - 1, y + w_half);
+
+                // Get sum and sum of squares from integral images
+                double sum = get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
+                double sum_sq = get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
+
+                const double N = (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
+                
+                // Calculate local mean and std. deviation
+                const double mean = sum / N;
+                const double std_dev = std::sqrt(std::max(0.0, (sum_sq / N) - (mean * mean)));
+
+                std_dev_image(x, y, z) = std_dev;
+            }
+        }
+    }
+
+    // Second pass: Binarize using local std. deviation
+    for (int z = 0; z < input_image.depth(); ++z)
+    {        for (int y = 0; y < input_image.height(); ++y)
+        {            for (int x = 0; x < input_image.width(); ++x)
+            {                
+                // Define the local window (clamp to edges)
+                const int x1 = std::max(0, x - w_half);
+                const int y1 = std::max(0, y - w_half);
+                const int x2 = std::min(input_image.width() - 1, x + w_half);
+                const int y2 = std::min(input_image.height() - 1, y + w_half);
+
+                // Get sum and sum of squares from integral images
+                double sum = get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
+                double sum_sq = get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
+
+                const double N = (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
+
+                const double local_std_dev = std_dev_image(x, y, z);
+                const double mean_window = sum / N;
+                const double std_dev_window = std_dev_image(x, y, z);
+
+                // Calculate adaptive threshold
+                const double std_dev_adaptive = (local_std_dev - std::min(std_dev_image)) / (std::max(std_dev_image) - std::min(std_dev_image));
+
+                // define threshold based on adaptive std deviation
+                const double threshold = mean_window - (((mean_global * mean_global) - std_dev_image(x, y, z)) / (mean_global + std_dev_image(x, y, z) * (std_dev_adaptive + std_dev_image(x, y, z))));
+
+                // Apply threshold
+                output_image(x, y, z) = (input_image(x, y, z) < threshold) * 255;
+            }
+        }
+    }
+    input_image = output_image;
+}
+
+    
+
 /**
  * @brief (Internal) Applies Gaussian denoising to an image, in-place.
  * Uses CImg's built-in blur function with neumann boundary conditions and isotropic blur.
@@ -540,7 +629,8 @@ namespace ite
             to_grayscale_inplace(output_image);
         }
 
-        binarize_inplace(output_image);
+        //binarize_inplace(output_image);
+        adaptive_binarize_inplace(output_image);
 
         return output_image;
     }
@@ -622,7 +712,8 @@ namespace ite
         gaussian_denoise_inplace(l_image, sigma);
         contrast_enhancement_inplace(l_image);
 
-        binarize_inplace(l_image);
+        //binarize_inplace(l_image);
+        adaptive_binarize_inplace(l_image);
 
         // Remove noise (little dust specks)
         if (do_despeckle) {
