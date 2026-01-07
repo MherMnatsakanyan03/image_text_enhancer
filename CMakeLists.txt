@@ -4,16 +4,6 @@ project(ITE LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Manually specify JPEG paths for MinGW
-set(JPEG_INCLUDE_DIR "C:/MinGW/include/libjpeg-turbo-gcc/include")
-set(JPEG_LIBRARY     "C:/MinGW/include/libjpeg-turbo-gcc/lib/libjpeg.dll.a")
-include_directories(${JPEG_INCLUDE_DIR})
-link_directories("C:/MinGW/include/libjpeg-turbo-gcc/lib")
-
-message(STATUS "Suche nach JPEG...")
-message(STATUS "Benutze Include-Pfad: ${JPEG_INCLUDE_DIR}")
-message(STATUS "Benutze Library-Pfad: ${JPEG_LIBRARY}")
-
 find_package(OpenMP)
 find_package(X11 REQUIRED)
 find_package(JPEG REQUIRED)
@@ -35,9 +25,9 @@ file(DOWNLOAD
 include(CTest)
 
 add_compile_options(
-  #-Wall # All warnings
-  #-Wextra # Extra warnings
-  #-Werror # Treat warnings as errors
+  -Wall # All warnings
+  -Wextra # Extra warnings
+  -Werror # Treat warnings as errors
 )
 
 include(FetchContent)

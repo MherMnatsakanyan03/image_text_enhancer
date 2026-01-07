@@ -111,6 +111,7 @@ namespace ite
      * @param do_dilation Whether to perform dilation (default true).
      * @param do_despeckle Whether to perform despeckling (default true).
      * @param do_deskew Whether to perform deskewing (default true).
+     * @param do_adaptive_binarization Whether to use Bataine's adaptive binarization (default false).
      * @return A new, enhanced image ready for OCR.
      */
     CImg<uint> enhance(
@@ -122,6 +123,7 @@ namespace ite
         bool do_erosion = false,
         bool do_dilation = true,
         bool do_despeckle = true,
-        bool do_deskew = true);
+        bool do_deskew = true,
+        bool do_adaptive_binarization = false);
 
 }

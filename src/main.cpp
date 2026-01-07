@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Created directory: " << output_dir.string() << std::endl;
     }
     
-    auto enhanced_img = ite::enhance(img, 0.8f, 1, 3);
+    auto enhanced_img = ite::enhance(img, 0.0f, 1, 3, true, false, true, false, true, false);
     
     ite::writeimage(enhanced_img, (output_dir / "enhanced.jpg").string());
     std::cout << "Images saved to: " << output_dir.string() << std::endl;
