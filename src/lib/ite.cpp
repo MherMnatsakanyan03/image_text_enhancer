@@ -41,9 +41,7 @@ static CImg<double> calculate_integral_image(const CImg<double> &src)
 /**
  * @brief (Internal) Computes the sum of a region from an integral image.
  */
-static double get_area_sum(const CImg<double> &integral_img,
-                           int x1, int y1, int z, int c,
-                           int x2, int y2)
+static double get_area_sum(const CImg<double> &integral_img, int x1, int y1, int z, int c, int x2, int y2)
 {
 
     // Get sum at all four corners of the rectangle, handling boundary conditions
@@ -150,10 +148,7 @@ static void binarize_inplace(CImg<uint> &input_image, int window_size = 15, floa
  * @brief (Internal) Applies Gaussian denoising to an image, in-place.
  * Uses CImg's built-in blur function with neumann boundary conditions and isotropic blur.
  */
-static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma)
-{
-    input_image.blur(sigma, 1, true);
-}
+static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma) { input_image.blur(sigma, 1, true); }
 
 /**
  * @brief (Internal) Applies dilation to a binary image, in-place.
@@ -294,21 +289,25 @@ static void deskew_inplace(CImg<uint> &input_image)
     // Work on a smaller copy for speed (width ~600px)
     // Processing the full-res image for every angle guess is too slow.
     float scale_factor = 600.0f / input_image.width();
-    if (scale_factor >= 1.0f) scale_factor = 1.0f; // Don't upscale small images
+    if (scale_factor >= 1.0f)
+        scale_factor = 1.0f; // Don't upscale small images
 
     int new_w = input_image.width() * scale_factor;
     int new_h = input_image.height() * scale_factor;
-    
+
     CImg<uint> work = input_image.get_resize(new_w, new_h, 1, 1);
+
+    binarize_inplace(work);
 
     // Pre-processing: Make text bright for counting
     // Assume standard "Black Text on White Background" -> Invert it.
-    if (work.spectrum() > 1) {
-        work = work.get_channel(0); 
+    if (work.spectrum() > 1)
+    {
+        work = work.get_channel(0);
     }
-    
+
     cimg_for(work, ptr, uint) { *ptr = 255 - *ptr; }
-    
+
     // Threshold to binary (simple mean threshold is sufficient for structure)
     work.threshold(work.mean());
 
@@ -317,37 +316,41 @@ static void deskew_inplace(CImg<uint> &input_image)
     double best_angle = 0.0;
     double max_variance = -1.0;
 
-    #pragma omp parallel for
-    for (int i = -30; i <= 30; ++i) {
+#pragma omp parallel for
+    for (int i = -30; i <= 30; ++i)
+    {
         double angle = i * 0.5; // Steps of 0.5 degrees
-        
+
         // Rotate the work image
         // 1 = Linear interpolation
         // 0 = Boundary condition (Black). Since we inverted, Background is Black (0)
-        CImg<uint> rot = work.get_rotate(angle, 1, 0); 
-        
+        CImg<uint> rot = work.get_rotate(angle, 0, 0);
+
         // Compute Projection Profile (Sum of rows)
         double sum_sq = 0.0;
         double sum = 0.0;
-        
-        cimg_forY(rot, y) {
+
+        cimg_forY(rot, y)
+        {
             double row_sum = 0.0;
-            cimg_forX(rot, x) {
+            cimg_forX(rot, x)
+            {
                 row_sum += rot(x, y); // Pixel is either 0 or 255
             }
             sum += row_sum;
             sum_sq += row_sum * row_sum;
         }
-        
+
         // Calculate Variance of the row sums
         // Var = E[X^2] - (E[X])^2
         // We want to maximize this.
         double mean = sum / rot.height();
         double variance = (sum_sq / rot.height()) - (mean * mean);
 
-        #pragma omp critical
+#pragma omp critical
         {
-            if (variance > max_variance) {
+            if (variance > max_variance)
+            {
                 max_variance = variance;
                 best_angle = angle;
             }
@@ -356,9 +359,10 @@ static void deskew_inplace(CImg<uint> &input_image)
 
     // Apply correction to the original full-res image
     // Only rotate if the skew is significant (> 0.1 degrees)
-    if (std::abs(best_angle) > 0.1) {
+    if (std::abs(best_angle) > 0.1)
+    {
         // Use Linear interpolation (1) or Cubic (2) for quality.
-        // Boundary 1 (Neumann) repeats edge pixels. 
+        // Boundary 1 (Neumann) repeats edge pixels.
         // For a white page, this fills the new corners with white
         input_image.rotate(best_angle, 2, 0);
     }
@@ -478,10 +482,7 @@ static void despeckle_inplace(CImg<uint> &input_image, uint threshold, bool diag
     // Iterate over the label image to count pixels per label
     // ptr points to a number in labels at each pixel which we
     // use as index in our sized vector
-    cimg_for(labels, ptr, uint)
-    {
-        sizes[*ptr]++;
-    }
+    cimg_for(labels, ptr, uint) { sizes[*ptr]++; }
 
 // Filter: If a label is too small, turn it off (Black -> 0) in our inverted map
 #pragma omp parallel for collapse(2)
@@ -517,10 +518,7 @@ namespace ite
         return image;
     }
 
-    void writeimage(const CImg<uint> &image, std::string filepath)
-    {
-        image.save(filepath.c_str());
-    }
+    void writeimage(const CImg<uint> &image, std::string filepath) { image.save(filepath.c_str()); }
 
     CImg<uint> to_grayscale(const CImg<uint> &input_image)
     {
@@ -599,22 +597,16 @@ namespace ite
         return output_image;
     }
 
-    CImg<uint> enhance(
-        const CImg<uint> &input_image,
-        float sigma,
-        int kernel_size,
-        int despeckle_threshold,
-        bool diagonal_connections,
-        bool do_erosion,
-        bool do_dilation,
-        bool do_despeckle,
-        bool do_deskew)
+    CImg<uint> enhance(const CImg<uint> &input_image, float sigma, int kernel_size, int despeckle_threshold, bool diagonal_connections, bool do_erosion,
+                       bool do_dilation, bool do_despeckle, bool do_deskew)
     {
         CImg<uint> l_image = input_image;
 
         // Preparation & Alignment
         to_grayscale_inplace(l_image);
-        if (do_deskew) {
+
+        if (do_deskew)
+        {
             deskew_inplace(l_image);
         }
 
@@ -625,18 +617,21 @@ namespace ite
         binarize_inplace(l_image);
 
         // Remove noise (little dust specks)
-        if (do_despeckle) {
+        if (do_despeckle)
+        {
             despeckle_inplace(l_image, despeckle_threshold, diagonal_connections);
         }
 
         // Shape Repair (Morphologicals)
-        if (do_dilation) {
+        if (do_dilation)
+        {
             dilation_inplace(l_image, kernel_size);
         }
-        if (do_erosion) {
+        if (do_erosion)
+        {
             erosion_inplace(l_image, kernel_size);
         }
 
         return l_image;
     }
-}
+} // namespace ite

@@ -1,8 +1,10 @@
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 #include "ite.h"
 
-int main(int argc, char* argv[]) {
+
+int main(int argc, char* argv[])
+{
 
     // Get the path to the directory the executable is in
     std::filesystem::path executable_path = (argc > 0) ? std::filesystem::canonical(argv[0]) : std::filesystem::current_path() / "ITE";
@@ -14,20 +16,17 @@ int main(int argc, char* argv[]) {
 
     auto img = ite::loadimage(input_path.string());
 
-    std::cout << "Image loaded with dimensions: " 
-              << img.width() << "x" 
-              << img.height() << "x" 
-              << img.depth() << "x" 
-              << img.spectrum() << std::endl;
+    std::cout << "Image loaded with dimensions: " << img.width() << "x" << img.height() << "x" << img.depth() << "x" << img.spectrum() << std::endl;
 
     // Create the directory if it doesn't exist
-    if (!std::filesystem::is_directory(output_dir) && !std::filesystem::is_regular_file(output_dir)) {
+    if (!std::filesystem::is_directory(output_dir) && !std::filesystem::is_regular_file(output_dir))
+    {
         std::filesystem::create_directory(output_dir);
         std::cout << "Created directory: " << output_dir.string() << std::endl;
     }
-    
+
     auto enhanced_img = ite::enhance(img, 0.8f, 1, 3);
-    
+
     ite::writeimage(enhanced_img, (output_dir / "enhanced.jpg").string());
     std::cout << "Images saved to: " << output_dir.string() << std::endl;
 

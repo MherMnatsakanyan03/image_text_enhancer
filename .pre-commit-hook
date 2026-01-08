@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# --- STRICT MODE ---
+# -e: Exit immediately if ANY command fails (non-zero exit status)
+# -u: Exit immediately if you use an undefined variable
+# -o pipefail: Fail if any part of a pipeline (cmd | cmd) fails
+set -euo pipefail
+
+# HOW TO USE THIS SCRIPT:
+# go into the .git/hooks/ directory of this repository
+# rename it to pre-commit (remove the .sample extension)
+# make the script executable: chmod +x ./.git/hooks/pre-commit
+
+# 0. PRE-FLIGHT CHECK: Verify clang-format is installed/visible
+# This ensures we fail nicely instead of crashing inside the loop
+if ! command -v clang-format &> /dev/null; then
+    echo "----------------------------------------------------"
+    echo "❌ ERROR: 'clang-format' is not found in the PATH."
+    echo ""
+    echo "Run sudo apt install clang-format (Linux) or brew install clang-format (macOS) to install it."
+    echo "----------------------------------------------------"
+    exit 1
+fi
+
+# 1. Define the file extensions to check
+FILE_PATTERN="\.(cpp|h|hpp)$"
+
+# 2. Find all staged files that match the pattern
+echo "🔍 Checking for staged C++ files..."
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E "$FILE_PATTERN" || true)
+
+# If no C++ files are staged, exit immediately
+if [ -z "$STAGED_FILES" ]; then
+    exit 0
+fi
+
+echo "🔍 Running clang-format on staged files..."
+
+FILES_CHANGED=0
+CHANGED_LIST=""
+
+# 3. Loop through files and format them
+# By using set -e above, if clang-format crashes here, the script exits IMMEDIATELY.
+for file in $STAGED_FILES; do
+    if [ -f "$file" ]; then
+        # Run clang-format in-place (-i) using the project .clang-format file
+        clang-format -i -style=file "$file"
+
+        # 4. Check if the formatting created unstaged changes
+        # 'git diff --quiet' returns 1 if there are differences.
+        # Because this is inside an 'if' statement, 'set -e' allows it to run safely.
+        if ! git diff --quiet "$file"; then
+            FILES_CHANGED=1
+            CHANGED_LIST="$CHANGED_LIST\n   - $file"
+        fi
+    fi
+done
+
+# 5. Result Handling
+if [ "$FILES_CHANGED" -eq 1 ]; then
+    echo "----------------------------------------------------"
+    echo -e "❌ ABORTING COMMIT: Formatting changes detected."
+    echo ""
+    echo "The following files were reformatted by clang-format:"
+    echo -e "$CHANGED_LIST"
+    echo ""
+    echo "⚠️  ACTION REQUIRED: Please run 'git add <file>' for these files and commit again."
+    echo "----------------------------------------------------"
+    exit 1
+else
+    echo "✅ Formatting checks passed."
+    exit 0
+fi
