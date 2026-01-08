@@ -170,16 +170,18 @@ static void adaptive_binarize_inplace(CImg<uint> &input_image, int window_size =
     const int img_depth = input_image.depth();
 
     // ToDo: Optimize memory usage
-    // create array to store std deviation, mean values for each window
-    double std_dev_window[img_width * img_height * img_depth];
-    double mean_window[img_width * img_height * img_depth];
+    // create vector (using of bigger storage) to store std deviation, mean values for each pixel in the image
+    // ToDo: calculate only once per window and store in a smaller vector
+    std::vector<double> std_dev_window(img_width * img_height * img_depth);
+    std::vector<double> mean_window(img_width * img_height * img_depth);
     double min_std_dev = 255.0; // initialize to max possible value -> can only go down
     double max_std_dev = 0.0; // initialize to min possible value -> can only go up
 
     CImg<uint> output_image(input_image.width(), input_image.height(), input_image.depth(), 1);
 
     // First pass: Calculate local std. deviation for each window
-    // ToDo: Parallelize this loop and only compute std. deviation once per window
+    // ToDo: only compute std. deviation once per window
+#pragma omp parallel for collapse(3) reduction(min : min_std_dev) reduction(max : max_std_dev)
     for (int z = 0; z < img_depth; ++z)
     {
         for (int y = 0; y < img_height; ++y)
@@ -219,22 +221,25 @@ static void adaptive_binarize_inplace(CImg<uint> &input_image, int window_size =
         }
     }
 
-    // ToDo: Add small epsilon to avoid division by zero in case min == max
-    // ToDo: Parallelize this loop
+    // calculate range once and set a small epsilon to avoid division by zero
+    const double std_dev_range = (max_std_dev - min_std_dev) > 1e-5 ? (max_std_dev - min_std_dev) : 1e-5;
+
     // Second pass: Binarize using local std. deviation
+#pragma omp parallel for collapse(3)
     for (int z = 0; z < input_image.depth(); ++z)
     {        for (int y = 0; y < input_image.height(); ++y)
         {            for (int x = 0; x < input_image.width(); ++x)
             {                
-                const double std_dev_window_val = std_dev_window[x + y * input_image.width() + z * input_image.width() * input_image.height()];
-                const double mean_window_val = mean_window[x + y * input_image.width() + z * input_image.width() * input_image.height()];
+                int idx = x + y * img_width + z * img_width * img_height;
+                const double std_dev_window_val = std_dev_window[idx];
+                const double mean_window_val = mean_window[idx];
                 
                 // Calculate adaptive threshold
-                const double std_dev_adaptive = (std_dev_window_val - min_std_dev) / (max_std_dev - min_std_dev);
+                const double std_dev_adaptive = (std_dev_window_val - min_std_dev) / std_dev_range;
                 // define threshold based on adaptive std deviation
                 const double threshold = mean_window_val - (((mean_window_val * mean_window_val) - std_dev_window_val) / ((mean_global + std_dev_window_val) * (std_dev_adaptive + std_dev_window_val)));
                 // Apply threshold
-                output_image(x, y, z) = (input_image(x, y, z) > threshold) * 255;
+                output_image(x, y, z) = (input_image(x, y, z) < threshold) ? 0 : 255;
             }
         }
     }
