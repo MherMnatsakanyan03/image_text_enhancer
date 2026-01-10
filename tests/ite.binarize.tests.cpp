@@ -2,7 +2,7 @@
 #include <CImg.h>
 #include <catch2/catch_test_macros.hpp>
 
-TEST_CASE("binarize: Converts grayscale to binary (black/white)", "[ite][binarize]")
+TEST_CASE("binarize_inplace: Converts grayscale to binary (black/white)", "[ite][binarize_inplace]")
 {
     SECTION("Converts a simple grayscale image")
     {

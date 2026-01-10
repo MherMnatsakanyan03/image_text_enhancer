@@ -37,13 +37,23 @@ namespace ite
     CImg<uint> to_grayscale(const CImg<uint> &input_image);
 
     /**
-     * @brief Converts a grayscale image to a binary (black and white) image.
+     * @brief Converts a grayscale image inplace to a binary (black and white) image.
      * If the image is not grayscale, it is first converted to grayscale.
      * Uses Sauvola's method for adaptive thresholding.
      * @param input_image The source grayscale image.
      * @return A new 1-channel binary image (values 0 or 255).
      */
     CImg<uint> binarize(const CImg<uint> &input_image);
+
+    /**
+     * @brief Converts a grayscale image inplace to a binary (black and white) image.
+     * If the image is not grayscale, it is first converted to grayscale.
+     * Uses Bataine's method for adaptive thresholding.
+     * @param input_image The source grayscale image.
+     * @param window_size The size of the window used for adaptive thresholding.
+     * @return A new 1-channel binary image (values 0 or 255).
+     */
+    CImg<uint> binarize_adaptive(const CImg<uint> &input_image, int window_size = 15);
 
     /**
      * @brief Applies a Gaussian blur to denoise the image.
@@ -100,12 +110,13 @@ namespace ite
 
     /**
      * @brief Runs the full pipeline for text enhancement.
-     * Applies a logical sequence of operations (e.g., grayscale, denoise, binarize)
+     * Applies a logical sequence of operations (e.g., grayscale, denoise, binarize_inplace)
      * to produce an image optimized for OCR.
      * @param input_image The original, unprocessed image.
      * @param sigma The standard deviation for Gaussian denoising (default 1.0f).
      * @param kernel_size The structuring element size for morphological operations (default 3).
      * @param despeckle_threshold The size threshold for despeckling (default 5).
+     * @param binarization_window_size The window size for adaptive binarization (default 15) (not used when do_adaptive_binarization is false).
      * @param diagonal_connections Whether to consider diagonal connections in despeckling (default true).
      * @param do_erosion Whether to perform erosion (default false).
      * @param do_dilation Whether to perform dilation (default true).
@@ -119,6 +130,7 @@ namespace ite
         float sigma = 1.0f,
         int kernel_size = 3,
         int despeckle_threshold = 5,
+        int binarization_window_size = 15,
         bool diagonal_connections = true,
         bool do_erosion = false,
         bool do_dilation = true,

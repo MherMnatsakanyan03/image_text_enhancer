@@ -151,7 +151,7 @@ static void binarize_inplace(CImg<uint> &input_image, int window_size = 15, floa
  * @brief (Internal) Converts a grayscale image to a binary (black and white) image, in-place.
  * Uses simple Bataine's adaptive thresholding. 
  */
-static void adaptive_binarize_inplace(CImg<uint> &input_image, int window_size = 15)
+static void binarize_inplace_adaptive(CImg<uint> &input_image, int window_size = 15)
 {
     if (input_image.spectrum() != 1)
     {
@@ -642,8 +642,21 @@ namespace ite
             to_grayscale_inplace(output_image);
         }
 
-        //binarize_inplace(output_image);
-        adaptive_binarize_inplace(output_image);
+        binarize_inplace(output_image);
+
+        return output_image;
+    }
+
+    CImg<uint> binarize_adaptive(const CImg<uint> &input_image, int window_size)
+    {
+        CImg<uint> output_image = input_image;
+
+        if (output_image.spectrum() != 1)
+        {
+            to_grayscale_inplace(output_image);
+        }
+
+        binarize_inplace_adaptive(output_image, window_size);
 
         return output_image;
     }
@@ -707,12 +720,13 @@ namespace ite
         float sigma,
         int kernel_size,
         int despeckle_threshold,
+        int binarization_window_size,
         bool diagonal_connections,
         bool do_erosion,
         bool do_dilation,
         bool do_despeckle,
         bool do_deskew,
-        bool do_adaptive_binarization)
+        bool do_binarization_adaptive)
     {
         CImg<uint> l_image = input_image;
 
@@ -727,13 +741,13 @@ namespace ite
         contrast_enhancement_inplace(l_image);
 
         // Binarization
-        if (do_adaptive_binarization) {
-            // New Adaptive Binarization
+        if (do_binarization_adaptive) {
+            // Adaptive Binarization
             // Based on Bataine's Adaptive Thresholding Methods for Documents Image Binarization"
-            adaptive_binarize_inplace(l_image);
+            binarize_adaptive(l_image, binarization_window_size);
         } else {
             // Standard Sauvola Binarization
-            binarize_inplace(l_image);
+            binarize(l_image);
         }
 
         // Remove noise (little dust specks)

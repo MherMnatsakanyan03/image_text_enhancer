@@ -18,7 +18,7 @@ target_link_libraries(grayscale_test ${Link_Libs})
 add_test(NAME grayscale_test COMMAND grayscale_test)
 
 # Binarization tests
-add_executable(binarization_test ite.binarize.tests.cpp)
+add_executable(binarization_test ite.binarize.tests.cpp ite.binarize_adaptive.tests.cpp)
 target_link_libraries(binarization_test ${Link_Libs})
 add_test(NAME binarization_test COMMAND binarization_test)
 
