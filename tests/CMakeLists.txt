@@ -28,6 +28,7 @@ add_ite_test(binarization_test binarization/ite.binarize.tests.cpp)
 # Denoising tests
 add_ite_test(simple_gaussian_test filters/ite.simple_gaussian.tests.cpp)
 add_ite_test(adaptive_gaussian_test filters/ite.adaptive_gaussian.tests.cpp)
+add_ite_test(adaptive_median_test filters/ite.adaptive_median.tests.cpp)
 add_ite_test(despeckling_test filters/ite.despeckle.tests.cpp)
 
 # Deskew tests
