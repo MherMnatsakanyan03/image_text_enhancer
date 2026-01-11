@@ -1,4 +1,3 @@
----
 Language: Cpp
 BasedOnStyle: LLVM
 AccessModifierOffset: -4
@@ -36,4 +35,3 @@ SpacesInParentheses: false
 TabWidth: 4
 ReferenceAlignment: Right
 FixNamespaceComments: true
-...
