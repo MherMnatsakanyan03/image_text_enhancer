@@ -99,18 +99,18 @@ namespace ite
      * @brief Detects and corrects for skew (rotation) in the image.
      * Finds the dominant text angle and rotates the image to be level.
      * @param input_image The source image (typically grayscale).
+     * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 1 = Neumann).
      * @return A new, deskewed image.
      */
-    CImg<uint> deskew(const CImg<uint> &input_image);
+    CImg<uint> deskew(const CImg<uint> &input_image, int boundary_conditions = 1);
 
     /**
      * @brief Enhances the contrast of the image.
      * This helps separate text from the background. Uses histogram equalization.
      * @param input_image The source image (typically grayscale).
-     * @param boundary_conditions The type of boundary conditions to use. See `CImg::blur()` in `CImg.h` for more info (default: 1 = Neumann).
      * @return A new, high-contrast image.
      */
-    CImg<uint> contrast_enhancement(const CImg<uint> &input_image, int boundary_conditions = 1);
+    CImg<uint> contrast_enhancement(const CImg<uint> &input_image);
 
     /**
      * @brief Removes small connected components (speckles) from a binary image.
