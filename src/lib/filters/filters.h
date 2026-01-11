@@ -37,7 +37,7 @@ namespace ite::filters
      * @param edge_thresh The variance threshold to differentiate between edge and flat regions.
      * @param block_h Height of the blocks for parallel processing (default: 64).
      */
-    void adaptive_gaussian_blur_omp(CImg<uint> &img, float sigma_low, float sigma_high, float edge_thresh, int block_h = 64, int boundary_conditions = 1);
+    void adaptive_gaussian_blur(CImg<uint> &img, float sigma_low, float sigma_high, float edge_thresh, int block_h = 64, int boundary_conditions = 1);
 
     /**
      * @brief Applies median denoising to an image in-place.

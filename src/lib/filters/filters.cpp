@@ -26,7 +26,7 @@ namespace ite::filters
     // Parallel: OpenMP over (channel, depth, row-block).
 
     // In-place adaptive Gaussian blur
-    void adaptive_gaussian_blur_omp(CImg<uint> &img, float sigma_low, float sigma_high,
+    void adaptive_gaussian_blur(CImg<uint> &img, float sigma_low, float sigma_high,
                                     float edge_thresh, // gradient threshold controlling blend (typical 30..80 for 8-bit)
                                     int block_h, int boundary_conditions)
     {

@@ -111,7 +111,7 @@ namespace ite
     CImg<uint> adaptive_gaussian_blur(const CImg<uint> &input_image, float sigma_low, float sigma_high, float edge_thresh, int truncate, int block_h)
     {
         CImg<uint> result = input_image;
-        filters::adaptive_gaussian_blur_omp(result, sigma_low, sigma_high, edge_thresh, truncate, block_h);
+        filters::adaptive_gaussian_blur(result, sigma_low, sigma_high, edge_thresh, truncate, block_h);
         return result;
     }
 
@@ -145,7 +145,7 @@ namespace ite
         // 4. Denoising
         if (opt.do_adaptive_gaussian_blur)
         {
-            filters::adaptive_gaussian_blur_omp(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, 8, opt.boundary_conditions);
+            filters::adaptive_gaussian_blur(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, 8, opt.boundary_conditions);
         }
         else if (opt.do_gaussian_blur)
         {
