@@ -80,7 +80,7 @@ namespace ite::geometry
         return {best_angle, best_score};
     }
 
-    void deskew_projection_profile(CImg<uint> &input_image, int boundary_conditions)
+    void deskew_projection_profile(CImg<uint> &input_image, int boundary_conditions, int window_size, float k, float delta)
     {
         const int inW = input_image.width();
         const int inH = input_image.height();
@@ -99,8 +99,8 @@ namespace ite::geometry
 
         CImg<uint> small = input_image.get_resize(new_w, new_h, 1, input_image.spectrum());
 
-        // Convert to grayscale
-        CImg<unsigned char> gray(new_w, new_h, 1, 1);
+        // Convert to grayscale (as CImg<uint> for Sauvola)
+        CImg<uint> gray(new_w, new_h, 1, 1);
         if (small.spectrum() >= 3)
         {
             for (int y = 0; y < new_h; ++y)
@@ -122,40 +122,25 @@ namespace ite::geometry
                     gray(x, y) = clamp_to_u8(small(x, y, 0, 0));
         }
 
-        // Threshold with Otsu
-        const int t = binarization::compute_otsu_threshold(gray);
-        const double bmean = binarization::compute_border_mean(gray);
-        const bool background_is_bright = (bmean >= static_cast<double>(t));
+        // Binarize with Sauvola
+        binarization::binarize_sauvola(gray, window_size, k, delta);
 
-        // Build binary image
+        // Build binary image (Sauvola produces 0 or 255, convert to 0 or 1)
         CImg<unsigned char> bin(new_w, new_h, 1, 1);
         {
             const int N = new_w * new_h;
-            const unsigned char* pg = gray.data();
+            const uint* pg = gray.data();
             unsigned char* pb = bin.data();
 
             int fg = 0;
-            if (background_is_bright)
+            for (int i = 0; i < N; ++i)
             {
-                for (int i = 0; i < N; ++i)
-                {
-                    const unsigned char v = pg[i];
-                    const unsigned char b = (v <= static_cast<unsigned char>(t)) ? 1u : 0u;
-                    pb[i] = b;
-                    fg += b;
-                }
-            }
-            else
-            {
-                for (int i = 0; i < N; ++i)
-                {
-                    const unsigned char v = pg[i];
-                    const unsigned char b = (v > static_cast<unsigned char>(t)) ? 1u : 0u;
-                    pb[i] = b;
-                    fg += b;
-                }
+                const unsigned char b = (pg[i] > 0) ? 1u : 0u;
+                pb[i] = b;
+                fg += b;
             }
 
+            // If foreground > 50%, invert (ensure foreground is minority)
             if (fg > N / 2)
             {
                 for (int i = 0; i < N; ++i)
