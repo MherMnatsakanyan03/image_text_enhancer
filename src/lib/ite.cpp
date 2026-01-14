@@ -10,460 +10,568 @@ const float WEIGHT_B = 0.114f;
 /**
  * @brief (Internal) Computes the Summed-Area Table (Integral Image).
  */
-static CImg<double> calculate_integral_image(const CImg<double> &src)
-{
-    CImg<double> integral_img(src.width(), src.height(), src.depth(), src.spectrum(), 0);
+static CImg<double> calculate_integral_image(const CImg<double> &src) {
+  CImg<double> integral_img(src.width(), src.height(), src.depth(),
+                            src.spectrum(), 0);
 
-    cimg_forZC(src, z, c)
-    { // Process each 2D slice
-        // First row
-        for (int x = 0; x < src.width(); ++x)
-        {
-            // Add current pixel to the sum of previous pixels in the row
-            integral_img(x, 0, z, c) = src(x, 0, z, c) + (x > 0 ? integral_img(x - 1, 0, z, c) : 0.0);
-        }
-        // Remaining rows
-        for (int y = 1; y < src.height(); ++y)
-        {
-            double row_sum = 0.0;
-            for (int x = 0; x < src.width(); ++x)
-            {
-                // Add current pixel to the sum of previous pixels in the row
-                row_sum += src(x, y, z, c);
-                integral_img(x, y, z, c) = row_sum + integral_img(x, y - 1, z, c);
-            }
-        }
+  cimg_forZC(src, z, c) { // Process each 2D slice
+    // First row
+    for (int x = 0; x < src.width(); ++x) {
+      // Add current pixel to the sum of previous pixels in the row
+      integral_img(x, 0, z, c) =
+          src(x, 0, z, c) + (x > 0 ? integral_img(x - 1, 0, z, c) : 0.0);
     }
+    // Remaining rows
+    for (int y = 1; y < src.height(); ++y) {
+      double row_sum = 0.0;
+      for (int x = 0; x < src.width(); ++x) {
+        // Add current pixel to the sum of previous pixels in the row
+        row_sum += src(x, y, z, c);
+        integral_img(x, y, z, c) = row_sum + integral_img(x, y - 1, z, c);
+      }
+    }
+  }
 
-    return integral_img;
+  return integral_img;
 }
 
 /**
  * @brief (Internal) Computes the sum of a region from an integral image.
  */
-static double get_area_sum(const CImg<double> &integral_img,
-                           int x1, int y1, int z, int c,
-                           int x2, int y2)
-{
+static double get_area_sum(const CImg<double> &integral_img, int x1, int y1,
+                           int z, int c, int x2, int y2) {
 
-    // Get sum at all four corners of the rectangle, handling boundary conditions
-    const double D = integral_img(x2, y2, z, c);
-    const double B = (x1 > 0) ? integral_img(x1 - 1, y2, z, c) : 0.0;
-    const double C = (y1 > 0) ? integral_img(x2, y1 - 1, z, c) : 0.0;
-    const double A = (x1 > 0 && y1 > 0) ? integral_img(x1 - 1, y1 - 1, z, c) : 0.0;
+  // Get sum at all four corners of the rectangle, handling boundary conditions
+  const double D = integral_img(x2, y2, z, c);
+  const double B = (x1 > 0) ? integral_img(x1 - 1, y2, z, c) : 0.0;
+  const double C = (y1 > 0) ? integral_img(x2, y1 - 1, z, c) : 0.0;
+  const double A =
+      (x1 > 0 && y1 > 0) ? integral_img(x1 - 1, y1 - 1, z, c) : 0.0;
 
-    // Inclusion-Exclusion Principle
-    return D - B - C + A;
+  // Inclusion-Exclusion Principle
+  return D - B - C + A;
 }
 
 /**
  * @brief (Internal) Converts an image to grayscale, in-place.
  * Uses the standard luminance formula.
  */
-static void to_grayscale_inplace(CImg<uint> &input_image)
-{
-    if (input_image.spectrum() == 1)
-    {
-        return; // Already grayscale
-    }
+static void to_grayscale_inplace(CImg<uint> &input_image) {
+  if (input_image.spectrum() == 1) {
+    return; // Already grayscale
+  }
 
-    // Create a new image with the correct 1-channel dimensions
-    CImg<uint> gray_image(input_image.width(), input_image.height(), input_image.depth(), 1);
+  // Create a new image with the correct 1-channel dimensions
+  CImg<uint> gray_image(input_image.width(), input_image.height(),
+                        input_image.depth(), 1);
 
 #pragma omp parallel for collapse(2)
-    for (int z = 0; z < input_image.depth(); ++z)
-    {
-        for (int y = 0; y < input_image.height(); ++y)
-        {
-            for (int x = 0; x < input_image.width(); ++x)
-            {
-                // Read all 3 channels
-                uint r = input_image(x, y, z, 0);
-                uint g = input_image(x, y, z, 1);
-                uint b = input_image(x, y, z, 2);
-                // Calculate and set the new pixel value
-                gray_image(x, y, z, 0) = static_cast<uint>(std::round(WEIGHT_R * r + WEIGHT_G * g + WEIGHT_B * b));
-            }
-        }
+  for (int z = 0; z < input_image.depth(); ++z) {
+    for (int y = 0; y < input_image.height(); ++y) {
+      for (int x = 0; x < input_image.width(); ++x) {
+        // Read all 3 channels
+        uint r = input_image(x, y, z, 0);
+        uint g = input_image(x, y, z, 1);
+        uint b = input_image(x, y, z, 2);
+        // Calculate and set the new pixel value
+        gray_image(x, y, z, 0) = static_cast<uint>(
+            std::round(WEIGHT_R * r + WEIGHT_G * g + WEIGHT_B * b));
+      }
     }
+  }
 
-    // Assign the new 1-channel image to the input reference
-    input_image = gray_image;
+  // Assign the new 1-channel image to the input reference
+  input_image = gray_image;
 }
 
 /**
- * @brief (Internal) Converts a grayscale image to a binary (black and white) image, in-place.
- * Uses Sauvola's method for adaptive thresholding.
+ * @brief (Internal) Converts a grayscale image to a binary (black and white)
+ * image, in-place. Uses Sauvola's method for adaptive thresholding.
  */
-static void binarize_inplace(CImg<uint> &input_image, int window_size = 15, float k = 0.2f)
-{
-    if (input_image.spectrum() != 1)
-    {
-        throw std::runtime_error("Sauvola requires a grayscale image.");
-    }
+static void binarize_inplace(CImg<uint> &input_image, int window_size = 15,
+                             float k = 0.2f) {
+  if (input_image.spectrum() != 1) {
+    throw std::runtime_error("Sauvola requires a grayscale image.");
+  }
 
-    CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
+  CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
 
-    CImg<double> integral_img = calculate_integral_image(img_double);
-    CImg<double> integral_sq_img = calculate_integral_image(img_double.get_sqr()); // Integral of (pixel*pixel)
+  CImg<double> integral_img = calculate_integral_image(img_double);
+  CImg<double> integral_sq_img = calculate_integral_image(
+      img_double.get_sqr()); // Integral of (pixel*pixel)
 
-    CImg<uint> output_image(input_image.width(), input_image.height(), input_image.depth(), 1);
-    const float R = 128.0f; // Max std. dev (for normalization)
-    const int w_half = window_size / 2;
+  CImg<uint> output_image(input_image.width(), input_image.height(),
+                          input_image.depth(), 1);
+  const float R = 128.0f; // Max std. dev (for normalization)
+  const int w_half = window_size / 2;
 
 #pragma omp parallel for collapse(2)
-    for (int z = 0; z < input_image.depth(); ++z)
-    {
-        for (int y = 0; y < input_image.height(); ++y)
-        {
-            for (int x = 0; x < input_image.width(); ++x)
-            {
-                // Define the local window (clamp to edges)
-                const int x1 = std::max(0, x - w_half);
-                const int y1 = std::max(0, y - w_half);
-                const int x2 = std::min(input_image.width() - 1, x + w_half);
-                const int y2 = std::min(input_image.height() - 1, y + w_half);
+  for (int z = 0; z < input_image.depth(); ++z) {
+    for (int y = 0; y < input_image.height(); ++y) {
+      for (int x = 0; x < input_image.width(); ++x) {
+        // Define the local window (clamp to edges)
+        const int x1 = std::max(0, x - w_half);
+        const int y1 = std::max(0, y - w_half);
+        const int x2 = std::min(input_image.width() - 1, x + w_half);
+        const int y2 = std::min(input_image.height() - 1, y + w_half);
 
-                const double N = (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
+        const double N =
+            (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
 
-                // Get sum and sum of squares from integral images
-                const double sum = get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
-                const double sum_sq = get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
+        // Get sum and sum of squares from integral images
+        const double sum = get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
+        const double sum_sq =
+            get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
 
-                // Calculate local mean and std. deviation
-                const double mean = sum / N;
-                const double std_dev = std::sqrt(std::max(0.0, (sum_sq / N) - (mean * mean)));
+        // Calculate local mean and std. deviation
+        const double mean = sum / N;
+        const double std_dev =
+            std::sqrt(std::max(0.0, (sum_sq / N) - (mean * mean)));
 
-                // Calculate Sauvola's threshold
-                const double threshold = mean * (1.0 + k * ((std_dev / R) - 1.0));
+        // Calculate Sauvola's threshold
+        const double threshold = mean * (1.0 + k * ((std_dev / R) - 1.0));
 
-                // Apply threshold
-                output_image(x, y, z) = (input_image(x, y, z) > threshold) * 255;
-            }
-        }
+        // Apply threshold
+        output_image(x, y, z) = (input_image(x, y, z) > threshold) * 255;
+      }
     }
-
-    input_image = output_image;
+  }
+  input_image = output_image;
 }
 
-
 /**
- * @brief (Internal) Converts a grayscale image to a binary (black and white) image, in-place.
- * Uses simple Bataine's adaptive thresholding. 
+ * @brief (Internal) Converts a grayscale image to a binary (black and white)
+ * image, in-place. Uses simple Bataine's adaptive thresholding.
  */
-static void binarize_inplace_adaptive(CImg<uint> &input_image, int window_size = 15)
-{
-    if (input_image.spectrum() != 1)
-    {
-        throw std::runtime_error("Adaptive Binarization requires a grayscale image.");
+static void binarize_inplace_adaptive(CImg<uint> &input_image) {
+  /*
+  Calculates adaptive binarization while using adaptive window sizes to improve
+  results, as described in Bataineh et al., "An adaptive local binarization
+  method for document images based on a novel thresholding method and dynamic
+  windows", 2011.
+
+  Calculation of adaptive binarization consists of two main parts:
+  1. Calculation of max and min std. deviation of the adaptive window sizes to
+  determine adaptive binarization thresholds.
+  2. Binarization using global max and min std. deviation for each pixel's
+  adaptive window.
+
+  Calculation of adaptive window sizes is based on image characteristics and
+  consists of 5 steps:
+  1. Compute Confusion Threshold T_con
+  2. Classify pixels based on T_con and calculation of probabilities p
+  3. Determine primary window size pw_size based on probability p
+  4. Set final window size W_size based on pw_size and image dimensions
+  5. Use W_size for adaptive binarization
+  Steps 4 and 5 are integrated in the binarization process below.
+  */
+
+  if (input_image.spectrum() != 1) {
+    throw std::runtime_error(
+        "Adaptive Binarization requires a grayscale image.");
+  }
+
+  CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
+  CImg<double> integral_img = calculate_integral_image(input_image);
+  CImg<double> integral_sq_img = calculate_integral_image(
+      input_image.get_sqr()); // Integral of (pixel*pixel)
+
+  // set usefull constants
+  const double mean_global = img_double.mean();
+  const int img_width = img_double.width();
+  const int img_height = img_double.height();
+  const int img_depth = img_double.depth();
+
+  /*----- adaptive window size steps 1-3 -----*/
+
+  // First step: compute Confusion Threshold T_con
+  const double std_dev = std::sqrt(img_double.variance());
+  const double max_intensity = img_double.max();
+  const double T_con =
+      mean_global -
+      ((mean_global * mean_global * std_dev) /
+       ((mean_global + std_dev) * (0.5 * max_intensity + std_dev)));
+  const double offset = std_dev / 2.0;
+
+  // Second step: classify pixels based on T_con and calculation of
+  // probabilities p
+  long n_black = 0;
+  long n_red = 0;
+  long n_white = 0;
+  cimg_forXYZ(img_double, x, y, z) {
+    double pixel_value = img_double(x, y, z);
+    if (pixel_value <= T_con - offset) {
+      n_black++;
+    } else if (pixel_value >= T_con + offset) {
+      n_white++;
+    } else {
+      n_red++;
     }
+  }
 
-    CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
-    CImg<double> integral_img = calculate_integral_image(img_double);
-    CImg<double> integral_sq_img = calculate_integral_image(img_double.get_sqr()); // Integral of (pixel*pixel)
+  double p = (n_red == 0) ? 10.0 : (double)n_black / n_red;
 
-    // set usefull constants
-    const int w_half = window_size / 2;
-    const double mean_global = input_image.mean();
-    const int img_width = input_image.width();
-    const int img_height = input_image.height();
-    const int img_depth = input_image.depth();
+  // Third step: determine primary window size pw_size based on probability p
+  // pw_size = [pw_size_x, pw_size_y]
+  int pw_size[2];
+  if (p >= 2.5 ||
+      (std_dev < 0.1 * max_intensity)) // large text size, low contact images
+  {
+    pw_size[0] = img_width / 6;  // 6
+    pw_size[1] = img_height / 4; // 4
+  } else if (1 < p ||
+             (img_width + img_height) < 400) { // fine and normal images
+    pw_size[0] = img_width / 30;               // 30
+    pw_size[1] = img_height / 20;              // 20
+  } else {                        // very fine text size, high contact images
+    pw_size[0] = img_width / 40;  // 40
+    pw_size[1] = img_height / 30; // 30
+  }
 
-    // ToDo: Optimize memory usage
-    // create vector (using of bigger storage) to store std deviation, mean values for each pixel in the image
-    // ToDo: calculate only once per window and store in a smaller vector
-    std::vector<double> std_dev_window(img_width * img_height * img_depth);
-    std::vector<double> mean_window(img_width * img_height * img_depth);
-    double min_std_dev = 255.0; // initialize to max possible value -> can only go down
-    double max_std_dev = 0.0; // initialize to min possible value -> can only go up
+  // check if window sizes are odd numbers, if not make them odd
+  if (pw_size[0] % 2 == 0) {
+    pw_size[0]++;
+  }
+  if (pw_size[1] % 2 == 0) {
+    pw_size[1]++;
+  }
 
-    CImg<uint> output_image(input_image.width(), input_image.height(), input_image.depth(), 1);
+  // usefull constants for later
+  const int pw_x_half = pw_size[0] / 2;
+  const int pw_y_half = pw_size[1] / 2;
 
-    // First pass: Calculate local std. deviation for each window
-    // ToDo: only compute std. deviation once per window
-#pragma omp parallel for collapse(3) reduction(min : min_std_dev) reduction(max : max_std_dev)
-    for (int z = 0; z < img_depth; ++z)
-    {
-        for (int y = 0; y < img_height; ++y)
-        {
-            for (int x = 0; x < img_width; ++x)
-            {
-                // Define the local window (clamp to edges)
-                const int x1 = std::max(0, x - w_half);
-                const int y1 = std::max(0, y - w_half);
-                const int x2 = std::min(img_width - 1, x + w_half);
-                const int y2 = std::min(img_height - 1, y + w_half);
+  /*----- end adaptive window size steps 1-3 -----*/
 
-                // Get sum and sum of squares from integral images
-                double sum = get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
-                double sum_sq = get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
+  CImg<uint> output_image(img_width, img_height, img_depth, 1);
+  double min_std_dev =
+      255.0; // initialize to max possible value -> can only go down
+  double max_std_dev =
+      0.0; // initialize to min possible value -> can only go up
 
-                const double N = (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
-                
-                // Calculate local mean and std. deviation
-                const double mean = sum / N;
-                const double std_dev = std::sqrt(std::max(0.0, (sum_sq / N) - (mean * mean)));
+  /*----- adaptive binarization -----*/
+  // First step: Calculate local std. deviation for each window and determine
+  // global min and max std. deviation
+#pragma omp parallel for collapse(3) reduction(min                             \
+                                               : min_std_dev)                  \
+    reduction(max                                                              \
+              : max_std_dev)
+  for (int z = 0; z < img_depth; ++z) {
+    for (int y = 0; y < img_height; ++y) {
+      for (int x = 0; x < img_width; ++x) {
+        // use primary window size pw_size for each pixel in step 1
+        // Define the local window (clamp to edges)
+        const int x1 = std::max(0, x - pw_x_half);
+        const int y1 = std::max(0, y - pw_y_half);
+        const int x2 = std::min(img_width - 1, x + pw_x_half);
+        const int y2 = std::min(img_height - 1, y + pw_y_half);
 
-                int idx = x + y * img_width + z * img_width * img_height;
-                std_dev_window[idx] = std_dev;
-                mean_window[idx] = mean;
+        // Get sum and sum of squares from integral images
+        double sum = get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
+        double sum_sq = get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
 
-                // set min and max global std deviation for normalization
-                if (std_dev < min_std_dev)
-                    {
-                        min_std_dev = std_dev;
-                    }
-                if (std_dev > max_std_dev)
-                    {
-                        max_std_dev = std_dev;
-                    }
-            }
+        const double N =
+            (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
+
+        // Calculate local mean and std. deviation
+        const double mean = sum / N;
+        const double std_dev =
+            std::sqrt(std::max(0.0, (sum_sq / N) - (mean * mean)));
+
+        // set min and max global std deviation for normalization
+        if (std_dev < min_std_dev) {
+          min_std_dev = std_dev;
         }
+        if (std_dev > max_std_dev) {
+          max_std_dev = std_dev;
+        }
+      }
     }
+  }
 
-    // calculate range once and set a small epsilon to avoid division by zero
-    const double std_dev_range = (max_std_dev - min_std_dev) > 1e-5 ? (max_std_dev - min_std_dev) : 1e-5;
+  // calculate range once and set a small epsilon to avoid division by zero
+  const double std_dev_range =
+      (max_std_dev - min_std_dev) > 1e-5 ? (max_std_dev - min_std_dev) : 1e-5;
 
-    // Second pass: Binarize using local std. deviation
+  // Second pass: Binarize using local std. deviation
 #pragma omp parallel for collapse(3)
-    for (int z = 0; z < input_image.depth(); ++z)
-    {        for (int y = 0; y < input_image.height(); ++y)
-        {            for (int x = 0; x < input_image.width(); ++x)
-            {                
-                int idx = x + y * img_width + z * img_width * img_height;
-                const double std_dev_window_val = std_dev_window[idx];
-                const double mean_window_val = mean_window[idx];
-                
-                // Calculate adaptive threshold
-                const double std_dev_adaptive = (std_dev_window_val - min_std_dev) / std_dev_range;
-                // define threshold based on adaptive std deviation
-                const double threshold = mean_window_val - (((mean_window_val * mean_window_val) - std_dev_window_val) / ((mean_global + std_dev_window_val) * (std_dev_adaptive + std_dev_window_val)));
-                // Apply threshold
-                output_image(x, y, z) = (input_image(x, y, z) < threshold) ? 0 : 255;
-            }
-        }
-    }
-    input_image = output_image;
-}
+  for (int z = 0; z < img_depth; ++z) {
+    for (int y = 0; y < img_height; ++y) {
+      for (int x = 0; x < img_width; ++x) {
+        // Define the local window (clamp to edges)
+        const int x1 = std::max(0, x - pw_x_half);
+        const int y1 = std::max(0, y - pw_y_half);
+        const int x2 = std::min(img_width - 1, x + pw_x_half);
+        const int y2 = std::min(img_height - 1, y + pw_y_half);
 
-    
+        /*----- adaptive window size -----*/
+        // Fourth step: Set final window size W_size based on pw_size and image
+        // dimensions count number of black and red pixels in primary window
+        long n_w_black = 0;
+        long n_w_red = 0;
+        for (int i = y1; i < y2; ++i) {
+          for (int j = x1; j < x2; ++j) {
+            double w_pixel_value = input_image(j, i, z);
+            if (w_pixel_value <= T_con - offset) {
+              n_w_black++;
+            } else if (w_pixel_value < T_con + offset) {
+              n_w_red++;
+            }
+          }
+        }
+        // if more red pixels than black pixels, decrease window size if not use
+        // normal pw_size
+        bool use_sub_window = (n_w_red > n_w_black);
+        int final_w_x_half = use_sub_window ? pw_x_half / 2 : pw_x_half;
+        int final_w_y_half = use_sub_window ? pw_y_half / 2 : pw_y_half;
+
+        // Fifth step: redefine the local window with final window size
+        const int x1_final = std::max(0, x - final_w_x_half);
+        const int y1_final = std::max(0, y - final_w_y_half);
+        const int x2_final = std::min(img_width - 1, x + final_w_x_half);
+        const int y2_final = std::min(img_height - 1, y + final_w_y_half);
+        /*----- end adaptive window size -----*/
+
+        // Get sum and sum of squares from integral images
+        double sum = get_area_sum(integral_img, x1_final, y1_final, z, 0,
+                                  x2_final, y2_final);
+        double sum_sq = get_area_sum(integral_sq_img, x1_final, y1_final, z, 0,
+                                     x2_final, y2_final);
+        const double N =
+            (x2_final - x1_final + 1) *
+            (y2_final - y1_final + 1); // Number of pixels in window
+
+        // Calculate local mean and std. deviation
+        const double mean_window_val = sum / N;
+        const double std_dev_window_val = std::sqrt(
+            std::max(0.0, (sum_sq / N) - (mean_window_val * mean_window_val)));
+
+        // not part of Bataineh's method, but needed for fourther adjusting
+        // threshold
+        double k = 1.0;
+        if (std_dev_window_val < 5.0) {
+          k = 1.4;
+        } else if (std_dev_window_val > 30.0) {
+          k = 0.8;
+        }
+
+        // Calculate adaptive threshold
+        double std_dev_adaptive =
+            (std_dev_window_val - min_std_dev) / std_dev_range;
+
+        // define threshold based on adaptive std deviation
+        const double threshold =
+            mean_window_val -
+            k * (((mean_window_val * mean_window_val) - std_dev_window_val) /
+                 ((mean_global + std_dev_window_val) *
+                  (std_dev_adaptive + std_dev_window_val)));
+
+        // Apply threshold
+        // new image needed because of race conditions in the parallel for loops
+        output_image(x, y, z) = (img_double(x, y, z) > threshold) * 255;
+      }
+    }
+  }
+  // needed because of race conditions in the parallel for loops
+  input_image = output_image;
+}
 
 /**
  * @brief (Internal) Applies Gaussian denoising to an image, in-place.
- * Uses CImg's built-in blur function with neumann boundary conditions and isotropic blur.
+ * Uses CImg's built-in blur function with neumann boundary conditions and
+ * isotropic blur.
  */
-static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma)
-{
-    input_image.blur(sigma, 1, true);
+static void gaussian_denoise_inplace(CImg<uint> &input_image, float sigma) {
+  input_image.blur(sigma, 1, true);
 }
 
 /**
  * @brief (Internal) Applies dilation to a binary image, in-place.
  */
-static void dilation_inplace(CImg<uint> &input_image, int kernel_size)
-{
-    if (input_image.spectrum() != 1)
-    {
-        throw std::runtime_error("Dilation requires a single-channel image.");
-    }
+static void dilation_inplace(CImg<uint> &input_image, int kernel_size) {
+  if (input_image.spectrum() != 1) {
+    throw std::runtime_error("Dilation requires a single-channel image.");
+  }
 
-    if (kernel_size <= 1)
-    {
-        return;
-    }
+  if (kernel_size <= 1) {
+    return;
+  }
 
-    CImg<uint> source = input_image;
+  CImg<uint> source = input_image;
 
-    int r = kernel_size / 2;
-    int w = input_image.width();
-    int h = input_image.height();
-    int d = input_image.depth();
+  int r = kernel_size / 2;
+  int w = input_image.width();
+  int h = input_image.height();
+  int d = input_image.depth();
 
 #pragma omp parallel for collapse(2)
-    for (int i_d = 0; i_d < d; ++i_d)
-    {
-        for (int i_h = 0; i_h < h; ++i_h)
-        {
-            for (int i_w = 0; i_w < w; ++i_w)
-            {
-                // If the pixel is already white, it stays white (dilation only adds white)
-                if (source(i_w, i_h, i_d) == 255)
-                {
-                    continue;
-                }
-
-                // If pixel is black, check neighbors
-                bool hit = false;
-
-                // Scan neighborhood
-                for (int k_h = -r; k_h <= r && !hit; ++k_h)
-                {
-                    for (int k_w = -r; k_w <= r && !hit; ++k_w)
-                    {
-                        int n_w = i_w + k_w;
-                        int n_h = i_h + k_h;
-
-                        // Boundary check
-                        if (n_w >= 0 && n_w < w && n_h >= 0 && n_h < h)
-                        {
-                            if (source(n_w, n_h, i_d) == 255)
-                            {
-                                hit = true;
-                            }
-                        }
-                    }
-                }
-
-                if (hit)
-                {
-                    input_image(i_w, i_h, i_d) = 255;
-                }
-            }
+  for (int i_d = 0; i_d < d; ++i_d) {
+    for (int i_h = 0; i_h < h; ++i_h) {
+      for (int i_w = 0; i_w < w; ++i_w) {
+        // If the pixel is already white, it stays white (dilation only adds
+        // white)
+        if (source(i_w, i_h, i_d) == 255) {
+          continue;
         }
+
+        // If pixel is black, check neighbors
+        bool hit = false;
+
+        // Scan neighborhood
+        for (int k_h = -r; k_h <= r && !hit; ++k_h) {
+          for (int k_w = -r; k_w <= r && !hit; ++k_w) {
+            int n_w = i_w + k_w;
+            int n_h = i_h + k_h;
+
+            // Boundary check
+            if (n_w >= 0 && n_w < w && n_h >= 0 && n_h < h) {
+              if (source(n_w, n_h, i_d) == 255) {
+                hit = true;
+              }
+            }
+          }
+        }
+
+        if (hit) {
+          input_image(i_w, i_h, i_d) = 255;
+        }
+      }
     }
+  }
 }
 
 /**
- * @brief (Internal) Applies erosion to a binary image, replacing the original image.
+ * @brief (Internal) Applies erosion to a binary image, replacing the original
+ * image.
  */
-static void erosion_inplace(CImg<uint> &input_image, int kernel_size)
-{
-    if (input_image.spectrum() != 1)
-    {
-        throw std::runtime_error("Erosion requires a grayscale image.");
-    }
+static void erosion_inplace(CImg<uint> &input_image, int kernel_size) {
+  if (input_image.spectrum() != 1) {
+    throw std::runtime_error("Erosion requires a grayscale image.");
+  }
 
-    if (kernel_size <= 1)
-        return;
+  if (kernel_size <= 1)
+    return;
 
-    CImg<uint> source = input_image;
+  CImg<uint> source = input_image;
 
-    int r = kernel_size / 2;
-    int w = input_image.width();
-    int h = input_image.height();
-    int d = input_image.depth();
+  int r = kernel_size / 2;
+  int w = input_image.width();
+  int h = input_image.height();
+  int d = input_image.depth();
 
 #pragma omp parallel for collapse(2)
-    for (int i_d = 0; i_d < d; ++i_d)
-    {
-        for (int i_h = 0; i_h < h; ++i_h)
-        {
-            for (int i_w = 0; i_w < w; ++i_w)
-            {
-                // If the pixel is already black, it stays black (erosion only removes white)
-                if (source(i_w, i_h, i_d) == 0)
-                {
-                    continue;
-                }
-
-                // If pixel is white, check neighbors
-                bool hit = false;
-
-                // Scan neighborhood
-                for (int k_h = -r; k_h <= r && !hit; ++k_h)
-                {
-                    for (int k_w = -r; k_w <= r && !hit; ++k_w)
-                    {
-                        int n_w = i_w + k_w;
-                        int n_h = i_h + k_h;
-
-                        // Boundary check
-                        if (n_w >= 0 && n_w < w && n_h >= 0 && n_h < h)
-                        {
-                            if (source(n_w, n_h, i_d) == 0)
-                            {
-                                hit = true;
-                            }
-                        }
-                    }
-                }
-
-                if (hit)
-                {
-                    input_image(i_w, i_h, i_d) = 0;
-                }
-            }
+  for (int i_d = 0; i_d < d; ++i_d) {
+    for (int i_h = 0; i_h < h; ++i_h) {
+      for (int i_w = 0; i_w < w; ++i_w) {
+        // If the pixel is already black, it stays black (erosion only removes
+        // white)
+        if (source(i_w, i_h, i_d) == 0) {
+          continue;
         }
+
+        // If pixel is white, check neighbors
+        bool hit = false;
+
+        // Scan neighborhood
+        for (int k_h = -r; k_h <= r && !hit; ++k_h) {
+          for (int k_w = -r; k_w <= r && !hit; ++k_w) {
+            int n_w = i_w + k_w;
+            int n_h = i_h + k_h;
+
+            // Boundary check
+            if (n_w >= 0 && n_w < w && n_h >= 0 && n_h < h) {
+              if (source(n_w, n_h, i_d) == 0) {
+                hit = true;
+              }
+            }
+          }
+        }
+
+        if (hit) {
+          input_image(i_w, i_h, i_d) = 0;
+        }
+      }
     }
+  }
 }
 
 /**
  * @brief (Internal) Deskews the image using the Projection Profile method.
  * Finds the angle that maximizes the variance of horizontal row sums.
  */
-static void deskew_inplace(CImg<uint> &input_image)
-{
-    // Work on a smaller copy for speed (width ~600px)
-    // Processing the full-res image for every angle guess is too slow.
-    float scale_factor = 600.0f / input_image.width();
-    if (scale_factor >= 1.0f) scale_factor = 1.0f; // Don't upscale small images
+static void deskew_inplace(CImg<uint> &input_image) {
+  // Work on a smaller copy for speed (width ~600px)
+  // Processing the full-res image for every angle guess is too slow.
+  float scale_factor = 600.0f / input_image.width();
+  if (scale_factor >= 1.0f)
+    scale_factor = 1.0f; // Don't upscale small images
 
-    int new_w = input_image.width() * scale_factor;
-    int new_h = input_image.height() * scale_factor;
-    
-    CImg<uint> work = input_image.get_resize(new_w, new_h, 1, 1);
+  int new_w = input_image.width() * scale_factor;
+  int new_h = input_image.height() * scale_factor;
 
-    // Pre-processing: Make text bright for counting
-    // Assume standard "Black Text on White Background" -> Invert it.
-    if (work.spectrum() > 1) {
-        work = work.get_channel(0); 
-    }
-    
-    cimg_for(work, ptr, uint) { *ptr = 255 - *ptr; }
-    
-    // Threshold to binary (simple mean threshold is sufficient for structure)
-    work.threshold(work.mean());
+  CImg<uint> work = input_image.get_resize(new_w, new_h, 1, 1);
 
-    // Search for the best angle
-    // Scans typically skew < 10 degrees. We search +/- 15 to be safe.
-    double best_angle = 0.0;
-    double max_variance = -1.0;
+  // Pre-processing: Make text bright for counting
+  // Assume standard "Black Text on White Background" -> Invert it.
+  if (work.spectrum() > 1) {
+    work = work.get_channel(0);
+  }
 
-    #pragma omp parallel for
-    for (int i = -30; i <= 30; ++i) {
-        double angle = i * 0.5; // Steps of 0.5 degrees
-        
-        // Rotate the work image
-        // 1 = Linear interpolation
-        // 0 = Boundary condition (Black). Since we inverted, Background is Black (0)
-        CImg<uint> rot = work.get_rotate(angle, 1, 0); 
-        
-        // Compute Projection Profile (Sum of rows)
-        double sum_sq = 0.0;
-        double sum = 0.0;
-        
-        cimg_forY(rot, y) {
-            double row_sum = 0.0;
-            cimg_forX(rot, x) {
-                row_sum += rot(x, y); // Pixel is either 0 or 255
-            }
-            sum += row_sum;
-            sum_sq += row_sum * row_sum;
-        }
-        
-        // Calculate Variance of the row sums
-        // Var = E[X^2] - (E[X])^2
-        // We want to maximize this.
-        double mean = sum / rot.height();
-        double variance = (sum_sq / rot.height()) - (mean * mean);
+  cimg_for(work, ptr, uint) { *ptr = 255 - *ptr; }
 
-        #pragma omp critical
-        {
-            if (variance > max_variance) {
-                max_variance = variance;
-                best_angle = angle;
-            }
-        }
+  // Threshold to binary (simple mean threshold is sufficient for structure)
+  work.threshold(work.mean());
+
+  // Search for the best angle
+  // Scans typically skew < 10 degrees. We search +/- 15 to be safe.
+  double best_angle = 0.0;
+  double max_variance = -1.0;
+
+#pragma omp parallel for
+  for (int i = -30; i <= 30; ++i) {
+    double angle = i * 0.5; // Steps of 0.5 degrees
+
+    // Rotate the work image
+    // 1 = Linear interpolation
+    // 0 = Boundary condition (Black). Since we inverted, Background is Black
+    // (0)
+    CImg<uint> rot = work.get_rotate(angle, 1, 0);
+
+    // Compute Projection Profile (Sum of rows)
+    double sum_sq = 0.0;
+    double sum = 0.0;
+
+    cimg_forY(rot, y) {
+      double row_sum = 0.0;
+      cimg_forX(rot, x) {
+        row_sum += rot(x, y); // Pixel is either 0 or 255
+      }
+      sum += row_sum;
+      sum_sq += row_sum * row_sum;
     }
 
-    // Apply correction to the original full-res image
-    // Only rotate if the skew is significant (> 0.1 degrees)
-    if (std::abs(best_angle) > 0.1) {
-        // Use Linear interpolation (1) or Cubic (2) for quality.
-        // Boundary 1 (Neumann) repeats edge pixels. 
-        // For a white page, this fills the new corners with white
-        input_image.rotate(best_angle, 2, 0);
+    // Calculate Variance of the row sums
+    // Var = E[X^2] - (E[X])^2
+    // We want to maximize this.
+    double mean = sum / rot.height();
+    double variance = (sum_sq / rot.height()) - (mean * mean);
+
+#pragma omp critical
+    {
+      if (variance > max_variance) {
+        max_variance = variance;
+        best_angle = angle;
+      }
     }
+  }
+
+  // Apply correction to the original full-res image
+  // Only rotate if the skew is significant (> 0.1 degrees)
+  if (std::abs(best_angle) > 0.1) {
+    // Use Linear interpolation (1) or Cubic (2) for quality.
+    // Boundary 1 (Neumann) repeats edge pixels.
+    // For a white page, this fills the new corners with white
+    input_image.rotate(best_angle, 2, 0);
+  }
 }
 
 /**
@@ -471,298 +579,256 @@ static void deskew_inplace(CImg<uint> &input_image)
  * Clips the bottom 1% and top 1% of intensities to ignore outliers,
  * then stretches the remaining range to 0-255.
  */
-static void contrast_enhancement_inplace(CImg<uint> &input_image)
-{
-    if (input_image.is_empty())
-    {
-        return;
+static void contrast_enhancement_inplace(CImg<uint> &input_image) {
+  if (input_image.is_empty()) {
+    return;
+  }
+
+  // Compute Histogram (to find percentiles)
+  const CImg<uint> hist = input_image.get_histogram(256, 0, 255);
+  const uint total_pixels = input_image.size();
+
+  // Find lower (1%) and upper (99%) cutoffs
+  const uint cutoff = total_pixels / 100; // 1% threshold
+
+  uint min_val = 0;
+  uint count = 0;
+  // find brightest pixel above cutoff
+  for (int i = 0; i < 256; ++i) {
+    count += hist[i];
+    if (count > cutoff) {
+      min_val = i;
+      break;
     }
+  }
 
-    // Compute Histogram (to find percentiles)
-    const CImg<uint> hist = input_image.get_histogram(256, 0, 255);
-    const uint total_pixels = input_image.size();
-
-    // Find lower (1%) and upper (99%) cutoffs
-    const uint cutoff = total_pixels / 100; // 1% threshold
-
-    uint min_val = 0;
-    uint count = 0;
-    // find brightest pixel above cutoff
-    for (int i = 0; i < 256; ++i)
-    {
-        count += hist[i];
-        if (count > cutoff)
-        {
-            min_val = i;
-            break;
-        }
+  // find darkest pixel below cutoff
+  uint max_val = 255;
+  count = 0;
+  for (int i = 255; i >= 0; --i) {
+    count += hist[i];
+    if (count > cutoff) {
+      max_val = i;
+      break;
     }
+  }
 
-    // find darkest pixel below cutoff
-    uint max_val = 255;
-    count = 0;
-    for (int i = 255; i >= 0; --i)
-    {
-        count += hist[i];
-        if (count > cutoff)
-        {
-            max_val = i;
-            break;
-        }
-    }
+  // Safety check: if image is solid color, min might equal max
+  if (max_val <= min_val) {
+    return;
+  }
 
-    // Safety check: if image is solid color, min might equal max
-    if (max_val <= min_val)
-    {
-        return;
-    }
-
-    // Apply the stretch
-    // Formula: 255 * (val - min) / (max - min)
-    const float scale = 255.0f / (max_val - min_val);
+  // Apply the stretch
+  // Formula: 255 * (val - min) / (max - min)
+  const float scale = 255.0f / (max_val - min_val);
 
 #pragma omp parallel for
-    for (uint i = 0; i < total_pixels; ++i)
-    {
-        uint val = input_image[i];
+  for (uint i = 0; i < total_pixels; ++i) {
+    uint val = input_image[i];
 
-        if (val <= min_val)
-        {
-            input_image[i] = 0;
-        }
-        else if (val >= max_val)
-        {
-            input_image[i] = 255;
-        }
-        else
-        {
-            input_image[i] = (val - min_val) * scale;
-        }
+    if (val <= min_val) {
+      input_image[i] = 0;
+    } else if (val >= max_val) {
+      input_image[i] = 255;
+    } else {
+      input_image[i] = (val - min_val) * scale;
     }
+  }
 }
 
 /**
- * @brief (Internal) Removes small connected components (speckles) from the image.
- * Assumes the input is binary (0 and 255).
+ * @brief (Internal) Removes small connected components (speckles) from the
+ * image. Assumes the input is binary (0 and 255).
  * @param input_image The image to process.
- * @param size_threshold Components smaller than this number of pixels will be removed.
+ * @param size_threshold Components smaller than this number of pixels will be
+ * removed.
  */
-static void despeckle_inplace(CImg<uint> &input_image, uint threshold, bool diagonal_connections = true)
-{
-    if (threshold <= 0)
-        return;
+static void despeckle_inplace(CImg<uint> &input_image, uint threshold,
+                              bool diagonal_connections = true) {
+  if (threshold <= 0)
+    return;
 
-// Invert image so Text/Noise becomes White (255) and Background becomes Black (0).
-// CImg's label() function tracks non-zero regions.
+// Invert image so Text/Noise becomes White (255) and Background becomes Black
+// (0). CImg's label() function tracks non-zero regions.
 #pragma omp parallel for
-    for (uint i = 0; i < input_image.size(); ++i)
-    {
-        input_image[i] = (input_image[i] == 0) ? 255 : 0;
-    }
+  for (uint i = 0; i < input_image.size(); ++i) {
+    input_image[i] = (input_image[i] == 0) ? 255 : 0;
+  }
 
-    // Label connected components.
-    // This assigns a unique integer ID (1, 2, 3...) to every distinct blob.
-    // 0 is background.
-    // true = 8-connectivity (diagonal pixels connect), false = 4-connectivity
-    CImg<uint> labels = input_image.get_label(diagonal_connections);
+  // Label connected components.
+  // This assigns a unique integer ID (1, 2, 3...) to every distinct blob.
+  // 0 is background.
+  // true = 8-connectivity (diagonal pixels connect), false = 4-connectivity
+  CImg<uint> labels = input_image.get_label(diagonal_connections);
 
-    // Count the size of each component.
-    uint max_label = labels.max();
-    if (max_label == 0)
-    {
-        // Image was completely empty (or full), revert inversion and return
-        input_image.fill(255);
-        return;
-    }
+  // Count the size of each component.
+  uint max_label = labels.max();
+  if (max_label == 0) {
+    // Image was completely empty (or full), revert inversion and return
+    input_image.fill(255);
+    return;
+  }
 
-    std::vector<uint> sizes(max_label + 1, 0);
+  std::vector<uint> sizes(max_label + 1, 0);
 
-    // Iterate over the label image to count pixels per label
-    // ptr points to a number in labels at each pixel which we
-    // use as index in our sized vector
-    cimg_for(labels, ptr, uint)
-    {
-        sizes[*ptr]++;
-    }
+  // Iterate over the label image to count pixels per label
+  // ptr points to a number in labels at each pixel which we
+  // use as index in our sized vector
+  cimg_for(labels, ptr, uint) { sizes[*ptr]++; }
 
 // Filter: If a label is too small, turn it off (Black -> 0) in our inverted map
 #pragma omp parallel for collapse(2)
-    for (int z = 0; z < input_image.depth(); ++z)
-    {
-        for (int y = 0; y < input_image.height(); ++y)
-        {
-            for (int x = 0; x < input_image.width(); ++x)
-            {
-                uint label_id = labels(x, y, z);
-                // If it's a valid object (id > 0) AND it's smaller than threshold
-                if (label_id > 0 && sizes[label_id] < threshold)
-                {
-                    input_image(x, y, z) = 0; // Erase it (in inverted space)
-                }
-            }
+  for (int z = 0; z < input_image.depth(); ++z) {
+    for (int y = 0; y < input_image.height(); ++y) {
+      for (int x = 0; x < input_image.width(); ++x) {
+        uint label_id = labels(x, y, z);
+        // If it's a valid object (id > 0) AND it's smaller than threshold
+        if (label_id > 0 && sizes[label_id] < threshold) {
+          input_image(x, y, z) = 0; // Erase it (in inverted space)
         }
+      }
     }
+  }
 
 // Invert back to original (Black Text, White Background)
 #pragma omp parallel for
-    for (uint i = 0; i < input_image.size(); ++i)
-    {
-        input_image[i] = (input_image[i] == 255) ? 0 : 255;
-    }
+  for (uint i = 0; i < input_image.size(); ++i) {
+    input_image[i] = (input_image[i] == 255) ? 0 : 255;
+  }
 }
 
-namespace ite
-{
-    CImg<uint> loadimage(std::string filepath)
-    {
-        CImg<uint> image(filepath.c_str());
-        return image;
-    }
-
-    void writeimage(const CImg<uint> &image, std::string filepath)
-    {
-        image.save(filepath.c_str());
-    }
-
-    CImg<uint> to_grayscale(const CImg<uint> &input_image)
-    {
-        CImg<uint> output_image = input_image;
-
-        to_grayscale_inplace(output_image);
-
-        return output_image;
-    }
-
-    CImg<uint> binarize(const CImg<uint> &input_image)
-    {
-        CImg<uint> output_image = input_image;
-
-        if (output_image.spectrum() != 1)
-        {
-            to_grayscale_inplace(output_image);
-        }
-
-        binarize_inplace(output_image);
-
-        return output_image;
-    }
-
-    CImg<uint> binarize_adaptive(const CImg<uint> &input_image, int window_size)
-    {
-        CImg<uint> output_image = input_image;
-
-        if (output_image.spectrum() != 1)
-        {
-            to_grayscale_inplace(output_image);
-        }
-
-        binarize_inplace_adaptive(output_image, window_size);
-
-        return output_image;
-    }
-
-    CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma)
-    {
-        CImg<uint> output_image = input_image;
-
-        gaussian_denoise_inplace(output_image, sigma);
-
-        return output_image;
-    }
-
-    CImg<uint> dilation(const CImg<uint> &input_image, int kernel_size)
-    {
-        CImg<uint> output_image = input_image;
-
-        dilation_inplace(output_image, kernel_size);
-
-        return output_image;
-    }
-
-    CImg<uint> erosion(const CImg<uint> &input_image, int kernel_size)
-    {
-        CImg<uint> output_image = input_image;
-
-        erosion_inplace(output_image, kernel_size);
-
-        return output_image;
-    }
-
-    CImg<uint> deskew(const CImg<uint> &input_image)
-    {
-        CImg<uint> output_image = input_image;
-
-        deskew_inplace(output_image);
-
-        return output_image;
-    }
-
-    CImg<uint> contrast_enhancement(const CImg<uint> &input_image)
-    {
-        CImg<uint> output_image = input_image;
-
-        contrast_enhancement_inplace(output_image);
-
-        return output_image;
-    }
-
-    CImg<uint> despeckle(const CImg<uint> &input_image, uint threshold, bool diagonal_connections)
-    {
-        CImg<uint> output_image = input_image;
-
-        despeckle_inplace(output_image, threshold, diagonal_connections);
-
-        return output_image;
-    }
-
-    CImg<uint> enhance(
-        const CImg<uint> &input_image,
-        float sigma,
-        int kernel_size,
-        int despeckle_threshold,
-        int binarization_window_size,
-        bool diagonal_connections,
-        bool do_erosion,
-        bool do_dilation,
-        bool do_despeckle,
-        bool do_deskew,
-        bool do_binarization_adaptive)
-    {
-        CImg<uint> l_image = input_image;
-
-        // Preparation & Alignment
-        to_grayscale_inplace(l_image);
-        if (do_deskew) {
-            deskew_inplace(l_image);
-        }
-
-        // Blur and Contrast help prepare the signal for binarization.
-        gaussian_denoise_inplace(l_image, sigma);
-        contrast_enhancement_inplace(l_image);
-
-        // Binarization
-        if (do_binarization_adaptive) {
-            // Adaptive Binarization
-            // Based on Bataine's Adaptive Thresholding Methods for Documents Image Binarization"
-            binarize_adaptive(l_image, binarization_window_size);
-        } else {
-            // Standard Sauvola Binarization
-            binarize(l_image);
-        }
-
-        // Remove noise (little dust specks)
-        if (do_despeckle) {
-            despeckle_inplace(l_image, despeckle_threshold, diagonal_connections);
-        }
-
-        // Shape Repair (Morphologicals)
-        if (do_dilation) {
-            dilation_inplace(l_image, kernel_size);
-        }
-        if (do_erosion) {
-            erosion_inplace(l_image, kernel_size);
-        }
-
-        return l_image;
-    }
+namespace ite {
+CImg<uint> loadimage(std::string filepath) {
+  CImg<uint> image(filepath.c_str());
+  return image;
 }
+
+void writeimage(const CImg<uint> &image, std::string filepath) {
+  image.save(filepath.c_str());
+  std::cout << "Image saved to " << filepath << std::endl;
+}
+
+CImg<uint> to_grayscale(const CImg<uint> &input_image) {
+  CImg<uint> output_image = input_image;
+
+  to_grayscale_inplace(output_image);
+
+  return output_image;
+}
+
+CImg<uint> binarize(const CImg<uint> &input_image) {
+  CImg<uint> output_image = input_image;
+
+  if (output_image.spectrum() != 1) {
+    to_grayscale_inplace(output_image);
+  }
+
+  binarize_inplace(output_image);
+
+  return output_image;
+}
+
+CImg<uint> binarize_adaptive(const CImg<uint> &input_image) {
+  CImg<uint> output_image = input_image;
+
+  if (output_image.spectrum() != 1) {
+
+    to_grayscale_inplace(output_image);
+  }
+
+  binarize_inplace_adaptive(output_image);
+
+  return output_image;
+}
+
+CImg<uint> gaussian_denoise(const CImg<uint> &input_image, float sigma) {
+  CImg<uint> output_image = input_image;
+
+  gaussian_denoise_inplace(output_image, sigma);
+
+  return output_image;
+}
+
+CImg<uint> dilation(const CImg<uint> &input_image, int kernel_size) {
+  CImg<uint> output_image = input_image;
+
+  dilation_inplace(output_image, kernel_size);
+
+  return output_image;
+}
+
+CImg<uint> erosion(const CImg<uint> &input_image, int kernel_size) {
+  CImg<uint> output_image = input_image;
+
+  erosion_inplace(output_image, kernel_size);
+
+  return output_image;
+}
+
+CImg<uint> deskew(const CImg<uint> &input_image) {
+  CImg<uint> output_image = input_image;
+
+  deskew_inplace(output_image);
+
+  return output_image;
+}
+
+CImg<uint> contrast_enhancement(const CImg<uint> &input_image) {
+  CImg<uint> output_image = input_image;
+
+  contrast_enhancement_inplace(output_image);
+
+  return output_image;
+}
+
+CImg<uint> despeckle(const CImg<uint> &input_image, uint threshold,
+                     bool diagonal_connections) {
+  CImg<uint> output_image = input_image;
+
+  despeckle_inplace(output_image, threshold, diagonal_connections);
+
+  return output_image;
+}
+
+CImg<uint> enhance(const CImg<uint> &input_image, float sigma, int kernel_size,
+                   int despeckle_threshold, bool diagonal_connections,
+                   bool do_erosion, bool do_dilation, bool do_despeckle,
+                   bool do_deskew, bool do_binarization_adaptive) {
+  CImg<uint> l_image = input_image;
+
+  // Preparation & Alignment
+  to_grayscale_inplace(l_image);
+  if (do_deskew) {
+    deskew_inplace(l_image);
+  }
+
+  // Blur and Contrast help prepare the signal for binarization.
+  gaussian_denoise_inplace(l_image, sigma);
+  contrast_enhancement_inplace(l_image);
+
+  // Binarization
+  if (do_binarization_adaptive) {
+    // Based on Bataine's "Adaptive Thresholding Methods for Documents Image
+    // Binarization
+    binarize_inplace_adaptive(l_image);
+  } else {
+    // Standard: Based on Sauvola Binarization
+    binarize_inplace(l_image);
+  }
+
+  // Remove noise (little dust specks)
+  if (do_despeckle) {
+    despeckle_inplace(l_image, despeckle_threshold, diagonal_connections);
+  }
+
+  // Shape Repair (Morphologicals)
+  if (do_dilation) {
+    dilation_inplace(l_image, kernel_size);
+  }
+  if (do_erosion) {
+    erosion_inplace(l_image, kernel_size);
+  }
+
+  return l_image;
+}
+} // namespace ite
