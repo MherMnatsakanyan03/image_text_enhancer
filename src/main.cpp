@@ -1,7 +1,9 @@
 #include <algorithm>
+#include <binarization/binarization.h>
 #include <filesystem>
 #include <iostream>
 #include <string>
+
 #include "filters/filters.h"
 #include "ite.h"
 
@@ -72,36 +74,38 @@ int main(int argc, char* argv[])
                       << " sigma_high=" << ad_gauss_params.sigma_high
                       << " edge_thresh=" << ad_gauss_params.edge_thresh << "\n";
 
-            ite::EnhanceOptions enhance_opts = {
-                .boundary_conditions = 1,
-                .do_gaussian_blur = false,
-                .do_median_blur = false,
-                .do_adaptive_median = false,
-                .do_adaptive_gaussian_blur = false,
-                .sigma = 1.0f,
-                .adaptive_sigma_low = 0.5f,
-                .adaptive_sigma_high = 2.0f,
-                .adaptive_edge_thresh = 30.0f,
-                .median_kernel_size = 3,
-                .median_threshold = 0,
-                .adaptive_median_max_window = 7,
-                .diagonal_connections = true,
-                .do_erosion = false,
-                .do_dilation = false,
-                .do_despeckle = true,
-                .kernel_size = 5,
-                .despeckle_threshold = 0,
-                .do_deskew = false,
-                .sauvola_window_size = 15,
-                .sauvola_k = 0.2f,
-                .sauvola_delta = 0.0f,
-            };
+            // ite::EnhanceOptions enhance_opts = {
+            //     .boundary_conditions = 1,
+            //     .do_gaussian_blur = false,
+            //     .do_median_blur = false,
+            //     .do_adaptive_median = false,
+            //     .do_adaptive_gaussian_blur = false,
+            //     .sigma = 1.0f,
+            //     .adaptive_sigma_low = 0.5f,
+            //     .adaptive_sigma_high = 2.0f,
+            //     .adaptive_edge_thresh = 30.0f,
+            //     .median_kernel_size = 3,
+            //     .median_threshold = 0,
+            //     .adaptive_median_max_window = 7,
+            //     .diagonal_connections = true,
+            //     .do_erosion = false,
+            //     .do_dilation = false,
+            //     .do_despeckle = true,
+            //     .kernel_size = 5,
+            //     .despeckle_threshold = 0,
+            //     .do_deskew = false,
+            //     .sauvola_window_size = 15,
+            //     .sauvola_k = 0.2f,
+            //     .sauvola_delta = 0.0f,
+            // };
 
-            auto output_img = ite::enhance(img, enhance_opts);
+            // auto output_img = ite::enhance(img, enhance_opts);
+
+            ite::binarization::binarize_otsu(img);
 
             // Save with the same filename into output/
             std::filesystem::path out_path = output_dir / in_path.filename();
-            ite::writeimage(output_img, out_path.string());
+            ite::writeimage(img, out_path.string());
 
             std::cout << "Saved:  " << out_path.string() << "\n";
             ++processed;

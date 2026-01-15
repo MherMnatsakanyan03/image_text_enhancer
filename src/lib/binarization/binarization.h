@@ -47,4 +47,16 @@ namespace ite::binarization
      */
     double compute_border_mean(const CImg<unsigned char> &gray);
 
+    /**
+     * @brief Binarizes a grayscale image in-place using Otsu's method.
+     *
+     * Uses Otsu's threshold to separate foreground from background.
+     * The border mean is used to determine if the background is light or dark,
+     * and adjust the binarization accordingly (dark text on light background vs. light text on dark background).
+     *
+     * @param image The grayscale image to binarize (modified in-place).
+     * @throws std::runtime_error if the image is not grayscale (1-channel).
+     */
+    void binarize_otsu(CImg<uint> &image);
+
 } // namespace ite::binarization

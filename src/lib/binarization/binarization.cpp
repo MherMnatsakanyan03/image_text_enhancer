@@ -147,4 +147,36 @@ namespace ite::binarization
         return cnt ? static_cast<double>(sum) / static_cast<double>(cnt) : 0.0;
     }
 
+    void binarize_otsu(CImg<uint> &input_image)
+    {
+        if (input_image.spectrum() != 1)
+        {
+            throw std::runtime_error("Otsu binarization requires a grayscale image.");
+        }
+
+        // Compute Otsu's threshold and border mean
+        const int threshold = compute_otsu_threshold(input_image);
+        const double border_mean = compute_border_mean(input_image);
+
+        // Determine if background is light (border mean > threshold) or dark
+        const bool light_background = border_mean > static_cast<double>(threshold);
+
+        // Binarize in-place
+#pragma omp parallel for collapse(3)
+        for (int z = 0; z < input_image.depth(); ++z)
+        {
+            for (int y = 0; y < input_image.height(); ++y)
+            {
+                for (int x = 0; x < input_image.width(); ++x)
+                {
+                    const unsigned char pixel = input_image(x, y, z);
+                    // For light background: dark pixels (<=threshold) become black (0)
+                    // For dark background: light pixels (>threshold) become white (255)
+                    const bool is_foreground = light_background ? (pixel <= threshold) : (pixel > threshold);
+                    input_image(x, y, z) = is_foreground ? 0 : 255;
+                }
+            }
+        }
+    }
+
 } // namespace ite::binarization
