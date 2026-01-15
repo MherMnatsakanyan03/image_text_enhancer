@@ -49,7 +49,7 @@ namespace ite
     // Binarization
     // ============================================================================
 
-    CImg<uint> binarize(const CImg<uint> &input_image)
+    CImg<uint> binarize_sauvola(const CImg<uint> &input_image, int window_size, float k, float delta)
     {
         CImg<uint> result = input_image;
         // Ensure grayscale first
@@ -57,7 +57,19 @@ namespace ite
         {
             color::to_grayscale_rec601(result);
         }
-        binarization::binarize_sauvola(result);
+        binarization::binarize_sauvola(result, window_size, k, delta);
+        return result;
+    }
+
+    CImg<uint> binarize_otsu(const CImg<uint> &input_image)
+    {
+        CImg<uint> result = input_image;
+        // Ensure grayscale first
+        if (result.spectrum() != 1)
+        {
+            color::to_grayscale_rec601(result);
+        }
+        binarization::binarize_otsu(result);
         return result;
     }
 

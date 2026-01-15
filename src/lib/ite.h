@@ -35,13 +35,26 @@ namespace ite
     CImg<uint> to_grayscale(const CImg<uint> &input_image);
 
     /**
-     * @brief Converts a grayscale image to a binary (black and white) image.
+     * @brief Converts a grayscale image to a binary (black and white) image using Sauvola's method.
      * If the image is not grayscale, it is first converted to grayscale.
-     * Uses Sauvola's method for adaptive thresholding.
-     * @param input_image The source grayscale image.
+     * Sauvola's adaptive thresholding considers local mean and standard deviation,
+     * making it robust against uneven illumination.
+     * @param input_image The source image (will be converted to grayscale if needed).
+     * @param window_size The size of the local window (default: 15).
+     * @param k Sauvola's parameter controlling threshold sensitivity (default: 0.2).
+     * @param delta Optional offset subtracted from threshold (default: 0.0).
      * @return A new 1-channel binary image (values 0 or 255).
      */
-    CImg<uint> binarize(const CImg<uint> &input_image);
+    CImg<uint> binarize_sauvola(const CImg<uint> &input_image, int window_size = 15, float k = 0.2f, float delta = 0.0f);
+
+    /**
+     * @brief Converts a grayscale image to a binary (black and white) image using Otsu's method.
+     * If the image is not grayscale, it is first converted to grayscale.
+     * Otsu's method finds the optimal threshold that minimizes intra-class variance.
+     * @param input_image The source image (will be converted to grayscale if needed).
+     * @return A new 1-channel binary image (values 0 or 255).
+     */
+    CImg<uint> binarize_otsu(const CImg<uint> &input_image);
 
     /**
      * @brief Applies a simple Gaussian blur to blur the image.
