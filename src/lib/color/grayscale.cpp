@@ -1,6 +1,5 @@
 #include "grayscale.h"
 #include <cmath>
-#include "../core/types.h"
 
 namespace ite::color
 {

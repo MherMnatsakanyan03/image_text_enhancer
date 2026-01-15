@@ -7,7 +7,6 @@ set(LIB_SRC
         # Core utilities
         core/integral_image.cpp
         core/integral_image.h
-        core/types.h
         core/utils.h
 
         # Color operations
