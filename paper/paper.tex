@@ -1,5 +1,7 @@
 \documentclass[sigconf]{acmart}
 \usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
 
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -91,14 +93,7 @@ Motivation:
 
 drei Paper wurden uns empfohlen:\\
 - Adaptive Thresholding Methods for Documents Image Binarization \cite{adaptive_threshilding_methods_bataineh_2011}: Das Bild wird in Fenster aufgeteilt. Fuer jedes Fenster wird ein Thresholdingvalue $T$ berechnet. In jedem Fenster wird die minimum $\sigma_{min}$ und maximum $\sigma_{max}$ Standardabweichungen aller Fenster verwendet, um adaptiv den Threshold $T$ zu bestimmen. Jeder Pixelwert $i(x, y)$ des Fensters wird anschliessend mit dem Threshold verglichen: Ist der Wert kleiner wird der Pixel schwarz und sonst weiss.\\
-\begin{gather}
-  T = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\\
-  \sigma_{adaptive} = \frac{\sigma_W-\sigma_{min}}{\sigma_{max}-\sigma_{min}}\\
-  I(x,y)= \begin{cases}
-    black, & \text{if } i(x,y) < T\\
-    white, & \text{otherwise}
-  \end{cases}
-\end{gather}
+
 - Adaptive Thresholding using the Integral Image \cite{adaptive_thresholding_integral_image_bradley_roth_2007}\\
 - Binarization of historical document images using the local maximum and minimum \cite{Binarization_historical_document_images_local_maximum_minimum_su_2010}
 \subsection{Our Contributions}
@@ -115,13 +110,192 @@ Dieses Paper ist wie folgt gegliedert: In Abschnitt \ref{sec:algorithm} beschrei
 \section{The Algorithm}
 \label{sec:algorithm}
 
+Es gibt bereits viele Ansätze und bewährte Verfahren, um die Qualität von gesannten Bildern zu verbessern. Wir haben uns entschieden, eine Pipeline zu entwicklen, die verschiedene dieser Verfahren kombiniert, um ein möglich gutes Ergebnis zu erzielen. Es ist dme Nutzer überlassen, welche Schritte der Pipeline er anwenden möchte. Die einzelnen Verfahren der Pipeline sind im Algorithmus \ref{alg:enhance} dargestellt. 
 
+\begin{algorithm}
+  \caption{Image Text Enhance Pipeline}
+  \label{alg:enhance}
+  \begin{enumerate}
+  \item convert image to grayscale
+  \item Deskew (if requested)
+  \item Contrast enhancement
+  \item Denoising
+  \item Binarization
+  \item Despeckle (if requested)
+  \item Morphological operations (if requested)
+\end{enumerate}
+\end{algorithm}
+
+\begin{comment}
+  <-- To be included later in some variation -->
+\begin{algorithm}
+\caption{Our enhance Pipeline}\label{alg:enhance}
+\begin{algorithmic}
+\Procedure{Enhance}{input\_image, deskew, despeckle, do\_dilation, do\_erosion}
+    \State result = input\_image
+    \State result $\gets$ ConvertToGrayscale(result)
+    \If{deskew}
+        \State result $\gets$ Deskew(result)
+    \EndIf
+    \State result $\gets$ ContrastEnhancement(result)
+    \If{do\_adaptive\_gaussian\_blur}
+        \State result $\gets$ AdaptiveGaussianBlur(result)
+    \ElsIf{do\_median\_blur}
+        \State result $\gets$ MedianBlur(result)
+    \ElsIf{do\_median\_blur}
+        \State result $\gets$ MedianBlur(result)
+    \ElsIf{do\_adaptive\_median}
+        \State result $\gets$ AdaptiveMedian(result)
+    \Else 
+        \State pass 
+    \EndIf
+    \State result $\gets$ Denoising(result)
+    \State result $\gets$ Binarization(result)
+    \If{despeckle}
+        \State result $\gets$ Despeckle(result)
+    \EndIf
+    \If{do\_dilation}
+        \State result $\gets$ MorphologicalOperations(result)
+    \EndIf
+    \If{do\_erosion}
+        \State result $\gets$ MorphologicalOperations(result)
+    \EndIf
+    \State \textbf{return} result
+    \EndProcedure
+\end{algorithmic}
+\end{algorithm}
+\end{comment}
+
+Im Folgenden werden die einzelnen Schritte der Pipeline näher erläutert:
+
+\subsection{Convert image to graysacle}
+\label{subsec:grayscale}
+\begin{comment}
+  Noch nicht mehr schreiben, da wir ggf. noch die Möglihckeit einfbauen wollen, farbige Bilder zu verarbeiten.
+\end{comment}
+
+Alle Verfahren der Pipeline arbeiten auf Graustufenbildern. Daher ist der erste Schritt der Pipeline die Umwandlung des Eingabebildes in ein Graustufenbild. Dies wird durch eine gewichtete Summe $Y=0.299R + 0.587G + 0.114B$ \cite{ITU-R_BT601} der RGB-Kanäle für jeden Pixel erreicht. Das Ergebnis ist ein Graustufenbild, in dem jeder Pixelwert $Y$ den Helligkeitswert des entsprechenden Pixels im Originalbild darstellt.
+Alle Schritte der Pipeline erfolgen nach der convertierung in-place, auf dem convertierten Graustufenbild.
+
+\subsection{Deskew}
+\label{subsec:deskew}
+
+\begin{comment}
+  Aus der header Datei
+  skew (rotation)
+  Nutzt die Projection Profile Methode:
+  1. Converts to grayscale and binarizes (using selected binarization method)
+  2. Searches fo the angle that maximizes horizontal projection variance 
+  3. Rotates the image to correct the sekw
+
+  Features
+  - Polarity-safe (detects light vs. dark background)
+  - Coarse-to-fine angle search for efficiency
+  - Uses Neumann boundary conditions to avoid black corners
+\end{comment}
+
+
+\subsection{Contrast enhancement}
+\label{subsec:contrast-enhancement}
+
+\begin{comment}
+  Aus der header Datei
+  Applies robust linear contrast stretching in-place.
+  Clips the bottom 1% and top 1% of intensities to ignore outliers, then stretches the remaining range to 0-255.
+\end{comment}
+
+\subsection{Denoising}
+\label{subsec:denoising}
+
+\begin{comment}
+  Aus der header Datei
+  Verschiedne Filtermehtoden werden angegeben: 
+  - simple Gaussian blur
+      Uses CImg's built-in blur function with Neumann boundary conditions.
+  - adaptive Gaussian blur
+      This function applies a Gaussian blur with a variable standard deviation.
+      It blurs less around edges (high variance) and more in flat regions (low variance)to preserve sharpness while reducing noise. The image is processed in parallel in horizontal blocks.
+  - median blur
+      Uses CImg's built-in blur_median function
+
+  - adaptive median blur
+      The adaptive median filter is excellent for removing impulse noise (salt-and-pepper) while preserving edges and fine details. It starts with a 3x3 window and expands up to max_window_size when detecting impulse noise, leaving non-impulse pixels unchanged. This makes it ideal for scan speckle removal in text images.
+\end{comment}
+
+\subsection{Binarization}
+\label{subsec:binarization}
+
+\begin{comment}
+  es werden verschiedene adaptive Binarisierungsmethoden angeboten:
+  - Sauvola
+      consideres local mean and standard deviation to compute a threshold for each pixel, making it robust against uneven illumination. - Paper finden
+  - Bataineh mit adaptiver window größe
+\end{comment}
+
+\paragraph{Sauvola}
+
+
+\paragraph{Bataineh}
+\begin{gather}\label{math:bataineh}
+  T = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\\
+  \sigma_{adaptive} = \frac{\sigma_W-\sigma_{min}}{\sigma_{max}-\sigma_{min}}\\
+  I(x,y)= \begin{cases}
+    black, & \text{if } i(x,y) < T\\
+    white, & \text{otherwise}
+  \end{cases}
+\end{gather}
+
+\begin{gather} \label{math:adapt_win}
+  T_{con} = m_g - k * \frac{m_g^2 * \sigma_g}{(m_g + \sigma_g) * (0.5 max_{level} + \sigma_g)}\\
+  I(x,y)= \begin{cases}
+    black, &  i(x,y) \leq T_{con} - \left(\frac{\sigma_g}{2}\right),\\
+    red, &  T_{con} - \left(\frac{\sigma_g}{2}\right) < i(x,y) < T_{exp} + \left(\frac{\sigma_g}{2}\right),\\
+    white, &  i(x, y) \geq T_{con} + \left(\frac{\sigma_g}{2}\right),\\
+  \end{cases}\\
+  p = \left(\frac{\text{number of black pixels}}{\text{number of red pixels}}\right)\\
+  PW_{size} = \begin{cases}
+    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), &  \geq 2.5 or (\sigma_g < 0.1 * max_{level}),\\
+    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), &  1 < p < 2-5 or (I_h + I_w < 400),\\
+    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), & p \leq 1,
+  \end{cases}\\
+  SW_{size} = \begin{cases}
+    \left(\frac{PW_h}{2}, \frac{PW_w}{2}\right), & \text{red\_pixel > black\_pixel},\\
+    WP_{size}, & \text{otherwise},
+  \end{cases}
+\end{gather}
+
+
+\subsection{Despeckle}
+\label{subsec:despeckle}
+
+\begin{comment}
+  Aus der header Datei
+  Removes small connected components (speckles) from a binary image in-place.
+  Components smaller than the threshold are removed.
+  uses diagonal_connections If true, 8-connectivity; if false, 4-connectivity.
+\end{comment}
+
+\subsection{Morphological operations}
+\label{subsec:morphological-operations}
+
+\begin{comment}
+  Aus der header Datei
+  Es stehen zwei Operationen zur Verfügung: 
+  - Dilation 
+      Dilation expands bright (white) regions. On binary images, this can connect broken character parts or thicken strokes.
+  - Erosion
+    Erosion shrinks bright regions (expands dark regions). On binary images, this can remove small noise specks or thin strokes.
+\end{comment}
 
 \section{Experiments}
 \label{sec:experiments}
 
+
+
 \section{Conclusions}
 \label{sec:conclusions}
+
+
 
 %%
 %% The next two lines define the bibliography style to be used, and
