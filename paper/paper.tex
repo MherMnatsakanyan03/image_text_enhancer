@@ -2,6 +2,7 @@
 \usepackage{booktabs}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+\usepackage{url}
 
 
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -69,7 +70,7 @@ The five-finger pattern \cite{macgilchrist2014}:
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{noise reduction, background removal, image filter}
+\keywords{noise reduction, background removal, image filter, binarization}
 
 
 %%
@@ -84,33 +85,53 @@ The five-finger pattern \cite{macgilchrist2014}:
 
 \subsection{Background}
 \label{sec:background}
-Motivation:
-- Viele handschriftliche oder gedruckte Dokumente werden heutzutage mit dem Smartphone, oder im Zuge der Digitalisierung mit Druckern gescannt. Dabei entstehen häufig Bilder mit schlechter Qualität, die schwer lesbar, für Mensch und Maschine sind. Schlechte Qualität ist in diesem Kontext durch schlechte Beleuchtung, Schatten, Verzerrungen, Rauschen oder ungleichmäßigen Kontrast gekennzeichnet.
-- Solche Bilder sind problematisch, wenn sie weiterverwendet werden sollen, beispielsweise um sie zu archivieren, zu drucken oder mittels OCR in maschinenlesbaren Text umzuwandeln.
+\begin{comment}
+  Motivation:
+  - Viele handschriftliche oder gedruckte Dokumente werden heutzutage mit dem Smartphone, oder im Zuge der Digitalisierung mit Druckern gescannt. Dabei entstehen häufig Bilder mit schlechter Qualität, die schwer lesbar, für Mensch und Maschine sind. Schlechte Qualität ist in diesem Kontext durch schlechte Beleuchtung, Schatten, Verzerrungen, Rauschen oder ungleichmäßigen Kontrast gekennzeichnet.
+  - Solche Bilder sind problematisch, wenn sie weiterverwendet werden sollen, beispielsweise um sie zu archivieren, zu drucken oder mittels OCR in maschinenlesbaren Text umzuwandeln.
+\end{comment}
 
 \subsection{Related Work}
 \label{sec:related-work}
+\begin{comment}
+  drei Paper wurden uns empfohlen:
+  - Adaptive Thresholding Methods for Documents Image Binarization \cite{adaptive_thresholding_methods_bataineh_2011}: Das Bild wird in Fenster aufgeteilt. Fuer jedes Fenster wird ein Thresholdingvalue $T$ berechnet. In jedem Fenster wird die minimum $\sigma_{min}$ und maximum $\sigma_{max}$ Standardabweichungen aller Fenster verwendet, um adaptiv den Threshold $T$ zu bestimmen. Jeder Pixelwert $i(x, y)$ des Fensters wird anschliessend mit dem Threshold verglichen: Ist der Wert kleiner wird der Pixel schwarz und sonst weiss.\\
 
-drei Paper wurden uns empfohlen:\\
-- Adaptive Thresholding Methods for Documents Image Binarization \cite{adaptive_threshilding_methods_bataineh_2011}: Das Bild wird in Fenster aufgeteilt. Fuer jedes Fenster wird ein Thresholdingvalue $T$ berechnet. In jedem Fenster wird die minimum $\sigma_{min}$ und maximum $\sigma_{max}$ Standardabweichungen aller Fenster verwendet, um adaptiv den Threshold $T$ zu bestimmen. Jeder Pixelwert $i(x, y)$ des Fensters wird anschliessend mit dem Threshold verglichen: Ist der Wert kleiner wird der Pixel schwarz und sonst weiss.\\
+  - Adaptive Thresholding using the Integral Image \cite{adaptive_thresholding_integral_image_bradley_roth_2007}
+  - Binarization of historical document images using the local maximum and minimum \cite{Binarization_historical_document_images_local_maximum_minimum_su_2010}
+  \subsection{Our Contributions}
+  \label{sec:our-contributions}
 
-- Adaptive Thresholding using the Integral Image \cite{adaptive_thresholding_integral_image_bradley_roth_2007}\\
-- Binarization of historical document images using the local maximum and minimum \cite{Binarization_historical_document_images_local_maximum_minimum_su_2010}
-\subsection{Our Contributions}
-\label{sec:our-contributions}
-- kostenloses Tool/executable um die Qualität von gescannten Bildern zu verbessern, bevor sie beispielsweise versendet, gedruckt oder archiviert werden.
-- Verbessert die Arbeit der Related Work, durch ... %%TODO: konkretisieren
-- Kann beispielsweise für die Digitalisierung von Büchern, Dokumenten und handschriftlichen Akten oder Notizen genutzt werden. So wird eine gute, digitale lesbarkeit und wiedervenwendung ermöglicht.
--OpenMP und C++ Implementierung mit CMake Build System.
+  Andere Arbeiten: 
+  - Pipeline die die Binarisierung durch kombination verschiedener existierender Binarisierungsmethoden und einer Logik, die die Bilder der exisiterenden Methoden filtert. Anschließend wird per Voting entschieden, welcher Pixel schwarz oder weiss ist. Vor der Ausgabe wird noch ein Post-Processing Schritt durchgeführt, um kleine Fehler zu entfernen \cite{voting_method_image_binarization_vlasceanu_2022}.
+  -
+
+  Tools die binarisierung bereits können:
+  - OpenCV
+  - Tesseract
+  - Leptonica - von copilopt vorgeschlagen
+  - ImageMagick
+
+  - kostenloses open source Tool/executable um die Qualität von gescannten Bildern zu verbessern, bevor sie beispielsweise versendet, gedruckt oder archiviert werden.
+  - Verbessert die Arbeit der Related Work, indem alle Methoden in einer Pipeline kombiniert werden können. Der Nutzer hat freie entscheidung welche Operationen er durchführen möchte ... %%TODO: konkretisieren
+  - Kann beispielsweise für die Digitalisierung von Büchern, Dokumenten und handschriftlichen Akten oder Notizen genutzt werden. So wird eine gute, digitale lesbarkeit und wiedervenwendung ermöglicht.
+  -OpenMP und C++ Implementierung mit CMake Build System, Catch2 Unit Tests.
+\end{comment}
 
 \subsection{Outline}
 \label{sec:outline}
-Dieses Paper ist wie folgt gegliedert: In Abschnitt \ref{sec:algorithm} beschreiben wir den entwickelten Algorithmus. In Abschnitt \ref{sec:experiments} zeigen wir die performance unseres Algorithmus anhand von Experimenten. Abschließend fassen wir in Abschnitt \ref{sec:conclusions} unsere Ergebnisse zusammen und geben einen Ausblick auf mögliche zukünftige Arbeiten.
+
+\begin{comment}
+  welche experimente werden wir durchführen?
+\end{comment}
+
+This paper is structured as follows: Section \ref{sec:algorithm} provides a detailed description the developed pipeline and its methods. Section \ref{sec:experiments} demonstrates the performance of our algorithm using experiments. Finally, Section \ref{sec:conclusions} summarises our results and provides an outlook on possible future work.
 
 \section{The Algorithm}
 \label{sec:algorithm}
 
-Es gibt bereits viele Ansätze und bewährte Verfahren, um die Qualität von gesannten Bildern zu verbessern. Wir haben uns entschieden, eine Pipeline zu entwicklen, die verschiedene dieser Verfahren kombiniert, um ein möglich gutes Ergebnis zu erzielen. Es ist dme Nutzer überlassen, welche Schritte der Pipeline er anwenden möchte. Die einzelnen Verfahren der Pipeline sind im Algorithmus \ref{alg:enhance} dargestellt. 
+Many approaches and best practices already exist for improving the quality of scanned images as seen in section \ref{sec:related-work}. We have developed a pipeline that combines several of these methods in order to achieve potentially good results. Users can choose which steps to apply from the pipeline. The individual methods of the pipeline are shown in algorithm \ref{alg:enhance}.
+ 
 
 \begin{algorithm}
   \caption{Image Text Enhance Pipeline}
@@ -166,7 +187,8 @@ Es gibt bereits viele Ansätze und bewährte Verfahren, um die Qualität von ges
 \end{algorithm}
 \end{comment}
 
-Im Folgenden werden die einzelnen Schritte der Pipeline näher erläutert:
+
+The individual methods of the pipeline are explained in more detail below.
 
 \subsection{Convert image to graysacle}
 \label{subsec:grayscale}
@@ -174,8 +196,8 @@ Im Folgenden werden die einzelnen Schritte der Pipeline näher erläutert:
   Noch nicht mehr schreiben, da wir ggf. noch die Möglihckeit einfbauen wollen, farbige Bilder zu verarbeiten.
 \end{comment}
 
-Alle Verfahren der Pipeline arbeiten auf Graustufenbildern. Daher ist der erste Schritt der Pipeline die Umwandlung des Eingabebildes in ein Graustufenbild. Dies wird durch eine gewichtete Summe $Y=0.299R + 0.587G + 0.114B$ \cite{ITU-R_BT601} der RGB-Kanäle für jeden Pixel erreicht. Das Ergebnis ist ein Graustufenbild, in dem jeder Pixelwert $Y$ den Helligkeitswert des entsprechenden Pixels im Originalbild darstellt.
-Alle Schritte der Pipeline erfolgen nach der convertierung in-place, auf dem convertierten Graustufenbild.
+All pipeline methods work on grayscale images. Therefore, the first step is to convert the input image into a grayscale image. This is achieved by applying the weighted sum $Y = 0.299R + 0.587G + 0.114B$, as defined by the International Telecommunication Union \cite{ITU-R_BT601}, to each pixel. The result is a grayscale image in which the brightness value of each pixel, represented by $Y$, corresponds to that of the original RGB-pixel.
+All steps in the pipeline are performed on the converted grayscale image in-place after the conversion.
 
 \subsection{Deskew}
 \label{subsec:deskew}
@@ -193,7 +215,6 @@ Alle Schritte der Pipeline erfolgen nach der convertierung in-place, auf dem con
   - Coarse-to-fine angle search for efficiency
   - Uses Neumann boundary conditions to avoid black corners
 \end{comment}
-
 
 \subsection{Contrast enhancement}
 \label{subsec:contrast-enhancement}
@@ -234,20 +255,77 @@ Alle Schritte der Pipeline erfolgen nach der convertierung in-place, auf dem con
 
 \paragraph{Sauvola}
 
+\begin{comment}
+  k = Sauvola's parameter, controlling threshold sensivity
+  delta = optional offset to fine-tune the threshold
+  R = max stddev value (typically 128 for 8-bit images)
+\end{comment}
+
+\cite{image_binarization_sauvola_2000}
+
+\begin{gather}
+  T_w = m_w * \left(1 + k * \left(\frac{\sigma_w}{R} - 1\right)\right) - delta\\
+  I(x,y)= \begin{cases}
+    black, &  i(x,y) < T_w,\\
+    white, & text{otherwise},
+  \end{cases}\\
+\end{gather}
 
 \paragraph{Bataineh}
+\subparagraph{Adaptive binarization using local threshold}
+
+\begin{comment}
+  m_w = local mean of the window
+  sigma_W = local standard deviation of the window
+  m_g = global mean of the image pixels
+  needs to be calculated upfront for all windows:
+    sigma_min = minimum standard deviation among all windows
+    sigma_max = maximum standard deviation among all windows
+  sigma_adaptive = adaptive standard deviation for the window
+
+  ToDo: evtl. noch k in die T Formel einbauen, um die Sensitivität anzupassen
+\end{comment}
+
+\cite{adaptive_thresholding_methods_bataineh_2011}
+
 \begin{gather}\label{math:bataineh}
-  T = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\\
+  T_w = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\\
   \sigma_{adaptive} = \frac{\sigma_W-\sigma_{min}}{\sigma_{max}-\sigma_{min}}\\
   I(x,y)= \begin{cases}
-    black, & \text{if } i(x,y) < T\\
+    black, & \text{if } i(x,y) < T_w\\
     white, & \text{otherwise}
   \end{cases}
 \end{gather}
 
+\subparagraph{Adaptive window size}
+
+\begin{comment}
+  m_g = global mean of the image pixels
+  sigma_g = global standard deviation of the image pixels
+  max_level = maximum gray level of the image
+  k = parameter to adjust the threshold sensitivity (based on std deviation)
+  T_con = confusion threshold, of the global image
+    classifies each pixel into balck (foreground), red (confusion values), or white (background )based on its intensity relative to T_con
+  PW_size = primary window size for local statistics
+    1. large windows: low contast or high probability of confusing images -> multi-levels, large text size, low contact images
+    2. medium windows: fine and normal images or small image size
+    3. small windows: degraded images
+  I_h, I_w = height and width of the image
+  SW_size = secondary/final window size for local statistics
+    1. subimage requieres a smaller window size 
+    2. otherwise use the primary window size
+\end{comment}
+
+\begin{comment}
+  "Dynamic segmentation of the image into windows based on image features, determining the threshold value for each window." \cite{review_document_binarization_yang_2024}
+  "It can address specific challenges, such as thin pen strokes and low-contrast images. However,it unavoidably retains excess background." \cite{review_document_binarization_yang_2024}
+\end{comment}
+
+\cite{adaptive_thresholding_methods_bataineh_2011}
+
 \begin{gather} \label{math:adapt_win}
   T_{con} = m_g - k * \frac{m_g^2 * \sigma_g}{(m_g + \sigma_g) * (0.5 max_{level} + \sigma_g)}\\
-  I(x,y)= \begin{cases}
+  I = \begin{cases}
     black, &  i(x,y) \leq T_{con} - \left(\frac{\sigma_g}{2}\right),\\
     red, &  T_{con} - \left(\frac{\sigma_g}{2}\right) < i(x,y) < T_{exp} + \left(\frac{\sigma_g}{2}\right),\\
     white, &  i(x, y) \geq T_{con} + \left(\frac{\sigma_g}{2}\right),\\
