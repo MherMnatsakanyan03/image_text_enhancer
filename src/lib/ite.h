@@ -67,6 +67,17 @@ namespace ite
     CImg<uint> adaptive_gaussian_blur(const CImg<uint> &input_image, float sigma_low, float sigma_high, float edge_thresh, int truncate = 3, int block_h = 64);
 
     /**
+     * @brief Applies a simple median filter to the image.
+     * Good for removing impulse noise (salt-and-pepper) while preserving edges.
+     * Uses a fixed window size across the entire image.
+     * @param input_image The source image.
+     * @param kernel_size The size of the median filter kernel (default: 3).
+     * @param threshold Threshold parameter for median filtering (default: 0).
+     * @return A new, filtered image.
+     */
+    CImg<uint> simple_median_filter(const CImg<uint> &input_image, int kernel_size = 3, unsigned int threshold = 0);
+
+    /**
      * @brief Applies an adaptive median filter to the image.
      * Excellent for removing impulse noise (salt-and-pepper) while preserving edges.
      * Starts with a 3x3 window and expands when detecting impulse noise.

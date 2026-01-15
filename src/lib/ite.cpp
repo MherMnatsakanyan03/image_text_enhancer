@@ -115,6 +115,13 @@ namespace ite
         return result;
     }
 
+    CImg<uint> simple_median_filter(const CImg<uint> &input_image, int kernel_size, unsigned int threshold)
+    {
+        CImg<uint> result = input_image;
+        filters::simple_median_blur(result, kernel_size, threshold);
+        return result;
+    }
+
     CImg<uint> adaptive_median_filter(const CImg<uint> &input_image, int max_window_size, int block_h)
     {
         CImg<uint> result = input_image;
