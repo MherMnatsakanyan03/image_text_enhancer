@@ -222,7 +222,7 @@ namespace ite
         if (opt.do_color_pass)
         {
             color::color_pass_inplace(color_image, result);
-            result = color_image;
+            return color_image;
         }
 
         return result;
