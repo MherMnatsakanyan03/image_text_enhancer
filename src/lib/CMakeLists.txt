@@ -14,6 +14,8 @@ set(LIB_SRC
         color/grayscale.h
         color/contrast.cpp
         color/contrast.h
+        color/color.cpp
+        color/color.h
 
         # Binarization
         binarization/binarization.cpp

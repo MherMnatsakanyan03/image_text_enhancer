@@ -9,6 +9,7 @@
 #include "ite.h"
 
 #include "binarization/binarization.h"
+#include "color/color.h"
 #include "color/contrast.h"
 #include "color/grayscale.h"
 #include "filters/filters.h"
@@ -42,6 +43,13 @@ namespace ite
     {
         CImg<uint> result = input_image;
         color::contrast_linear_stretch(result);
+        return result;
+    }
+
+    CImg<uint> color_pass(const CImg<uint> &bin_image, const CImg<uint> &color_image)
+    {
+        CImg<uint> result = color_image;
+        color::color_pass_inplace(result, bin_image);
         return result;
     }
 
@@ -148,6 +156,13 @@ namespace ite
     CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt)
     {
         CImg<uint> result = input_image;
+        CImg<uint> color_image;
+
+        // Preserve color image if color pass is requested
+        if (opt.do_color_pass)
+        {
+            color_image = input_image;
+        }
 
         // 1. Convert to grayscale
         color::to_grayscale_rec601(result);
@@ -156,6 +171,10 @@ namespace ite
         if (opt.do_deskew)
         {
             geometry::deskew_projection_profile(result, opt.boundary_conditions);
+            if (opt.do_color_pass)
+            {
+                geometry::deskew_projection_profile(color_image, opt.boundary_conditions);
+            }
         }
 
         // 3. Contrast enhancement
@@ -197,6 +216,13 @@ namespace ite
         if (opt.do_erosion)
         {
             morphology::erosion_square(result, opt.kernel_size);
+        }
+
+        // 8. Color pass if requested
+        if (opt.do_color_pass)
+        {
+            color::color_pass_inplace(color_image, result);
+            result = color_image;
         }
 
         return result;

@@ -147,6 +147,14 @@ namespace ite
     CImg<uint> despeckle(const CImg<uint> &input_image, uint threshold, bool diagonal_connections = true);
 
     /**
+     * @brief Applies a color pass to the binary image using the color image.
+     * This function overlays a color image onto a binary image, preserving the binary structure.
+     * @param bin_image The binary image (single channel).
+     * @param color_image The color image (three channels).
+     */
+    CImg<uint> color_pass(const CImg<uint> &bin_image, const CImg<uint> &color_image);
+
+    /**
      * @brief Options for the `enhance` function.
      */
     struct EnhanceOptions
@@ -163,6 +171,8 @@ namespace ite
         bool do_adaptive_median = false;
         /** @brief Whether to perform adaptive Gaussian denoising (default false). */
         bool do_adaptive_gaussian_blur = false;
+        /** @brief Whether to perform color pass (default false). */
+        bool do_color_pass = false;
         /** @brief The standard deviation for Gaussian denoising (default 1.0f). */
         float sigma = 1.0f;
         /** @brief The low standard deviation for adaptive Gaussian denoising (default 0.5f). */
