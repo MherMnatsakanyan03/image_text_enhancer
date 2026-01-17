@@ -81,6 +81,18 @@ namespace ite
         return result;
     }
 
+    CImg<uint> binarize_bataineh(const CImg<uint> &input_image)
+    {
+        CImg<uint> result = input_image;
+        // Ensure grayscale first
+        if (result.spectrum() != 1)
+        {
+            color::to_grayscale_rec601(result);
+        }
+        binarization::binarize_bataineh(result);
+        return result;
+    }
+
     // ============================================================================
     // Morphological Operations
     // ============================================================================
