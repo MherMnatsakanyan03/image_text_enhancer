@@ -11,6 +11,16 @@ using namespace cimg_library;
 namespace ite
 {
     /**
+     *  @brief Binarization methods available.
+     */
+    enum class BinarizationMethod
+    {
+        Otsu,
+        Sauvola,
+        Bataineh
+    };
+
+    /**
      * @brief Loads an image from a specified file path.
      * @param filepath The relative or absolute path to the image file.
      * @return A CImg<uint> object containing the image data.
@@ -55,6 +65,16 @@ namespace ite
      * @return A new 1-channel binary image (values 0 or 255).
      */
     CImg<uint> binarize_otsu(const CImg<uint> &input_image);
+
+    /**
+     * @brief Converts a grayscale image inplace to a binary (black and white) image using Bataineh's method.
+     * If the image is not grayscale, it is first converted to grayscale.
+     * Bataineh's method uses adaptive thresholding for local windows. Window size is determined adaptively based on image characteristics.
+     * @param input_image The source grayscale image.
+     * @param window_size The size of the window used for adaptive thresholding.
+     * @return A new 1-channel binary image (values 0 or 255).
+     */
+    CImg<uint> binarize_bataineh(const CImg<uint> &input_image);
 
     /**
      * @brief Applies a simple Gaussian blur to blur the image.
@@ -154,6 +174,7 @@ namespace ite
      */
     CImg<uint> color_pass(const CImg<uint> &bin_image, const CImg<uint> &color_image);
 
+
     /**
      * @brief Options for the `enhance` function.
      */
@@ -205,6 +226,10 @@ namespace ite
         // --- Geometry Options ---
         /** @brief Whether to perform deskewing (default true). */
         bool do_deskew = false;
+
+        // --- Binarization Options ---
+        /** @brief The binarization method to use (default: Sauvola). */
+        BinarizationMethod binarization_method = BinarizationMethod::Sauvola;
 
         // --- Sauvola Binarization Options ---
         /** @brief The size of the local window for Sauvola binarization (default: 15). */

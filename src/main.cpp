@@ -69,7 +69,8 @@ int main(int argc, char* argv[])
 
             ite::filters::AdaptiveGaussianParams ad_gauss_params = ite::filters::choose_sigmas_for_text_enhancement(img);
 
-            std::cout << " Chosen Adaptive Gaussian Params: " << " sigma_low=" << ad_gauss_params.sigma_low << " sigma_high=" << ad_gauss_params.sigma_high
+            std::cout << " Chosen Adaptive Gaussian Params: "
+                      << " sigma_low=" << ad_gauss_params.sigma_low << " sigma_high=" << ad_gauss_params.sigma_high
                       << " edge_thresh=" << ad_gauss_params.edge_thresh << "\n";
 
             ite::EnhanceOptions enhance_opts = {
@@ -93,6 +94,7 @@ int main(int argc, char* argv[])
                 .kernel_size = 5,
                 .despeckle_threshold = 0,
                 .do_deskew = false,
+                .binarization_method = ite::BinarizationMethod::Bataineh,
                 .sauvola_window_size = 15,
                 .sauvola_k = 0.2f,
                 .sauvola_delta = 0.0f,
