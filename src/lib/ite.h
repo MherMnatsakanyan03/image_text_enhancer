@@ -220,7 +220,8 @@ namespace ite
      * This is a convenience function that chains together the most common operations.
      * @param input_image The source image.
      * @param opt The enhancement options.
+     * @param block_h Height of the blocks for parallel processing (default: 64).
      * @return An enhanced image, ready for OCR.
      */
-    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt = {});
+    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt = {}, int block_h = 64);
 } // namespace ite
