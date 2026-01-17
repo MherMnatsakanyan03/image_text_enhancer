@@ -1,9 +1,7 @@
 #include "binarization.h"
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <iostream>
 #include <stdexcept>
 #include "../core/integral_image.h"
 
@@ -207,8 +205,10 @@ namespace ite::binarization
         4. Set final window size W_size based on pw_size and image dimensions
         5. Use W_size for adaptive binarization
         Steps 4 and 5 are integrated in the binarization process below.
+
+        Adaptiv window size 1-3 is calculated once per image at the beginning.
+        Steps 4-5 are calculated for each pixel during second step of the adaptive binarization.
         */
-        auto start = std::chrono::steady_clock::now();
         if (input_image.spectrum() != 1)
         {
             throw std::runtime_error("Adaptive Binarization requires a grayscale image.");
@@ -224,7 +224,9 @@ namespace ite::binarization
         const int img_height = img_double.height();
         const int img_depth = img_double.depth();
 
-        /*----- adaptive window size steps 1-3 -----*/
+        // ============================================================================
+        // adaptive window size steps 1-3
+        // ============================================================================
 
         // First step: compute Confusion Threshold T_con
         const double std_dev = std::sqrt(img_double.variance());
@@ -289,15 +291,19 @@ namespace ite::binarization
         const int pw_x_half = pw_size[0] / 2;
         const int pw_y_half = pw_size[1] / 2;
 
-        /*----- end adaptive window size steps 1-3 -----*/
+        // ============================================================================
+        // End adaptive window size steps 1-3
+        // ============================================================================
 
         CImg<uint> output_image(img_width, img_height, img_depth, 1);
         double min_std_dev = 255.0; // initialize to max possible value -> can only go down
         double max_std_dev = 0.0; // initialize to min possible value -> can only go up
 
-        /*----- adaptive binarization -----*/
-        // First step: Calculate local std. deviation for each window and determine
-        // global min and max std. deviation
+        // ============================================================================
+        // adaptive binarization
+        // ============================================================================
+
+        // 1. Calculate local std. deviation for each window and determine global min and max std. deviation
 #pragma omp parallel for collapse(3) reduction(min : min_std_dev) reduction(max : max_std_dev)
         for (int z = 0; z < img_depth; ++z)
         {
@@ -338,7 +344,7 @@ namespace ite::binarization
         // calculate range once and set a small epsilon to avoid division by zero
         const double std_dev_range = (max_std_dev - min_std_dev) > 1e-5 ? (max_std_dev - min_std_dev) : 1e-5;
 
-        // Second pass: Binarize using local std. deviation
+        // 2. Binarize using local std. deviation
 #pragma omp parallel for collapse(3)
         for (int z = 0; z < img_depth; ++z)
         {
@@ -352,9 +358,10 @@ namespace ite::binarization
                     const int x2 = std::min(img_width - 1, x + pw_x_half);
                     const int y2 = std::min(img_height - 1, y + pw_y_half);
 
-                    /*----- adaptive window size -----*/
-                    // Fourth step: Set final window size W_size based on pw_size and image
-                    // dimensions count number of black and red pixels in primary window
+                    // ============================================================================
+                    // adaptive window size steps 4-5
+                    // ============================================================================
+                    // Fourth step: Set final window size W_size based on pw_size and image dimensions count number of black and red pixels in primary window
                     long n_w_black = 0;
                     long n_w_red = 0;
                     for (int i = y1; i < y2; ++i)
@@ -383,7 +390,10 @@ namespace ite::binarization
                     const int y1_final = std::max(0, y - final_w_y_half);
                     const int x2_final = std::min(img_width - 1, x + final_w_x_half);
                     const int y2_final = std::min(img_height - 1, y + final_w_y_half);
-                    /*----- end adaptive window size -----*/
+
+                    // ============================================================================
+                    // end adaptive window size steps 4-5
+                    // ============================================================================
 
                     // Get sum and sum of squares from integral images
                     double sum = core::get_area_sum(integral_img, x1_final, y1_final, z, 0, x2_final, y2_final);
@@ -415,17 +425,12 @@ namespace ite::binarization
                             (((mean_window_val * mean_window_val) - std_dev_window_val) /
                              ((mean_global + std_dev_window_val) * (std_dev_adaptive + std_dev_window_val)));
 
-                    // Apply threshold
-                    // new image needed because of race conditions in the parallel for loops
+                    // Apply threshold - new image needed because of race conditions in the parallel for loops
                     output_image(x, y, z) = (img_double(x, y, z) > threshold) * 255;
                 }
             }
         }
-        // needed because of race conditions in the parallel for loops
         input_image = output_image;
-        auto end = std::chrono::steady_clock::now();
-        auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        std::cout << "Bataineh Binarization took " << diff.count() << " ms" << std::endl;
     }
 
 } // namespace ite::binarization

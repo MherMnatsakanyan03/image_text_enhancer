@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
                 .kernel_size = 5,
                 .despeckle_threshold = 0,
                 .do_deskew = false,
-                .binarization_method = ite::BinarizationMethod::Bataineh,
+                .binarization_method = ite::BinarizationMethod::Sauvola,
                 .sauvola_window_size = 15,
                 .sauvola_k = 0.2f,
                 .sauvola_delta = 0.0f,
