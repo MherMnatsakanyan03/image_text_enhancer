@@ -184,7 +184,7 @@ namespace ite
         /** @brief The kernel size for median denoising (default 3). */
         int median_kernel_size = 3;
         /** @brief The threshold for median denoising (default 0). */
-        unsigned int median_threshold = 0;
+        float median_threshold = 0;
         /** @brief Maximum window size for adaptive median filter (must be odd, default 7). */
         int adaptive_median_max_window = 7;
 
