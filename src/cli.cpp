@@ -1,6 +1,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <string>
+#include <chrono>
 #include "ite.h"
 
 // Define IDs for long-only options to keep the switch statement clean
@@ -27,6 +28,7 @@ enum : int
     OPT_SAUVOLA_WINDOW,
     OPT_SAUVOLA_K,
     OPT_SAUVOLA_DELTA,
+    OPT_TIME,
 };
 
 static void die_usage(const std::string &msg, int exit_code = 2)
@@ -116,7 +118,9 @@ static void print_help(const char* prog)
               << "      --despeckle-thresh <int>       Despeckle threshold (default: " << d.despeckle_threshold << ")\n"
               << "      --sauvola-window <int>         Sauvola window size (default: " << d.sauvola_window_size << ")\n"
               << "      --sauvola-k <float>            Sauvola k (default: " << d.sauvola_k << ")\n"
-              << "      --sauvola-delta <float>        Sauvola delta (default: " << d.sauvola_delta << ")\n"
+              << "      --sauvola-delta <float>        Sauvola delta (default: " << d.sauvola_delta << ")\n\n"
+              << "Other:\n"
+              << "  -t, --time                         Report execution time of enhance function\n"
               << "  -h, --help                         Show this help\n";
 }
 
@@ -124,16 +128,18 @@ int main(int argc, char* argv[])
 {
     ite::EnhanceOptions opt;
     std::string input_path, output_path;
+    bool measure_time = false;
 
     // getopt settings:
     // - leading ':' => we handle missing arg as ':' return value
     // - opterr = 0 => we print our own errors
     opterr = 0;
-    auto shortopts = ":i:o:h";
+    auto shortopts = ":i:o:th";
 
     const option longopts[] = {{"input", required_argument, nullptr, 'i'},
                                {"output", required_argument, nullptr, 'o'},
                                {"help", no_argument, nullptr, 'h'},
+                               {"time", no_argument, nullptr, 't'},
 
                                // Toggles
                                {"do-gaussian", no_argument, nullptr, OPT_DO_GAUSSIAN},
@@ -176,6 +182,9 @@ int main(int argc, char* argv[])
         case 'h':
             print_help(argv[0]);
             return 0;
+        case 't':
+            measure_time = true;
+            break;
 
         case OPT_DO_GAUSSIAN:
             opt.do_gaussian_blur = true;
@@ -313,9 +322,20 @@ int main(int argc, char* argv[])
     {
         std::cout << "Processing: " << input_path << " -> " << output_path << std::endl;
         auto img = ite::loadimage(input_path);
+
+        auto start = std::chrono::high_resolution_clock::now();
         auto result = ite::enhance(img, opt, 64);
+        auto end = std::chrono::high_resolution_clock::now();
+
         ite::writeimage(result, output_path);
         std::cout << "Success!" << std::endl;
+
+        if (measure_time)
+        {
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+            double seconds = duration.count() / 1000.0;
+            std::cout << "Enhancement time: " << seconds << " s" << std::endl;
+        }
     }
     catch (const std::exception &e)
     {
