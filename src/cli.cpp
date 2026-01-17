@@ -83,7 +83,7 @@ static void require_non_negative(const char* opt_name, int v)
 
 static void require_positive_f(const char* opt_name, float v)
 {
-    if (!(v > 0.0f))
+    if (v <= 0.0f)
         die_usage(std::string(opt_name) + " must be > 0");
 }
 
@@ -281,7 +281,7 @@ int main(int argc, char* argv[])
         case OPT_SAUVOLA_K:
             {
                 opt.sauvola_k = parse_float(optarg, "--sauvola-k");
-                require_positive("--sauvola-k", opt.sauvola_k);
+                require_positive_f("--sauvola-k", opt.sauvola_k);
             }
             break;
 
