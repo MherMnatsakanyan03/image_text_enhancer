@@ -59,4 +59,16 @@ namespace ite::binarization
      */
     void binarize_otsu(CImg<uint> &image);
 
+    /**
+     * @brief Binarizes a grayscale image in-place using Bataineh's method.
+     *
+     * Uses Bataineh's threshold to separate foreground from background.
+     * The method adapts window sizes based on image characteristics for improved results.
+     * Uses adaptive local thresholds computed from local mean and standard deviation for separation.
+     *
+     * @param image The grayscale image to binarize (modified in-place).
+     * @throws std::runtime_error if the image is not grayscale (1-channel).
+     */
+    void binarize_bataineh(CImg<uint> &image);
+
 } // namespace ite::binarization

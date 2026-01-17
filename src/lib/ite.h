@@ -155,6 +155,16 @@ namespace ite
     CImg<uint> color_pass(const CImg<uint> &bin_image, const CImg<uint> &color_image);
 
     /**
+     *  @brief Binarization methods available.
+     */
+    enum class BinarizationMethod
+    {
+        Otsu,
+        Sauvola,
+        Bataineh
+    };
+
+    /**
      * @brief Options for the `enhance` function.
      */
     struct EnhanceOptions
@@ -205,6 +215,10 @@ namespace ite
         // --- Geometry Options ---
         /** @brief Whether to perform deskewing (default true). */
         bool do_deskew = false;
+
+        // --- Binarization Options ---
+        /** @brief The binarization method to use (default: Sauvola). */
+        BinarizationMethod binarization_method = BinarizationMethod::Sauvola;
 
         // --- Sauvola Binarization Options ---
         /** @brief The size of the local window for Sauvola binarization (default: 15). */
