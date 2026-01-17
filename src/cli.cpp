@@ -1,7 +1,7 @@
+#include <chrono>
 #include <getopt.h>
 #include <iostream>
 #include <string>
-#include <chrono>
 #include "ite.h"
 
 // Define IDs for long-only options to keep the switch statement clean
@@ -94,34 +94,41 @@ static void print_help(const char* prog)
               << "Usage:\n"
               << "  " << prog << " -i <input> -o <output> [options]\n\n"
               << "Required:\n"
-              << "  -i, --input <path>                 Input image path\n"
-              << "  -o, --output <path>                Output image path\n\n"
-              << "Toggles:\n"
-              << "      --do-gaussian                  Enable Gaussian blur (default: " << (d.do_gaussian_blur ? "true" : "false") << ")\n"
-              << "      --do-median                    Enable median filter (default: " << (d.do_median_blur ? "true" : "false") << ")\n"
-              << "      --do-adaptive-median           Enable adaptive median filter (default: " << (d.do_adaptive_median ? "true" : "false") << ")\n"
-              << "      --do-adaptive-gaussian         Enable adaptive Gaussian blur (default: " << (d.do_adaptive_gaussian_blur ? "true" : "false") << ")\n"
-              << "      --do-erosion                   Enable erosion (default: " << (d.do_erosion ? "true" : "false") << ")\n"
-              << "      --do-dilation                  Enable dilation (default: " << (d.do_dilation ? "true" : "false") << ")\n"
-              << "      --do-despeckle                 Enable despeckle (default: " << (d.do_despeckle ? "true" : "false") << ")\n"
-              << "      --do-deskew                    Enable deskew (default: " << (d.do_deskew ? "true" : "false") << ")\n"
-              << "      --do-color-pass                Enable color pass (default: " << (d.do_color_pass ? "true" : "false") << ")\n\n"
-              << "Parameters:\n"
-              << "      --sigma <float>                Gaussian sigma (default: " << d.sigma << ")\n"
-              << "      --sigma-low <float>            Adaptive Gaussian low sigma (default: " << d.adaptive_sigma_low << ")\n"
-              << "      --sigma-high <float>           Adaptive Gaussian high sigma (default: " << d.adaptive_sigma_high << ")\n"
-              << "      --edge-thresh <float>          Adaptive Gaussian edge threshold (default: " << d.adaptive_edge_thresh << ")\n"
-              << "      --median-size <int>            Median kernel size (default: " << d.median_kernel_size << ")\n"
-              << "      --median-thresh <uint>         Median threshold (default: " << d.median_threshold << ")\n"
-              << "      --adaptive-median-max <int>    Adaptive median max window (default: " << d.adaptive_median_max_window << ")\n"
-              << "      --kernel-size <int>            Morphology kernel size (default: " << d.kernel_size << ")\n"
-              << "      --despeckle-thresh <int>       Despeckle threshold (default: " << d.despeckle_threshold << ")\n"
-              << "      --sauvola-window <int>         Sauvola window size (default: " << d.sauvola_window_size << ")\n"
-              << "      --sauvola-k <float>            Sauvola k (default: " << d.sauvola_k << ")\n"
-              << "      --sauvola-delta <float>        Sauvola delta (default: " << d.sauvola_delta << ")\n\n"
-              << "Other:\n"
-              << "  -t, --time                         Report execution time of enhance function\n"
-              << "  -h, --help                         Show this help\n";
+              << "  -i, --input <path>            Path to source image\n"
+              << "  -o, --output <path>           Path to save processed result\n\n"
+
+              << "GEOMETRY & PRE-PROCESSING:\n"
+              << "  (Note: Contrast Stretching and Grayscale conversion are ALWAYS performed)\n"
+              << "      --do-deskew               Straighten tilted text (default: " << (d.do_deskew ? "ON" : "OFF") << ")\n\n"
+
+              << "DENOISING (Pre-Binarization):\n"
+              << "      --do-gaussian             Apply Gaussian blur (default: " << (d.do_gaussian_blur ? "ON" : "OFF") << ")\n"
+              << "      --sigma <float>           Gaussian sigma (default: " << d.sigma << ")\n"
+              << "      --do-adaptive-gaussian    Apply adaptive blur [overrides --do-gaussian] (default: " << (d.do_adaptive_gaussian_blur ? "ON" : "OFF")
+              << ")\n"
+              << "      --sigma-low <float>       Adaptive low sigma (default: " << d.adaptive_sigma_low << ")\n"
+              << "      --sigma-high <float>      Adaptive high sigma (default: " << d.adaptive_sigma_high << ")\n"
+              << "      --edge-thresh <float>     Adaptive edge sensitivity (default: " << d.adaptive_edge_thresh << ")\n"
+              << "      --do-median               Apply median filter (default: " << (d.do_median_blur ? "ON" : "OFF") << ")\n"
+              << "      --median-size <int>       Median kernel size (default: " << d.median_kernel_size << ")\n"
+              << "      --do-adaptive-median      Apply adaptive median filter (default: " << (d.do_adaptive_median ? "ON" : "OFF") << ")\n\n"
+
+              << "BINARIZATION (Sauvola Algorithm):\n"
+              << "      --sauvola-window <int>    Local window size (default: " << d.sauvola_window_size << ")\n"
+              << "      --sauvola-k <float>       Sensitivity parameter k (default: " << d.sauvola_k << ")\n"
+              << "      --sauvola-delta <float>   Threshold offset delta (default: " << d.sauvola_delta << ")\n\n"
+
+              << "MORPHOLOGY (Post-Binarization):\n"
+              << "      --do-despeckle            Remove small noise specks (default: " << (d.do_despeckle ? "ON" : "OFF") << ")\n"
+              << "      --despeckle-thresh <int>  Max pixel size of specks to remove (default: " << d.despeckle_threshold << ")\n"
+              << "      --do-dilation             Thicken/bolden dark features (default: " << (d.do_dilation ? "ON" : "OFF") << ")\n"
+              << "      --do-erosion              Thin/shrink dark features (default: " << (d.do_erosion ? "ON" : "OFF") << ")\n"
+              << "      --kernel-size <int>       Size of dilation/erosion square (default: " << d.kernel_size << ")\n\n"
+
+              << "OUTPUT OPTIONS:\n"
+              << "      --do-color-pass           Re-apply original color to binarized mask (default: " << (d.do_color_pass ? "ON" : "OFF") << ")\n"
+              << "  -t, --time                    Report execution time of enhance function\n"
+              << "  -h, --help                    Show this help\n";
 }
 
 int main(int argc, char* argv[])
