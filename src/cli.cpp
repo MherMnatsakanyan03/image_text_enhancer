@@ -1,4 +1,3 @@
-#include <chrono>
 #include <getopt.h>
 #include <iostream>
 #include <string>
@@ -252,7 +251,7 @@ int main(int argc, char* argv[])
             break;
 
         case OPT_MEDIAN_THRESH:
-            opt.median_threshold = parse_uint(optarg, "--median-thresh");
+            opt.median_threshold = (int)parse_uint(optarg, "--median-thresh");
             break;
 
         case OPT_ADAPTIVE_MEDIAN_MAX:
@@ -330,18 +329,16 @@ int main(int argc, char* argv[])
         std::cout << "Processing: " << input_path << " -> " << output_path << std::endl;
         auto img = ite::loadimage(input_path);
 
-        auto start = std::chrono::high_resolution_clock::now();
+        auto start = omp_get_wtime();
         auto result = ite::enhance(img, opt, 64);
-        auto end = std::chrono::high_resolution_clock::now();
+        auto end = omp_get_wtime();
 
         ite::writeimage(result, output_path);
         std::cout << "Success!" << std::endl;
 
         if (measure_time)
         {
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            double seconds = duration.count() / 1000.0;
-            std::cout << "Enhancement time: " << seconds << " s" << std::endl;
+            std::cout << "Enhancement time: " << end-start << " s" << std::endl;
         }
     }
     catch (const std::exception &e)
