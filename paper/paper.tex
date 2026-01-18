@@ -11,7 +11,8 @@
     \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
 
 %% These commands are for a PROCEEDINGS abstract or paper.
-\settopmatter{printacmref=false} % Removes citation information below abstract
+\settopmatter{printacmref=true} % Removes citation information below abstract
+%% Was false before, we need to check why its not working as intended
 \renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in 
 
 \acmConference[AEPRO 2026]{AEPRO 2026: Algorithm Engineering Projects}{March 1}{Jena, Germany}
@@ -28,7 +29,8 @@
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
 %% TODO: think about good title
-\title[Image Text Enhancer]{Image Text Enhancer\\\large Algorithm Engineering 2026 Project Paper}
+\title[Image Text Enhancer]{Image Text Enhancer}
+\subtitle{\large Algorithm Engineering 2026 Project Paper}
 
 %%
 %% The "author" command and its associated commands are used to define
@@ -37,25 +39,28 @@
 \author{Daniel Motz}
 \affiliation{%
   \institution{Friedrich Schiller University Jena}
+  \city{Jena}
   \country{Germany}}
 \email{daniel.motz@uni-jena.de}
 
 \author{Leonard Teschner}
 \affiliation{%
   \institution{Friedrich Schiller University Jena}
+  \city{Jena}
   \country{Germany}}
 \email{leonard.teschnner@uni-jena.de}
 
 \author{Mher Mnatsakanyan}
 \affiliation{%
   \institution{Friedrich Schiller University Jena}
+  \city{Jena}
   \country{Germany}}
 \email{mher.mnatsakanyan@uni-jena.de}
 
 %% The abstract is a short summary of the work to be presented in the article.
 \begin{abstract}
 
-The five-finger pattern \cite{macgilchrist2014}:
+The five-finger pattern:
 \begin{enumerate}
 \item \textbf{Topic and background:} What topic does the paper deal with? What is the point of departure for your research? Why are you studying this now?
 \item \textbf{Focus:} What is your research question? What are you studying precisely?
@@ -85,38 +90,51 @@ The five-finger pattern \cite{macgilchrist2014}:
 
 \subsection{Background}
 \label{sec:background}
-\begin{comment}
-  Motivation:
-  - Viele handschriftliche oder gedruckte Dokumente werden heutzutage mit dem Smartphone, oder im Zuge der Digitalisierung mit Druckern gescannt. Dabei entstehen häufig Bilder mit schlechter Qualität, die schwer lesbar, für Mensch und Maschine sind. Schlechte Qualität ist in diesem Kontext durch schlechte Beleuchtung, Schatten, Verzerrungen, Rauschen oder ungleichmäßigen Kontrast gekennzeichnet.
-  - Solche Bilder sind problematisch, wenn sie weiterverwendet werden sollen, beispielsweise um sie zu archivieren, zu drucken oder mittels OCR in maschinenlesbaren Text umzuwandeln.
-\end{comment}
+
+In der Zeit der Digialisierung werden viele gedruckte, handschriftliche und historische Dokumente mittels Scanner oder Smartphone-Kamera digitalisiert. Dabei entstehen häufig digitale Bilder mit schlechter Qualität, die nicht für die digitalen Verfahren der image analysis, wie text detection, geeignet sind.
+
+Bei der digitalisierung der Bildern können unterschiedliche challenges durch die Aufnahmeart, als auch durch den Dokumententyp entstehen:
+Durch Smartphone-Kameras gescannte Dokumente können nicht alle Details wie ein dedizierte Dokumenten-Scanner aufnehmen, wodurch blurry und distorted Bilder entstehen. Auch der Winkel und der Abstand der Kamere zum Dokument haben einfluss auf die Qualität. So können distorted Perspektiven und Probleme für das Text Alignment verursacht werden. Die Lichteigenschaften können Schatten werfen, glare und reflektionen hervorrufen. Zusätzlich können Smartphone-Kameras Text auffangen, der nicht zum gescannten Dokument selbst gehört \cite{comprehensive_review_document_image_binarization_bataineh_2025}\cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}.
+
+Historiesche Dokumente haben durch ihr schieres Alter Probleme. So können sie fading und noise aufweisen, die den Text unlesbar machen. Die digitalisierung der Dokumente wird komplexer durch handschriftliche Notizen, überlappende Texte und variationen im Style, sowie durch beschädigte Seiten und risse oder auch fungal spots \cite{comprehensive_review_document_image_binarization_bataineh_2025}.
 
 \subsection{Related Work}
 \label{sec:related-work}
 \begin{comment}
   drei Paper wurden uns empfohlen:
   - Adaptive Thresholding Methods for Documents Image Binarization \cite{adaptive_thresholding_methods_bataineh_2011}: Das Bild wird in Fenster aufgeteilt. Fuer jedes Fenster wird ein Thresholdingvalue $T$ berechnet. In jedem Fenster wird die minimum $\sigma_{min}$ und maximum $\sigma_{max}$ Standardabweichungen aller Fenster verwendet, um adaptiv den Threshold $T$ zu bestimmen. Jeder Pixelwert $i(x, y)$ des Fensters wird anschliessend mit dem Threshold verglichen: Ist der Wert kleiner wird der Pixel schwarz und sonst weiss.\\
-
   - Adaptive Thresholding using the Integral Image \cite{adaptive_thresholding_integral_image_bradley_roth_2007}
   - Binarization of historical document images using the local maximum and minimum \cite{Binarization_historical_document_images_local_maximum_minimum_su_2010}
   \subsection{Our Contributions}
   \label{sec:our-contributions}
-
-  Andere Arbeiten: 
-  - Pipeline die die Binarisierung durch kombination verschiedener existierender Binarisierungsmethoden und einer Logik, die die Bilder der exisiterenden Methoden filtert. Anschließend wird per Voting entschieden, welcher Pixel schwarz oder weiss ist. Vor der Ausgabe wird noch ein Post-Processing Schritt durchgeführt, um kleine Fehler zu entfernen \cite{voting_method_image_binarization_vlasceanu_2022}.
-  -
 
   Tools die binarisierung bereits können:
   - OpenCV
   - Tesseract
   - Leptonica - von copilopt vorgeschlagen
   - ImageMagick
-
-  - kostenloses open source Tool/executable um die Qualität von gescannten Bildern zu verbessern, bevor sie beispielsweise versendet, gedruckt oder archiviert werden.
-  - Verbessert die Arbeit der Related Work, indem alle Methoden in einer Pipeline kombiniert werden können. Der Nutzer hat freie entscheidung welche Operationen er durchführen möchte ... %%TODO: konkretisieren
-  - Kann beispielsweise für die Digitalisierung von Büchern, Dokumenten und handschriftlichen Akten oder Notizen genutzt werden. So wird eine gute, digitale lesbarkeit und wiedervenwendung ermöglicht.
-  -OpenMP und C++ Implementierung mit CMake Build System, Catch2 Unit Tests.
 \end{comment}
+
+\begin{comment}
+  Diese Paper wurden nicht von mir gelesen, aber in \cite{review_document_binarization_yang_2024} als beispiel für die verschiedenen Kategorien von Binarisierungsmethoden genannt:
+  \cite{Yang2008}, \cite{Lu2010}, cite{Tong2009}
+\end{comment}
+
+Der erste Schritt bei der image analysis, wie OCR Texterkennung und Recognision Systemen, ist die Segmentierung von Hintergrund und dem Fordergrund. \cite{review_document_binarization_yang_2024}. Die Segmentierung wird druch Binarisierung durchgeführt. Es gibt Traditionelle Methoden, welche einen globalen \cite{Otsu1979}, lokalen \cite{adaptive_thresholding_methods_bataineh_2011}\cite{adaptive_thresholding_integral_image_bradley_roth_2007}\cite{image_binarization_sauvola_2000} oder auch gemixeten Threshold berechnen\cite{Yang2008}\cite{review_document_binarization_yang_2024}. Mit Image Feature Methoden wurden Edge Detection \cite{Lu2010}\cite{review_document_binarization_yang_2024} und Fuzzy Logics \cite{Tong2009}\cite{review_document_binarization_yang_2024} eingesetz. In den letzten Jahren sind zusätzlich zu den Traditionellen Methoden noch Deep learning Binarisierungsmethoden hinzugekommen. Diese beruhen auf Convulational Neural Networks, Generative Adversarial Networks oder Attention Mechanisms \cite{review_document_binarization_yang_2024}. 
+
+Neben den reinen Binarisierungsmethoden gibt es Ansätze, die mehrere Bildverarbeitungsmethoden kombinieren, um die Qualität von Textbildern zu verbessern. So wird in \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015} eine Pipeline vorgestellt, die Entropy Filter und Morphologische Operationen mit Binarisierung kombiniert. In \cite{image_binarization_end_to_end_text_understanding_milyaev_2013} wird Niblacks Binarisierung mit einem Laplace Filter und globaler Optimierung kombiniert. Ein weiterer Ansatz ist in \cite{voting_method_image_binarization_vlasceanu_2022} beschrieben, wo verschiedene Binarisierungsmethoden kombiniert werden und per Votingmechanismus entschieden wird, welcher Pixel Vorder- oder Hintergrund ist.
+
+\subsection{Our Contribution}
+\label{sec:our-contribution}
+
+In diesem Paper stellen wir eine Pipeline vor, die mehrere Bildverarbeitungsmethoden kombiniert, um die Qualität von gescannten oder fotografierten Textbildern zu verbessern. 
+Die Pipeline umfasst Schritte wie Deskewing, Kontrastverbesserung, Rauschunterdrückung, Binarisierung, Despeckle, und morphologische Operationen. Das binarisierte Ergebnis der Pipeline kann außerdem zurück in ein Farbbild konvertiert werden.
+
+Die Pipeline ist modular und userfriendly aufgebaut, sodass Nutzer auswählen können, welche Schritte sie anwenden möchten, um die Pipeline auf ihre spezifischen Anwendungsfälle anzupassen können. Die Methodenparameter können einzeln angepasst werden, sind aber für die userfirendlyness mit den state of the art Werten standardmäßig konfiguriert. 
+
+Uns ist die effiziente Verarbeitung in der Pipeline wichtig. Daher vergleichen wir uns mit traditionellen open-source Binarisierungsmethoden und Bildverbesserungsverfahren und lassen bewusst Deep Learning Ansätze, sowie zahlungspflichtige Software außen vor.
+
+Wir stellen die Pipline als C++ Bibliothek, zusätzlich mit den einzelnen Methoden zur Verfügung. Die Implementierung nutzt parallelisierung durch OpenMP, sowie weitere Optimierungsmethoden wie Loop-blocking um eine effiziente Verarbeitung großer Bilddatenmengen zu gewährleisten. 
 
 \subsection{Outline}
 \label{sec:outline}
@@ -125,14 +143,13 @@ The five-finger pattern \cite{macgilchrist2014}:
   welche experimente werden wir durchführen?
 \end{comment}
 
-This paper is structured as follows: Section \ref{sec:algorithm} provides a detailed description the developed pipeline and its methods. Section \ref{sec:experiments} demonstrates the performance of our algorithm using experiments. Finally, Section \ref{sec:conclusions} summarises our results and provides an outlook on possible future work.
+This paper is structured as follows: Section \ref{sec:pipeline} provides a detailed description the developed pipeline and its methods. Section \ref{sec:experiments} demonstrates the performance of our pipeline using experiments. Finally, Section \ref{sec:conclusions} summarises our results and provides an outlook on possible future work.
 
-\section{The Algorithm}
-\label{sec:algorithm}
+\section{The Pipeline}
+\label{sec:pipeline}
 
 Many approaches and best practices already exist for improving the quality of scanned images as seen in section \ref{sec:related-work}. We have developed a pipeline that combines several of these methods in order to achieve potentially good results. Users can choose which steps to apply from the pipeline. The individual methods of the pipeline are shown in algorithm \ref{alg:enhance}.
  
-
 \begin{algorithm}
   \caption{Image Text Enhance Pipeline}
   \label{alg:enhance}
@@ -144,57 +161,14 @@ Many approaches and best practices already exist for improving the quality of sc
   \item Binarization
   \item Despeckle (if requested)
   \item Morphological operations (if requested)
+  \item Color passthrough
 \end{enumerate}
 \end{algorithm}
-
-\begin{comment}
-  <-- To be included later in some variation -->
-\begin{algorithm}
-\caption{Our enhance Pipeline}\label{alg:enhance}
-\begin{algorithmic}
-\Procedure{Enhance}{input\_image, deskew, despeckle, do\_dilation, do\_erosion}
-    \State result = input\_image
-    \State result $\gets$ ConvertToGrayscale(result)
-    \If{deskew}
-        \State result $\gets$ Deskew(result)
-    \EndIf
-    \State result $\gets$ ContrastEnhancement(result)
-    \If{do\_adaptive\_gaussian\_blur}
-        \State result $\gets$ AdaptiveGaussianBlur(result)
-    \ElsIf{do\_median\_blur}
-        \State result $\gets$ MedianBlur(result)
-    \ElsIf{do\_median\_blur}
-        \State result $\gets$ MedianBlur(result)
-    \ElsIf{do\_adaptive\_median}
-        \State result $\gets$ AdaptiveMedian(result)
-    \Else 
-        \State pass 
-    \EndIf
-    \State result $\gets$ Denoising(result)
-    \State result $\gets$ Binarization(result)
-    \If{despeckle}
-        \State result $\gets$ Despeckle(result)
-    \EndIf
-    \If{do\_dilation}
-        \State result $\gets$ MorphologicalOperations(result)
-    \EndIf
-    \If{do\_erosion}
-        \State result $\gets$ MorphologicalOperations(result)
-    \EndIf
-    \State \textbf{return} result
-    \EndProcedure
-\end{algorithmic}
-\end{algorithm}
-\end{comment}
-
 
 The individual methods of the pipeline are explained in more detail below.
 
 \subsection{Convert image to graysacle}
 \label{subsec:grayscale}
-\begin{comment}
-  Noch nicht mehr schreiben, da wir ggf. noch die Möglihckeit einfbauen wollen, farbige Bilder zu verarbeiten.
-\end{comment}
 
 All pipeline methods work on grayscale images. Therefore, the first step is to convert the input image into a grayscale image. This is achieved by applying the weighted sum $Y = 0.299R + 0.587G + 0.114B$, as defined by the International Telecommunication Union \cite{ITU-R_BT601}, to each pixel. The result is a grayscale image in which the brightness value of each pixel, represented by $Y$, corresponds to that of the original RGB-pixel.
 All steps in the pipeline are performed on the converted grayscale image in-place after the conversion.
@@ -202,28 +176,14 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
 \subsection{Deskew}
 \label{subsec:deskew}
 
-\begin{comment}
-  Aus der header Datei
-  skew (rotation)
-  Nutzt die Projection Profile Methode:
-  1. Converts to grayscale and binarizes (using selected binarization method)
-  2. Searches fo the angle that maximizes horizontal projection variance 
-  3. Rotates the image to correct the sekw
+Damit der Text im Bild horizontal ausgerichtet ist, wird ein Deskew Schritt auf den wunsch des Nutzers hin durchgeführt. Besonders text analysis Methoden wie OCR profitieren von horitonal ausgerichteten Texten \cite{novel_adaptive_deskewing_algorithm_document_images_bao_2022}. Unser Deskew Algorithmus nutzt die Projection Profile Methode, die ähnlich zu \cite{automated_entry_system_printed_documents_akiyama_hagita_1990} ist. Zuerst wird das Bild in Graustufen kovertiert und mittels Sauvols Methode Binarisiert\footnote{siehe Abschnitt \ref{subsec:binarization} oder \cite{image_binarization_sauvola_2000}}. Im zweiten Schritt wird der Winkel gesucht, der die horizontale projections Varianz maximiert. Abschließend wird das Bild rotiert, um den Skew zu korrigieren. 
 
-  Features
-  - Polarity-safe (detects light vs. dark background)
-  - Coarse-to-fine angle search for efficiency
-  - Uses Neumann boundary conditions to avoid black corners
-\end{comment}
+Die Vorteile dieser Methode sind, dass sie Polarity-safe ist\footnote{erkennt hellen vs. dunklen Hintergrund}, eine coarse-to-fine Winkelsuche für Effizienz nutzt und Neumann Randbedingungen verwendet, um schwarze Ecken zu vermeiden.
 
 \subsection{Contrast enhancement}
 \label{subsec:contrast-enhancement}
 
-\begin{comment}
-  Aus der header Datei
-  Applies robust linear contrast stretching in-place.
-  Clips the bottom 1% and top 1% of intensities to ignore outliers, then stretches the remaining range to 0-255.
-\end{comment}
+Um die unterschiedlichen Lichtverhältnisse und daraus entstandenen Kontrastprobleme bei der Digitalisierung von Dokumenten zu adressieren, wird ein Kontrasverbesserungsschritt durchgeführt. Dies hilft der Binarisierung im weiteren Verlauf \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}. Dabei wird ein robuster linearer Kontrast Streching Algorithmus angewendet. Dabei werden die unteren 1\% und oberen 1\% der Intensitäten abgeschnitten, um Ausreißer zu ignorieren. Der verbleibende Bereich wird dann auf den vollen Bereich von 0 bis 255 gestreckt.
 
 \subsection{Denoising}
 \label{subsec:denoising}
@@ -259,9 +219,6 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
   k = Sauvola's parameter, controlling threshold sensivity
   delta = optional offset to fine-tune the threshold
   R = max stddev value (typically 128 for 8-bit images)
-\end{comment}
-
-\cite{image_binarization_sauvola_2000}
 
 \begin{gather}
   T_w = m_w * \left(1 + k * \left(\frac{\sigma_w}{R} - 1\right)\right) - delta\\
@@ -270,6 +227,10 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
     white, & text{otherwise},
   \end{cases}\\
 \end{gather}
+
+\cite{image_binarization_sauvola_2000}
+
+\end{comment}
 
 \paragraph{Bataineh}
 \subparagraph{Adaptive binarization using local threshold}
@@ -284,9 +245,6 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
   sigma_adaptive = adaptive standard deviation for the window
 
   ToDo: evtl. noch k in die T Formel einbauen, um die Sensitivität anzupassen
-\end{comment}
-
-\cite{adaptive_thresholding_methods_bataineh_2011}
 
 \begin{gather}\label{math:bataineh}
   T_w = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\\
@@ -296,6 +254,10 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
     white, & \text{otherwise}
   \end{cases}
 \end{gather}
+\cite{adaptive_thresholding_methods_bataineh_2011}
+\end{comment}
+
+
 
 \subparagraph{Adaptive window size}
 
@@ -319,9 +281,6 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
 \begin{comment}
   "Dynamic segmentation of the image into windows based on image features, determining the threshold value for each window." \cite{review_document_binarization_yang_2024}
   "It can address specific challenges, such as thin pen strokes and low-contrast images. However,it unavoidably retains excess background." \cite{review_document_binarization_yang_2024}
-\end{comment}
-
-\cite{adaptive_thresholding_methods_bataineh_2011}
 
 \begin{gather} \label{math:adapt_win}
   T_{con} = m_g - k * \frac{m_g^2 * \sigma_g}{(m_g + \sigma_g) * (0.5 max_{level} + \sigma_g)}\\
@@ -342,7 +301,9 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
   \end{cases}
 \end{gather}
 
+\cite{adaptive_thresholding_methods_bataineh_2011}
 
+\end{comment}
 \subsection{Despeckle}
 \label{subsec:despeckle}
 
@@ -365,8 +326,21 @@ All steps in the pipeline are performed on the converted grayscale image in-plac
     Erosion shrinks bright regions (expands dark regions). On binary images, this can remove small noise specks or thin strokes.
 \end{comment}
 
+\subsection{Color passthrough}
+\label{subsec:color-passthrough}
+
+
+
 \section{Experiments}
 \label{sec:experiments}
+
+\begin{comment}
+  In der Literatur wird die Binarisierung durch Benchmark Datasets evaluiert, die ground truth Bilder enthalten. Es ergibt aber keinen Sinn für unserer Pipeline diese zu nutzen, da wir nicht nur binarisieren, sondern auch andere Schritte durchführen.
+\end{comment}
+
+\begin{comment}
+  Wir werden die performance (Laufzeit) der Pipeline anhand verschiedener Einstellungen testen. Bspw. unterschiediche Anzahl an Threads, verschieden große Bilder, verschiedene Kombinationen von Methoden.
+\end{comment}
 
 
 
