@@ -189,19 +189,18 @@ Um die unterschiedlichen Lichtverhältnisse und daraus entstandenen Kontrastprob
 \label{subsec:denoising}
 
 \begin{comment}
-  Aus der header Datei
-  Verschiedne Filtermehtoden werden angegeben: 
   - simple Gaussian blur
-      Uses CImg's built-in blur function with Neumann boundary conditions.
+      https://cimg.eu/reference/structcimg__library_1_1CImg.html#af7f98599171b72b4dd66ff4eb79178a4
   - adaptive Gaussian blur
-      This function applies a Gaussian blur with a variable standard deviation.
-      It blurs less around edges (high variance) and more in flat regions (low variance)to preserve sharpness while reducing noise. The image is processed in parallel in horizontal blocks.
+      Paper fehlt
   - median blur
-      Uses CImg's built-in blur_median function
-
+      https://cimg.eu/reference/structcimg__library_1_1CImg.html#ae04904ba5e0b43f6ad65be1d73442e36
   - adaptive median blur
-      The adaptive median filter is excellent for removing impulse noise (salt-and-pepper) while preserving edges and fine details. It starts with a 3x3 window and expands up to max_window_size when detecting impulse noise, leaving non-impulse pixels unchanged. This makes it ideal for scan speckle removal in text images.
+      Paper fehlt
 \end{comment}
+
+Digitale Bilder sind durch ihre Aufnahmeart, Kompression oder durch ihren Transmissionchannel mit Rauschen vershen, bei der Bildinformationen verloren gehen. Durch das Vorhandensein von Rauschen sind unteranderem Bild analysis Schritte in ihrer effektivität eingeschränkt \cite{review_image_denoising_techniques_fan_2019}. Daher wird in der Pipeline ein Denoising Schritt durchgeführt, der das Rauschen reduziert. Es stehen verschiedene einfache und adaptive Filtermethoden zur Verfügung, die der Nutzer auswählen kann. 
+Es werden zwei einfache Filtermethoden angeboten, die von CImg bereitgestellt werden: Ein Gaussian Blur Filter mit Neumann Randbedingungen und ein nicht-linearer Median Filter\cite{cimg}. Zusätzlich werden zwei adaptive Filtermethoden angeboten: Ein adaptiver Gaussian Blur Filter, der eine variable Standardabweichungen nutzt, um an Kanten weniger zu verwischen und in flachen Regionen, mit hoher Varianz, stärker zu verwischen. Zusätzlich zum einfachen Median Filter wird ein adaptiver Median Filter bereitgestellt, der besonders gut für die Entfernung von Impulsrauschen (salt-and-pepper) geeignet ist, während Kanten und feine Details erhalten bleiben. Dabei wird mit einem $3\dot3$ Fenster begonnen, das bei der Erkennung von Impulsrauschen bis zu einer definierten maximalen Fenstergröße erweitert wird, während nicht-Impuls-Pixel unverändert bleiben. Dies macht ihn ideal für die Entfernung von Scan-Speckle in Textbildern.
 
 \subsection{Binarization}
 \label{subsec:binarization}
