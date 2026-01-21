@@ -77,13 +77,10 @@ The five-finger pattern:
 %% the work being presented. Separate the keywords with commas.
 \keywords{noise reduction, background removal, image filter, binarization}
 
-
 %%
 %% This command processes the author and affiliation and title
 %% information and builds the first part of the formatted document.
 \maketitle
-
-\let\thefootnote\relax\footnotetext{AEPRO 2026, March 1, Jena, Germany. Copyright \copyright 2026 for this paper by its authors. Use permitted under Creative Commons License Attribution 4.0 International (CC BY 4.0).}
 
 \section{Introduction}
 \label{sec:intro}
@@ -91,23 +88,14 @@ The five-finger pattern:
 \subsection{Background}
 \label{sec:background}
 
-In der Zeit der Digialisierung werden viele gedruckte, handschriftliche und historische Dokumente mittels Scanner oder Smartphone-Kamera digitalisiert. Dabei entstehen häufig digitale Bilder mit schlechter Qualität, die nicht für die digitalen Verfahren der image analysis, wie text detection, geeignet sind.
-
-Bei der digitalisierung der Bildern können unterschiedliche challenges durch die Aufnahmeart, als auch durch den Dokumententyp entstehen:
-Durch Smartphone-Kameras gescannte Dokumente können nicht alle Details wie ein dedizierte Dokumenten-Scanner aufnehmen, wodurch blurry und distorted Bilder entstehen. Auch der Winkel und der Abstand der Kamere zum Dokument haben einfluss auf die Qualität. So können distorted Perspektiven und Probleme für das Text Alignment verursacht werden. Die Lichteigenschaften können Schatten werfen, glare und reflektionen hervorrufen. Zusätzlich können Smartphone-Kameras Text auffangen, der nicht zum gescannten Dokument selbst gehört \cite{comprehensive_review_document_image_binarization_bataineh_2025}\cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}.
-
-Historiesche Dokumente haben durch ihr schieres Alter Probleme. So können sie fading und noise aufweisen, die den Text unlesbar machen. Die digitalisierung der Dokumente wird komplexer durch handschriftliche Notizen, überlappende Texte und variationen im Style, sowie durch beschädigte Seiten und risse oder auch fungal spots \cite{comprehensive_review_document_image_binarization_bataineh_2025}.
+In Zeiten der Digitalisierung werden viele gedruckte, handschriftliche und historische Dokumente mit einem Scanner oder der Kamera eines Smartphones digitalisiert. Dabei entstehen häufig Bilder in schlechter Qualität, die sich nicht für digitale Bildverarbeitungsverfahren wie die Texterkennung eignen \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015,review_document_binarization_yang_2024,review_degradation_image_enhancement_zhou_2023}.
+Probleme bei der Digitalisierung können durch die Aufnahmeart sowie durch den Dokumententyp unterschiedliche Herausforderungen entstehen:
+Dokumente, die mit einer Smartphone-Kamera gescannt wurden, können nicht alle Details wie mit einem dedizierten Dokumentenscanner erfassen. Dadurch entstehen verschwommene und verzerrte Bilder. Auch der Winkel und der Abstand der Kamera zum Dokument beeinflussen die Qualität. So können verzerrte Perspektiven und Probleme beim Text-Alignment verursacht werden. Die Lichteigenschaften können Schatten werfen sowie Glare und Reflexionen hervorrufen. Zusätzlich können Smartphone-Kameras Text erfassen, der nicht zum gescannten Dokument selbst gehört \cite{comprehensive_review_document_image_binarization_bataineh_2025, Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}.
+Gerade bei historischen Dokumenten besteht ein großes Interesse daran, sie zu digitalisieren. So bleiben sie erhalten und können mit Texterkennung analysiert werden. Aufgrund ihres hohen Alters, der Lagerung und der Art und Weise ihrer Erstellung leiden sie jedoch häufig unter Problemen. So können sie Fading und Noise aufweisen, wodurch der Text unlesbar wird. Die Digitalisierung wird durch handschriftliche Notizen, überlappende Texte, stilistische Variationen sowie durch beschädigte Seiten, Risse und Schimmelstellen komplexer  \cite{comprehensive_review_document_image_binarization_bataineh_2025,degraded_historical_document_binarization_sulaiman_2019}.
 
 \subsection{Related Work}
 \label{sec:related-work}
 \begin{comment}
-  drei Paper wurden uns empfohlen:
-  - Adaptive Thresholding Methods for Documents Image Binarization \cite{adaptive_thresholding_methods_bataineh_2011}: Das Bild wird in Fenster aufgeteilt. Fuer jedes Fenster wird ein Thresholdingvalue $T$ berechnet. In jedem Fenster wird die minimum $\sigma_{min}$ und maximum $\sigma_{max}$ Standardabweichungen aller Fenster verwendet, um adaptiv den Threshold $T$ zu bestimmen. Jeder Pixelwert $i(x, y)$ des Fensters wird anschliessend mit dem Threshold verglichen: Ist der Wert kleiner wird der Pixel schwarz und sonst weiss.\\
-  - Adaptive Thresholding using the Integral Image \cite{adaptive_thresholding_integral_image_bradley_roth_2007}
-  - Binarization of historical document images using the local maximum and minimum \cite{Binarization_historical_document_images_local_maximum_minimum_su_2010}
-  \subsection{Our Contributions}
-  \label{sec:our-contributions}
-
   Tools die binarisierung bereits können:
   - OpenCV
   - Tesseract
@@ -120,17 +108,21 @@ Historiesche Dokumente haben durch ihr schieres Alter Probleme. So können sie f
   \cite{Yang2008}, \cite{Lu2010}, cite{Tong2009}
 \end{comment}
 
-Der erste Schritt bei der image analysis, wie OCR Texterkennung und Recognision Systemen, ist die Segmentierung von Hintergrund und dem Fordergrund. \cite{review_document_binarization_yang_2024}. Die Segmentierung wird druch Binarisierung durchgeführt. Es gibt Traditionelle Methoden, welche einen globalen \cite{Otsu1979}, lokalen \cite{adaptive_thresholding_methods_bataineh_2011}\cite{adaptive_thresholding_integral_image_bradley_roth_2007}\cite{image_binarization_sauvola_2000} oder auch gemixeten Threshold berechnen\cite{Yang2008}\cite{review_document_binarization_yang_2024}. Mit Image Feature Methoden wurden Edge Detection \cite{Lu2010}\cite{review_document_binarization_yang_2024} und Fuzzy Logics \cite{Tong2009}\cite{review_document_binarization_yang_2024} eingesetz. In den letzten Jahren sind zusätzlich zu den Traditionellen Methoden noch Deep learning Binarisierungsmethoden hinzugekommen. Diese beruhen auf Convulational Neural Networks, Generative Adversarial Networks oder Attention Mechanisms \cite{review_document_binarization_yang_2024}. 
+Bei der Bildverbesserung sowie bei der Analyse digitalisierter Dokumente mithilfe von OCR-Texterkennung und Recognition-Systemen ist die Segmentierung von Hintergrund und Vordergrund ein wichtiger Schritt \cite{review_document_binarization_yang_2024}. Die Segmentierung wird mit der Binarisierung umgesetzt. Bei der Binarisierung gibt es traditionelle Methoden, welche einen globalen \cite{Otsu1979}, lokalen \cite{adaptive_thresholding_methods_bataineh_2011, adaptive_thresholding_integral_image_bradley_roth_2007, image_binarization_sauvola_2000} oder auch gemixeten Threshold berechnen \cite{Yang2008, review_document_binarization_yang_2024} und pixelweise mit ihm die Pixel als Vorder- und Hintergrund klassifizieren. Mit Image Feature Methoden wurden Edge Detection \cite{Lu2010, review_document_binarization_yang_2024} und Fuzzy Logics \cite{Tong2009, review_document_binarization_yang_2024} für die Binarisierung eingesetzt. In den letzten Jahren sind zu den traditionellen Methoden zusätzlich Deep Learning Binarisierungsmethoden hinzugekommen. Diese beruhen auf Convolutional Neural Networks, Generative Adversarial Networks oder Attention Mechanisms. \cite{review_document_binarization_yang_2024}. 
 
-Neben den reinen Binarisierungsmethoden gibt es Ansätze, die mehrere Bildverarbeitungsmethoden kombinieren, um die Qualität von Textbildern zu verbessern. So wird in \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015} eine Pipeline vorgestellt, die Entropy Filter und Morphologische Operationen mit Binarisierung kombiniert. In \cite{image_binarization_end_to_end_text_understanding_milyaev_2013} wird Niblacks Binarisierung mit einem Laplace Filter und globaler Optimierung kombiniert. Ein weiterer Ansatz ist in \cite{voting_method_image_binarization_vlasceanu_2022} beschrieben, wo verschiedene Binarisierungsmethoden kombiniert werden und per Votingmechanismus entschieden wird, welcher Pixel Vorder- oder Hintergrund ist.
+Neben den reinen Binarisierungsmethoden gibt es Ansätze, die mehrere Bildverarbeitungsmethoden kombinieren, um die Qualität von Textbildern zu verbessern. So stellt Alqudah et al. \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015} eine Pipeline vor, die Entropiefilter und morphologische Operationen mit Binarisierung kombiniert. In \cite{image_binarization_end_to_end_text_understanding_milyaev_2013} wird Niblacks Binarisierung mit einem Laplace Kantenfilter und globaler Optimierung kombiniert. Ein weiterer Ansatz wird von Vlasceanu et al.   \cite{voting_method_image_binarization_vlasceanu_2022} beschrieben. Dabei werden verschiedene Binarisierungsmethoden kombiniert und mittels eines Voting-Mechanismus entschieden, welcher Pixel dem Vorder- bzw. Hintergrund zuzuordnen ist.
+
+\begin{comment}
+  Noch etwas für Denoising und andere bildverbesserungsmethoden, wie deskewing, erosion/dilation, despeckle etc.?
+\end{comment}
 
 \subsection{Our Contribution}
 \label{sec:our-contribution}
 
 In diesem Paper stellen wir eine Pipeline vor, die mehrere Bildverarbeitungsmethoden kombiniert, um die Qualität von gescannten oder fotografierten Textbildern zu verbessern. 
-Die Pipeline umfasst Schritte wie Deskewing, Kontrastverbesserung, Rauschunterdrückung, Binarisierung, Despeckle, und morphologische Operationen. Das binarisierte Ergebnis der Pipeline kann außerdem zurück in ein Farbbild konvertiert werden.
+Sie umfasst Schritte wie Deskewing, Kontrastverbesserung, Rauschunterdrückung, Binarisierung, Despeckle, und morphologische Operationen. Das binarisierte Ergebnis der Pipeline kann außerdem zurück in ein Farbbild konvertiert werden.
 
-Die Pipeline ist modular und userfriendly aufgebaut, sodass Nutzer auswählen können, welche Schritte sie anwenden möchten, um die Pipeline auf ihre spezifischen Anwendungsfälle anzupassen können. Die Methodenparameter können einzeln angepasst werden, sind aber für die userfirendlyness mit den state of the art Werten standardmäßig konfiguriert. 
+Die Pipeline ist modular und benutzerfreundlich aufgebaut. Nutzer können auswählen, welche Schritte sie anwenden möchten, um die Pipeline an ihre spezifischen Anwendungsfälle anzupassen. Die Methodenparameter können einzeln angepasst werden, sind aber standardmäßig mit den State-of-the-Art-Werten konfiguriert, um die Benutzerfreundlichkeit zu gewährleisten.
 
 Uns ist die effiziente Verarbeitung in der Pipeline wichtig. Daher vergleichen wir uns mit traditionellen open-source Binarisierungsmethoden und Bildverbesserungsverfahren und lassen bewusst Deep Learning Ansätze, sowie zahlungspflichtige Software außen vor.
 
@@ -189,146 +181,86 @@ Um die unterschiedlichen Lichtverhältnisse und daraus entstandenen Kontrastprob
 \label{subsec:denoising}
 
 \begin{comment}
-  - simple Gaussian blur
-      https://cimg.eu/reference/structcimg__library_1_1CImg.html#af7f98599171b72b4dd66ff4eb79178a4
   - adaptive Gaussian blur
       Paper fehlt
-  - median blur
-      https://cimg.eu/reference/structcimg__library_1_1CImg.html#ae04904ba5e0b43f6ad65be1d73442e36
   - adaptive median blur
       Paper fehlt
 \end{comment}
 
 Digitale Bilder sind durch ihre Aufnahmeart, Kompression oder durch ihren Transmissionchannel mit Rauschen vershen, bei der Bildinformationen verloren gehen. Durch das Vorhandensein von Rauschen sind unteranderem Bild analysis Schritte in ihrer effektivität eingeschränkt \cite{review_image_denoising_techniques_fan_2019}. Daher wird in der Pipeline ein Denoising Schritt durchgeführt, der das Rauschen reduziert. Es stehen verschiedene einfache und adaptive Filtermethoden zur Verfügung, die der Nutzer auswählen kann. 
-Es werden zwei einfache Filtermethoden angeboten, die von CImg bereitgestellt werden: Ein Gaussian Blur Filter mit Neumann Randbedingungen und ein nicht-linearer Median Filter\cite{cimg}. Zusätzlich werden zwei adaptive Filtermethoden angeboten: Ein adaptiver Gaussian Blur Filter, der eine variable Standardabweichungen nutzt, um an Kanten weniger zu verwischen und in flachen Regionen, mit hoher Varianz, stärker zu verwischen. Zusätzlich zum einfachen Median Filter wird ein adaptiver Median Filter bereitgestellt, der besonders gut für die Entfernung von Impulsrauschen (salt-and-pepper) geeignet ist, während Kanten und feine Details erhalten bleiben. Dabei wird mit einem $3\dot3$ Fenster begonnen, das bei der Erkennung von Impulsrauschen bis zu einer definierten maximalen Fenstergröße erweitert wird, während nicht-Impuls-Pixel unverändert bleiben. Dies macht ihn ideal für die Entfernung von Scan-Speckle in Textbildern.
+Es werden zwei einfache Filtermethoden angeboten, die von CImg bereitgestellt werden: Ein Gaussian Filter mit Neumann Randbedingungen und ein nicht-linearer Median Filter \cite{cimg}. Der Gauß Filter ist Teil der Low Pass-Filter und zeichnet damit das bild weich. Der Median Filter ist ein nicht-linearer Filter und nimmt den Pixelwert an, der den Median der Nachbarschaftspixel im Fenster darstellt \cite{Image_engineering_zhang_2017}. Zusätzlich zu den beiden einfachen Filtern werden zwei adaptive Filtermethoden angeboten: Ein adaptiver Gaussian Blur Filter, der eine variable Standardabweichungen nutzt, um an Kanten weniger zu verwischen und in flachen Regionen, mit hoher Varianz, stärker zu verwischen. Zusätzlich zum einfachen Median Filter wird ein adaptiver Median Filter bereitgestellt, der besonders gut für die Entfernung von Impulsrauschen (salt-and-pepper) geeignet ist, während Kanten und feine Details erhalten bleiben. Dabei wird mit einem $3\dot3$ Fenster begonnen, das bei der Erkennung von Impulsrauschen bis zu einer definierten maximalen Fenstergröße erweitert wird, während nicht-Impuls-Pixel unverändert bleiben. Dies macht ihn ideal für die Entfernung von Scan-Speckle in Textbildern.
 
 \subsection{Binarization}
 \label{subsec:binarization}
 
-\begin{comment}
-  es werden verschiedene adaptive Binarisierungsmethoden angeboten:
-  - Sauvola
-      consideres local mean and standard deviation to compute a threshold for each pixel, making it robust against uneven illumination. - Paper finden
-  - Bataineh mit adaptiver window größe
-\end{comment}
+Die Segmentierung von Vorder- und Hintergrund ist ein guter Ansatz um die Bildqualität zu verbessern und stellt zudem den ersten Schritt bei Recognision Systemen wie OCR\cite{review_document_binarization_yang_2024,Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}. Da die Binarisierungsmethoden in der Literatur gut untersucht sind, bieten wir mehrere Binarisierungsmethoden an, die der Nutzer auswählen kann. Alle Methoden sind Thresholding Methoden, die für jeden Pixel einen Trehshold $T$ berechnen ($T_g$ für globale und $T_w$ für lokale Thresholds) und den Pixelwert $i(x,y)$ mit dem Threshold vergleichen. Diese Art der Binarisierung ist simpel und effizient \cite{comprehensive_review_document_image_binarization_bataineh_2025}. 
 
-\paragraph{Sauvola}
-
-\begin{comment}
-  k = Sauvola's parameter, controlling threshold sensivity
-  delta = optional offset to fine-tune the threshold
-  R = max stddev value (typically 128 for 8-bit images)
+Die einfachste Methode ist die Otsu Methode \cite{Otsu1979}, welche einen globalen Threshold berechnet. Dabei wird die intra-class varianze minimiert. Dies ist in der Gleichung \eqref{eq:1} und \eqref{eq:2} dargestellt, wobei $w1(t)$ und $w2(t)$ die Wahrscheinlichkeiten der zwei Klassen (Vorder- und Hintergrund) sind und $\sigma^2\_1(t)$ und $\sigma^2\_2(t)$ die Varianzen der zwei Klassen sind. Dies macht die Methode effizient, aber anfällig für Überlappungen und schlechte Intensitätsverteilungen \cite{comprehensive_review_document_image_binarization_bataineh_2025}.
 
 \begin{gather}
-  T_w = m_w * \left(1 + k * \left(\frac{\sigma_w}{R} - 1\right)\right) - delta\\
-  I(x,y)= \begin{cases}
-    black, &  i(x,y) < T_w,\\
-    white, & text{otherwise},
-  \end{cases}\\
+  \sigma^2\_w(t) = w1(t) * \sigma^21(t) + w2(t) * \sigma^2\_2(t) \label{eq:1} \\
+  T_g=\underset{t}{\operatorname{argmin}}\ \sigma^2\_w(t) \label{eq:2}
 \end{gather}
 
-\cite{image_binarization_sauvola_2000}
-
+\begin{comment}
+  R = max stddev value (typically 128 for 8-bit images)
 \end{comment}
 
-\paragraph{Bataineh}
-\subparagraph{Adaptive binarization using local threshold}
+Ein lokaler Trehshold ansatz, der adaptiv ist, ist die Sauvola Methode \cite{image_binarization_sauvola_2000}. Dabei wird für jedes Pixel ein lokaler Threshold $T_w$ in einem Fenster um das Pixel berechnet. Diese Methode ist resistent gegen ungleichmäßige Beleuchtung. Es wird der lokale Mittelwert $m_w$ und die lokale Standardabweichung $\sigma_w$ des Fensters, sowie ein Parameter $R$, welcher die dynamische Range der Standardabweichung darstellt, genutzt. Mit dem Parameter $k$ kann die Sensitivität des Thresholds korrigiert werden. Der Threshold wird in Gleichung \eqref{math:sauvola} dargestellt \cite{review_document_binarization_yang_2024,image_binarization_sauvola_2000}. Wir haben noch den optionalen Paramter $delta$ hinzugefügt, um den Threshold weiter feinjustieren zu können.
+\begin{gather}
+  T_w = m_w * \left(1 + k * \left(\frac{\sigma_w}{R} - 1\right)\right) - delta \label{math:sauvola}
+\end{gather}
 
 \begin{comment}
-  m_w = local mean of the window
-  sigma_W = local standard deviation of the window
-  m_g = global mean of the image pixels
-  needs to be calculated upfront for all windows:
-    sigma_min = minimum standard deviation among all windows
-    sigma_max = maximum standard deviation among all windows
-  sigma_adaptive = adaptive standard deviation for the window
-
   ToDo: evtl. noch k in die T Formel einbauen, um die Sensitivität anzupassen
-
-\begin{gather}\label{math:bataineh}
-  T_w = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\\
-  \sigma_{adaptive} = \frac{\sigma_W-\sigma_{min}}{\sigma_{max}-\sigma_{min}}\\
-  I(x,y)= \begin{cases}
-    black, & \text{if } i(x,y) < T_w\\
-    white, & \text{otherwise}
-  \end{cases}
-\end{gather}
-\cite{adaptive_thresholding_methods_bataineh_2011}
 \end{comment}
 
+Eine weitere adaptive Methode, die adaptive die benötigte Fenstergröße anpasst, ist die Methode von Bataineh et al. \cite{adaptive_thresholding_methods_bataineh_2011}. Diese Methode berechnet zuerst einen globalen Threshold $T_{con}$ \eqref{math:adapt_win:T_con}, der den Pixelwert in Vordergrund (black), Hintergrund (weiß) und Confusion-Values (red) klassifiziert \eqref{math:adapt_win:I}. Basierend auf dem Verhältnis von Vordergrund zu Confusion-Values und der globalen Standardabweichung wird eine primäre Fenstergröße $PW_{size}$ ausgewählt \eqref{math:adapt_win:PW}. Sollte die Anzahl der Confusion-Values die der Vordergrundpixel in dem Fenster übersteigen, wird die halbe Fenstergröße $SW_{size}$ verwendet. 
 
-
-\subparagraph{Adaptive window size}
-
-\begin{comment}
-  m_g = global mean of the image pixels
-  sigma_g = global standard deviation of the image pixels
-  max_level = maximum gray level of the image
-  k = parameter to adjust the threshold sensitivity (based on std deviation)
-  T_con = confusion threshold, of the global image
-    classifies each pixel into balck (foreground), red (confusion values), or white (background )based on its intensity relative to T_con
-  PW_size = primary window size for local statistics
-    1. large windows: low contast or high probability of confusing images -> multi-levels, large text size, low contact images
-    2. medium windows: fine and normal images or small image size
-    3. small windows: degraded images
-  I_h, I_w = height and width of the image
-  SW_size = secondary/final window size for local statistics
-    1. subimage requieres a smaller window size 
-    2. otherwise use the primary window size
-\end{comment}
-
-\begin{comment}
-  "Dynamic segmentation of the image into windows based on image features, determining the threshold value for each window." \cite{review_document_binarization_yang_2024}
-  "It can address specific challenges, such as thin pen strokes and low-contrast images. However,it unavoidably retains excess background." \cite{review_document_binarization_yang_2024}
-
-\begin{gather} \label{math:adapt_win}
-  T_{con} = m_g - k * \frac{m_g^2 * \sigma_g}{(m_g + \sigma_g) * (0.5 max_{level} + \sigma_g)}\\
+\begin{gather}
+  T_{con} = m_g - \frac{m_g^2 * \sigma_g}{(m_g + \sigma_g) * (0.5 max_{level} + \sigma_g)}\label{math:adapt_win:T_con}\\
   I = \begin{cases}
-    black, &  i(x,y) \leq T_{con} - \left(\frac{\sigma_g}{2}\right),\\
-    red, &  T_{con} - \left(\frac{\sigma_g}{2}\right) < i(x,y) < T_{exp} + \left(\frac{\sigma_g}{2}\right),\\
-    white, &  i(x, y) \geq T_{con} + \left(\frac{\sigma_g}{2}\right),\\
-  \end{cases}\\
-  p = \left(\frac{\text{number of black pixels}}{\text{number of red pixels}}\right)\\
+    \text{black}, &  i(x,y) \leq T_{con} - \left(\frac{\sigma_g}{2}\right),\\
+    \text{red}, &  T_{con} - \left(\frac{\sigma_g}{2}\right) < i(x,y) < T_{con} + \left(\frac{\sigma_g}{2}\right),\\
+    \text{white}, &  i(x, y) \geq T_{con} + \left(\frac{\sigma_g}{2}\right),\\
+  \end{cases} \label{math:adapt_win:I}\\
   PW_{size} = \begin{cases}
-    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), &  \geq 2.5 or (\sigma_g < 0.1 * max_{level}),\\
-    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), &  1 < p < 2-5 or (I_h + I_w < 400),\\
-    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), & p \leq 1,
-  \end{cases}\\
-  SW_{size} = \begin{cases}
-    \left(\frac{PW_h}{2}, \frac{PW_w}{2}\right), & \text{red\_pixel > black\_pixel},\\
-    WP_{size}, & \text{otherwise},
-  \end{cases}
+    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), &  \geq 2.5 \ \text{ or } \ (\sigma_g < 0.1 * max_{level}),\\
+    \left(\frac{I_h}{30}, \frac{I_w}{20}\right), &  1 < p < 2-5 \ \text{or} \ (I_h + I_w < 400),\\
+    \left(\frac{I_h}{40}, \frac{I_w}{30}\right), & p \leq 1,
+  \end{cases}\label{math:adapt_win:PW}
 \end{gather}
 
-\cite{adaptive_thresholding_methods_bataineh_2011}
+Anschließend wird für jedes Fenster der lokale Threshold $T_w$ berechnet \eqref{math:bataineh}. Der Threshold nutzt einen adaptiven Standardabweichungswert $\sigma_{adaptive}$, der auf den maximalen und minimalen Wert der Standardabweichung aller Fenster basiert \eqref{math:bataineh:adapt} \cite{adaptive_thresholding_methods_bataineh_2011}. Durch die adaptive Fenstergröße und den adaptiven Thresholdwert basierend auf den Bildmerkmalen, ist diese Methode robust gegenüber unterschiedlichen Herausforderungen wie dünnen Stiftstrichen und kontrastarmen Bildern, es bleibt unvermeidlich ein übermäßiger Hintergrund erhalten \cite{review_document_binarization_yang_2024}.
 
-\end{comment}
+\begin{gather} 
+  T_w = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\label{math:bataineh} \\
+  \sigma_{adaptive} = \frac{\sigma_W-\sigma_{min}}{\sigma_{max}-\sigma_{min}} \label{math:bataineh:adapt}
+\end{gather}
+
 \subsection{Despeckle}
 \label{subsec:despeckle}
 
-\begin{comment}
-  Aus der header Datei
-  Removes small connected components (speckles) from a binary image in-place.
-  Components smaller than the threshold are removed.
-  uses diagonal_connections If true, 8-connectivity; if false, 4-connectivity.
-\end{comment}
+Um kleine Flecken, die bei der Binarisierung entstehen bzw. übrigbleiben zu entfernen, wird ein Despeckle Schritt angeboten. Dabei werden kleine zusammenhängende Komponenten (speckles) aus dem binarisierten Bild in-place entfernt. Komponenten, die kleiner als ein definierter Schwellenwert sind, werden entfernt.
+Für die detektion der zusammenhängenden Komponenten wird die $get\_label\text{()}$ Methode aus der CImg Bibliothek verwendet\cite{cimg}. Diese berechnet die zusammenhängenden Komponenten mittels Hesselinks et al. Algorithmus \cite{connected_components_hesselink_meijster_bron_2001}.
 
 \subsection{Morphological operations}
 \label{subsec:morphological-operations}
 
-\begin{comment}
-  Aus der header Datei
-  Es stehen zwei Operationen zur Verfügung: 
-  - Dilation 
-      Dilation expands bright (white) regions. On binary images, this can connect broken character parts or thicken strokes.
-  - Erosion
-    Erosion shrinks bright regions (expands dark regions). On binary images, this can remove small noise specks or thin strokes.
-\end{comment}
+Nach der Segmentierung von Vorder- und Hintergrund können kleine Löcher oder Inseln entstehen, welche durch Opening und Closing Operationen entfernt werden können \cite{image_engineering_vl2_zhang_2017}. Wir bieten in unserer Pipeline die Möglichkeit, die morphologischen Operationen Dilation und Erosion anzuwenden. Dilation erweitert helle (weiße) Bereiche. Bei binären Bildern kann dies gebrochene Zeichen verbinden oder Striche verdicken. Erosion verkleinert helle Bereiche (erweitert dunkle Bereiche). Bei binären Bildern kann dies kleine Rauschpunkte entfernen oder Striche dünner machen \cite{Digitale_Bildverarbeitung_werner_2020,image_engineering_vl2_zhang_2017}.
 
 \subsection{Color passthrough}
 \label{subsec:color-passthrough}
 
+Im letzten Schritt der Pipeline kann das binarisierte Bild genutzt werden, um die Farbwerte des Originalbildes zu erhalten. Dazu wird das binarisierte und verbesserte Bild als Maske verwendet. Alle Pixel, die im binarisierten Bild als Vordergrund (schwarz) klassifiziert wurden, werden durch die Farbe des darunterliegenden Pixels im Originalbild ersetzt. In Gleichung \eqref{math:color} beschreibt $I'(x, y, z)$ das Ergebnis, $I_{original}(x, y, z)$ das farbige Originalbild und $i(x, y)$ das binarisierte Bild.
 
+\begin{gather}
+  I'(x, y, z) =
+  \begin{cases}
+    I_{original}(x, y, z), & \text{if }i(x, y) == \text{schwarz},\\
+    \text{white}, & \text{else} 
+  \end{cases} \label{math:color}
+\end{gather}
 
 \section{Experiments}
 \label{sec:experiments}
@@ -342,10 +274,8 @@ Es werden zwei einfache Filtermethoden angeboten, die von CImg bereitgestellt we
 \end{comment}
 
 
-
 \section{Conclusions}
 \label{sec:conclusions}
-
 
 
 %%
