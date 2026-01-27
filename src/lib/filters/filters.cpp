@@ -313,7 +313,7 @@ namespace ite::filters
 
     // ===================== Median blur =====================
 
-    void simple_median_blur(CImg<uint> &image, int kernel_size, unsigned int threshold) { image.blur_median(kernel_size, threshold); }
+    void simple_median_blur(CImg<uint> &image, int kernel_size, float threshold) { image.blur_median(kernel_size, threshold); }
 
 
     // --------- Median-of-9 (3x3) fast network ----------

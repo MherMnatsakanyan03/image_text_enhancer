@@ -205,7 +205,7 @@ namespace ite
         /** @brief The kernel size for median denoising (default 3). */
         int median_kernel_size = 3;
         /** @brief The threshold for median denoising (default 0). */
-        unsigned int median_threshold = 0;
+        float median_threshold = 0;
         /** @brief Maximum window size for adaptive median filter (must be odd, default 7). */
         int adaptive_median_max_window = 7;
 
@@ -245,7 +245,8 @@ namespace ite
      * This is a convenience function that chains together the most common operations.
      * @param input_image The source image.
      * @param opt The enhancement options.
+     * @param block_h Height of the blocks for parallel processing (default: 64).
      * @return An enhanced image, ready for OCR.
      */
-    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt = {});
+    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt = {}, int block_h = 64);
 } // namespace ite

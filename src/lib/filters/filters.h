@@ -43,8 +43,9 @@ namespace ite::filters
      * @brief Applies median denoising to an image in-place.
      * @param image The image to blur (modified in-place).
      * @param kernel_size The size of the median filter kernel.
+     * @param threshold Threshold used to discard pixels too far from the current pixel value in the median computation.
      */
-    void simple_median_blur(CImg<uint> &image, int kernel_size = 3, unsigned int threshold = 0);
+    void simple_median_blur(CImg<uint> &image, int kernel_size = 3, float threshold = 0);
 
     /**
      * @brief Applies adaptive median filtering to an image in-place using OpenMP.

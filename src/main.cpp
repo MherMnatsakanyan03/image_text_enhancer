@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <binarization/binarization.h>
 #include <filesystem>
 #include <iostream>
 #include <string>
