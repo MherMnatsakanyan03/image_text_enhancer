@@ -33,12 +33,54 @@ async function initWasm() {
         console.log(`[WASM] OpenMP threads available: ${threadCount}`);
         document.getElementById('threadCount').textContent = threadCount;
 
+        // Load default settings
+        loadDefaultSettings();
+
         setStatus('Ready! Load an image to begin.', 'success');
 
     } catch (error) {
         setStatus(`Failed to load WASM: ${error.message}`, 'error');
         console.error('[WASM] Initialization error:', error);
     }
+}
+
+const OPT_SIZE = 92; // 23 fields * 4 bytes
+
+function loadDefaultSettings() {
+    const ptr = iteWasmModule._malloc(OPT_SIZE);
+    iteWasmModule._get_default_options(ptr);
+    
+    // Helper to read form HEAP
+    const getInt = (offset) => iteWasmModule.getValue(ptr + offset, 'i32');
+    const getFloat = (offset) => iteWasmModule.getValue(ptr + offset, 'float');
+
+    // Populate UI
+    document.getElementById('boundary_conditions').value = getInt(0);
+    document.getElementById('do_gaussian_blur').checked = getInt(4);
+    document.getElementById('do_median_blur').checked = getInt(8);
+    document.getElementById('do_adaptive_median').checked = getInt(12);
+    document.getElementById('do_adaptive_gaussian_blur').checked = getInt(16);
+    document.getElementById('do_color_pass').checked = getInt(20);
+    document.getElementById('sigma').value = getFloat(24);
+    document.getElementById('adaptive_sigma_low').value = getFloat(28);
+    document.getElementById('adaptive_sigma_high').value = getFloat(32);
+    document.getElementById('adaptive_edge_thresh').value = getFloat(36);
+    document.getElementById('median_kernel_size').value = getInt(40);
+    document.getElementById('median_threshold').value = getFloat(44);
+    document.getElementById('adaptive_median_max_window').value = getInt(48);
+    document.getElementById('diagonal_connections').checked = getInt(52);
+    document.getElementById('do_erosion').checked = getInt(56);
+    document.getElementById('do_dilation').checked = getInt(60);
+    document.getElementById('do_despeckle').checked = getInt(64);
+    document.getElementById('kernel_size').value = getInt(68);
+    document.getElementById('despeckle_threshold').value = getInt(72);
+    document.getElementById('do_deskew').checked = getInt(76);
+    document.getElementById('sauvola_window_size').value = getInt(80);
+    document.getElementById('sauvola_k').value = getFloat(84);
+    document.getElementById('sauvola_delta').value = getFloat(88);
+
+    iteWasmModule._free(ptr);
+    console.log('[WASM] Default settings loaded');
 }
 
 // Load image from file
@@ -95,39 +137,72 @@ function processImage() {
     try {
         // Get input image data from canvas
         const inputCanvas = document.getElementById('inputCanvas');
-    const ctx = inputCanvas.getContext('2d', { willReadFrequently: true });
+        const ctx = inputCanvas.getContext('2d', { willReadFrequently: true });
 
+        const imageData = ctx.getImageData(0, 0, inputCanvas.width, inputCanvas.height);
         const width = imageData.width;
         const height = imageData.height;
         const pixels = imageData.data; // Uint8ClampedArray (RGBA)
 
         console.log(`[WASM] Processing ${width}×${height} image (${pixels.length} bytes)`);
 
-        // Allocate memory in WASM heap
+        // Allocate memory for image
         const numBytes = pixels.length;
-        const ptr = iteWasmModule._malloc(numBytes);
+        const imgPtr = iteWasmModule._malloc(numBytes);
+        
+        // Allocate memory for options
+        const optsPtr = iteWasmModule._malloc(OPT_SIZE);
 
-        if (!ptr) {
+        if (!imgPtr || !optsPtr) {
             throw new Error('Failed to allocate WASM memory');
         }
 
-        console.log(`[WASM] Allocated ${numBytes} bytes at address ${ptr}`);
+        // Fill options
+        const setInt = (offset, val) => iteWasmModule.setValue(optsPtr + offset, val, 'i32');
+        const setFloat = (offset, val) => iteWasmModule.setValue(optsPtr + offset, val, 'float');
+
+        setInt(0, parseInt(document.getElementById('boundary_conditions').value));
+        setInt(4, document.getElementById('do_gaussian_blur').checked ? 1 : 0);
+        setInt(8, document.getElementById('do_median_blur').checked ? 1 : 0);
+        setInt(12, document.getElementById('do_adaptive_median').checked ? 1 : 0);
+        setInt(16, document.getElementById('do_adaptive_gaussian_blur').checked ? 1 : 0);
+        setInt(20, document.getElementById('do_color_pass').checked ? 1 : 0);
+        setFloat(24, parseFloat(document.getElementById('sigma').value));
+        setFloat(28, parseFloat(document.getElementById('adaptive_sigma_low').value));
+        setFloat(32, parseFloat(document.getElementById('adaptive_sigma_high').value));
+        setFloat(36, parseFloat(document.getElementById('adaptive_edge_thresh').value));
+        setInt(40, parseInt(document.getElementById('median_kernel_size').value));
+        setFloat(44, parseFloat(document.getElementById('median_threshold').value));
+        setInt(48, parseInt(document.getElementById('adaptive_median_max_window').value));
+        setInt(52, document.getElementById('diagonal_connections').checked ? 1 : 0);
+        setInt(56, document.getElementById('do_erosion').checked ? 1 : 0);
+        setInt(60, document.getElementById('do_dilation').checked ? 1 : 0);
+        setInt(64, document.getElementById('do_despeckle').checked ? 1 : 0);
+        setInt(68, parseInt(document.getElementById('kernel_size').value));
+        setInt(72, parseInt(document.getElementById('despeckle_threshold').value));
+        setInt(76, document.getElementById('do_deskew').checked ? 1 : 0);
+        setInt(80, parseInt(document.getElementById('sauvola_window_size').value));
+        setFloat(84, parseFloat(document.getElementById('sauvola_k').value));
+        setFloat(88, parseFloat(document.getElementById('sauvola_delta').value));
+
+        console.log(`[WASM] Allocated ${numBytes} bytes at address ${imgPtr}`);
 
         // Copy pixel data to WASM memory
-        iteWasmModule.HEAPU8.set(pixels, ptr);
+        iteWasmModule.HEAPU8.set(pixels, imgPtr);
 
         // Call WASM processing function
-        console.log('[WASM] Calling process_image...');
-        iteWasmModule._process_image(ptr, width, height);
+        console.log('[WASM] Calling process_image_with_options...');
+        iteWasmModule._process_image_with_options(imgPtr, width, height, optsPtr);
 
         // Read processed data back
-        const processedPixels = new Uint8ClampedArray(iteWasmModule.HEAPU8.buffer, ptr, numBytes);
+        const processedPixels = new Uint8ClampedArray(iteWasmModule.HEAPU8.buffer, imgPtr, numBytes);
 
         // Copy to avoid issues when freeing memory
         const outputPixels = new Uint8ClampedArray(processedPixels);
 
         // Free WASM memory
-        iteWasmModule._free(ptr);
+        iteWasmModule._free(imgPtr);
+        iteWasmModule._free(optsPtr);
         console.log('[WASM] Memory freed');
 
         // Display output image

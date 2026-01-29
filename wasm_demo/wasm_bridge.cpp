@@ -142,8 +142,41 @@ void process_image_with_options(uint8_t* rgba_data, int width, int height, WasmE
 }
 
 EMSCRIPTEN_KEEPALIVE
+void get_default_options(WasmEnhanceOptions* opts) {
+    if (!opts) return;
+    
+    ite::EnhanceOptions defaults;
+    
+    opts->boundary_conditions = defaults.boundary_conditions;
+    opts->do_gaussian_blur = (int)defaults.do_gaussian_blur;
+    opts->do_median_blur = (int)defaults.do_median_blur;
+    opts->do_adaptive_median = (int)defaults.do_adaptive_median;
+    opts->do_adaptive_gaussian_blur = (int)defaults.do_adaptive_gaussian_blur;
+    opts->do_color_pass = (int)defaults.do_color_pass;
+    opts->sigma = defaults.sigma;
+    opts->adaptive_sigma_low = defaults.adaptive_sigma_low;
+    opts->adaptive_sigma_high = defaults.adaptive_sigma_high;
+    opts->adaptive_edge_thresh = defaults.adaptive_edge_thresh;
+    opts->median_kernel_size = defaults.median_kernel_size;
+    opts->median_threshold = defaults.median_threshold;
+    opts->adaptive_median_max_window = defaults.adaptive_median_max_window;
+    opts->diagonal_connections = (int)defaults.diagonal_connections;
+    opts->do_erosion = (int)defaults.do_erosion;
+    opts->do_dilation = (int)defaults.do_dilation;
+    opts->do_despeckle = (int)defaults.do_despeckle;
+    opts->kernel_size = defaults.kernel_size;
+    opts->despeckle_threshold = defaults.despeckle_threshold;
+    opts->do_deskew = 1;
+    opts->sauvola_window_size = defaults.sauvola_window_size;
+    opts->sauvola_k = defaults.sauvola_k;
+    opts->sauvola_delta = defaults.sauvola_delta;
+}
+
+EMSCRIPTEN_KEEPALIVE
 void process_image(uint8_t* rgba_data, int width, int height) {
-    process_image_with_options(rgba_data, width, height, nullptr);
+    WasmEnhanceOptions opts;
+    get_default_options(&opts);
+    process_image_with_options(rgba_data, width, height, &opts);
 }
 
 EMSCRIPTEN_KEEPALIVE

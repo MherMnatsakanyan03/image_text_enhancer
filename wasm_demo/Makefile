@@ -41,7 +41,7 @@ SOURCES := wasm_bridge.cpp \
            $(ITE_PATH)/io/image_io.cpp
 
 # Toolchain
-CXX := emcc
+CXX := em++
 
 # Common compiler flags (both builds)
 CXXFLAGS_COMMON := -std=c++17 -O3 -Dcimg_display=0 \
@@ -53,9 +53,9 @@ CXXFLAGS_COMMON := -std=c++17 -O3 -Dcimg_display=0 \
 # Common emscripten flags (both builds)
 EMFLAGS_COMMON := -s ALLOW_MEMORY_GROWTH=0 \
                   -s ALLOW_TABLE_GROWTH=1 \
-                  -s INITIAL_MEMORY=1073741824 \
-                  -s EXPORTED_FUNCTIONS='["_process_image", "_process_image_with_options", "_wasm_get_thread_count", "_malloc", "_free"]' \
-                  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "HEAPU8"]' \
+                  -s INITIAL_MEMORY=2147483648 \
+                  -s EXPORTED_FUNCTIONS='["_process_image", "_process_image_with_options", "_get_default_options", "_wasm_get_thread_count", "_malloc", "_free"]' \
+                  -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "HEAPU8", "getValue", "setValue"]' \
                   -s MODULARIZE=0 \
                   -s EXPORT_NAME="Module" \
                   -s ENVIRONMENT=web,worker \
@@ -64,7 +64,7 @@ EMFLAGS_COMMON := -s ALLOW_MEMORY_GROWTH=0 \
 #536870912
 
 # OpenMP/threaded build flags
-CXXFLAGS_OMP := -pthread -fopenmp=libomp -I$(OPENMP_INCLUDE_DIR) -L$(BUILD_DIR)/lib
+CXXFLAGS_OMP := -pthread -fopenmp=libomp -I$(OPENMP_INCLUDE_DIR)
 EMFLAGS_OMP  := -s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency
 
 # No-OpenMP build flags (single-thread)
@@ -117,7 +117,6 @@ $(OPENMP_LIB): $(OPENMP_DIR) $(EMSDK_ENV)
 	$(RUN_EM) emcmake cmake \
         -DCMAKE_C_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory" \
         -DCMAKE_CXX_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory" \
-        -DCMAKE_C_COMPILER=$(EMSDK_DIR)/upstream/emscripten/emcc \
         -DCMAKE_CXX_COMPILER=$(EMSDK_DIR)/upstream/emscripten/em++ \
         -DOPENMP_STANDALONE_BUILD=ON \
         -DOPENMP_ENABLE_OMPT_TOOLS=OFF \

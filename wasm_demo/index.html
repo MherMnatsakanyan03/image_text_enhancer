@@ -216,6 +216,80 @@
             </button>
         </div>
 
+        <details class="settings-panel" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <summary style="cursor: pointer; font-weight: bold; padding-bottom: 10px;">⚙️ Advanced Settings</summary>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 10px;">
+                <!-- Boolean Flags -->
+                <div><label><input type="checkbox" id="do_deskew"> Deskew</label></div>
+                <div><label><input type="checkbox" id="do_gaussian_blur"> Gaussian Blur</label></div>
+                <div><label><input type="checkbox" id="do_median_blur"> Median Blur</label></div>
+                <div><label><input type="checkbox" id="do_adaptive_median"> Adaptive Median</label></div>
+                <div><label><input type="checkbox" id="do_adaptive_gaussian_blur"> Adapt. Gaussian</label></div>
+                <div><label><input type="checkbox" id="do_color_pass"> Color Pass</label></div>
+                <div><label><input type="checkbox" id="do_erosion"> Erosion</label></div>
+                <div><label><input type="checkbox" id="do_dilation"> Dilation</label></div>
+                <div><label><input type="checkbox" id="do_despeckle"> Despeckle</label></div>
+                <div><label><input type="checkbox" id="diagonal_connections"> Diag. Connections</label></div>
+
+                <!-- Numeric Fields -->
+                <div class="input-group">
+                    <label>Sigma:</label>
+                    <input type="number" id="sigma" step="0.1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Adapt. Sigma Low:</label>
+                    <input type="number" id="adaptive_sigma_low" step="0.1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Adapt. Sigma High:</label>
+                    <input type="number" id="adaptive_sigma_high" step="0.1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Adapt. Edge Thresh:</label>
+                    <input type="number" id="adaptive_edge_thresh" step="1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Median Kernel:</label>
+                    <input type="number" id="median_kernel_size" step="1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Median Thresh:</label>
+                    <input type="number" id="median_threshold" step="1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Adapt. Med Window:</label>
+                    <input type="number" id="adaptive_median_max_window" step="2" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Kernel Size:</label>
+                    <input type="number" id="kernel_size" step="1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Despeckle Thresh:</label>
+                    <input type="number" id="despeckle_threshold" step="1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Boundary Cond:</label>
+                    <input type="number" id="boundary_conditions" step="1" style="width: 80px;">
+                </div>
+                
+                <!-- Sauvola -->
+                <div class="input-group">
+                    <label>Sauvola Win:</label>
+                    <input type="number" id="sauvola_window_size" step="1" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Sauvola K:</label>
+                    <input type="number" id="sauvola_k" step="0.05" style="width: 80px;">
+                </div>
+                <div class="input-group">
+                    <label>Sauvola Delta:</label>
+                    <input type="number" id="sauvola_delta" step="1" style="width: 80px;">
+                </div>
+            </div>
+        </details>
+
         <div id="status"></div>
 
         <div class="stats" id="stats" style="display: none;">
