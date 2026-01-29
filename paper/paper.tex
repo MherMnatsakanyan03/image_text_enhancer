@@ -88,7 +88,16 @@ The five-finger pattern:
 Possible Research Questions
 \begin{enumerate}
   \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
-  \item all of the above, and it can be compiled to run as WASM!
+  \item all of the above, and it can be compiled to run as WASM! The question would be: How easy is it to compile a C++ image processing pipeline with OpenMP and CImg to WASM? (This would show, that you can take a lightweight C++ library and just put it in the browser with great parallelisation.)
+  \item We could additionally try and implement one of the filters or binarization methods in WASM SIMD (which is not platform specific) and show which of the two is faster. The conclusion could then be: is it worth it to manually write SIMD for WASM or is OpenMP good enough (which would be an interesting conclusion)?
+\end{enumerate}
+
+What would be necessary to make our project run in WASM?
+\begin{enumerate}
+  \item Minimum working example of OpenMP can be found here: \href{https://github.com/abrown/wasm-openmp-examples}{WASM OpenMP Examples}
+  \item Compile using O3 and look for automatic SIMD usage
+  \item Put SIMD where it was not put by the compiler
+  \item Some background on the compiler (WASI)?
 \end{enumerate}
 
 \subsection{Background}
