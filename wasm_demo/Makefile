@@ -45,24 +45,31 @@ CXXFLAGS := -std=c++17 -O3 -pthread -fopenmp=libomp -Dcimg_display=0 \
 
 EMFLAGS := -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency \
            -s ALLOW_MEMORY_GROWTH=1 \
-           -s INITIAL_MEMORY=67108864 \
+           -s INITIAL_MEMORY=536870912 \
            -s EXPORTED_FUNCTIONS='["_process_image", "_process_image_with_options", "_wasm_get_thread_count", "_malloc", "_free"]' \
-           -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
+           -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "HEAPU8"]' \
            -s MODULARIZE=0 \
            -s EXPORT_NAME="Module" \
            -s ENVIRONMENT=web,worker \
            --no-entry
 
 OUTPUT := $(OUTPUT_DIR)/wasm_bridge.js
+WEB_FILES := index.html main.js
+OUTPUT_WEB := $(addprefix $(OUTPUT_DIR)/, $(WEB_FILES))
 
 # Default target
-all: $(OUTPUT)
+all: $(OUTPUT) $(OUTPUT_WEB)
+
+# Copy web files
+$(OUTPUT_DIR)/%: %
+	@mkdir -p $(OUTPUT_DIR)
+	cp $< $@
 
 # Compile the application (depends on OpenMP library and EMSDK)
-$(OUTPUT): $(SOURCES) $(OPENMP_LIB) $(EMSDK_ENV)
+$(OUTPUT): $(SOURCES) $(OPENMP_LIB) $(EMSDK_ENV) Makefile
 	@mkdir -p $(OUTPUT_DIR)
 	@echo "Building application..."
-	$(RUN_EM) $(CXX) $(CXXFLAGS) $(EMFLAGS) $(SOURCES) -o $(OUTPUT)
+	$(RUN_EM) $(CXX) $(CXXFLAGS) $(EMFLAGS) $(SOURCES) $(OPENMP_LIB) -o $(OUTPUT)
 	@echo "Build complete: $(OUTPUT)"
 
 # Build the OpenMP runtime library using Emscripten
@@ -70,8 +77,8 @@ $(OPENMP_LIB): $(OPENMP_DIR) $(EMSDK_ENV)
 	@echo "Building OpenMP Runtime..."
 	@mkdir -p $(BUILD_DIR)
 	$(RUN_EM) emcmake cmake \
-		-DCMAKE_C_FLAGS="-DPAGESIZE=65536" \
-		-DCMAKE_CXX_FLAGS="-DPAGESIZE=65536" \
+        -DCMAKE_C_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory" \
+        -DCMAKE_CXX_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory" \
         -DCMAKE_C_COMPILER=$(EMSDK_DIR)/upstream/emscripten/emcc \
         -DCMAKE_CXX_COMPILER=$(EMSDK_DIR)/upstream/emscripten/em++ \
         -DOPENMP_STANDALONE_BUILD=ON \

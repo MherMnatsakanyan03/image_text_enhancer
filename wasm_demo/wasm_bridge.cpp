@@ -84,7 +84,8 @@ void process_image_with_options(uint8_t* rgba_data, int width, int height, WasmE
         // Convert interleaved RGBA to CImg Planar
         cimg_library::CImg<unsigned int> img(width, height, 1, 4);
 
-        #pragma omp parallel for collapse(2)
+        std::cout << "[WASM] Reading input data..." << std::endl;
+        #pragma omp parallel for
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 int idx = (y * width + x) * 4;
@@ -106,7 +107,8 @@ void process_image_with_options(uint8_t* rgba_data, int width, int height, WasmE
         }
 
         // Write back
-        #pragma omp parallel for collapse(2)
+        std::cout << "[WASM] Writing output data..." << std::endl;
+        #pragma omp parallel for
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 int idx = (y * width + x) * 4;

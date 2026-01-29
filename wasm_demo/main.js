@@ -72,7 +72,7 @@ function loadImage(file) {
 // Display input image on canvas
 function displayInputImage(img) {
     const canvas = document.getElementById('inputCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     canvas.width = img.width;
     canvas.height = img.height;
@@ -95,8 +95,7 @@ function processImage() {
     try {
         // Get input image data from canvas
         const inputCanvas = document.getElementById('inputCanvas');
-        const ctx = inputCanvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, inputCanvas.width, inputCanvas.height);
+    const ctx = inputCanvas.getContext('2d', { willReadFrequently: true });
 
         const width = imageData.width;
         const height = imageData.height;
