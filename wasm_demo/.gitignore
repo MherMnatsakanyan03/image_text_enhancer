@@ -1,0 +1,24 @@
+# Build outputs
+output/
+build-openmp/
+*.wasm
+*.js.mem
+# Test images
+*.png
+*.jpg
+*.jpeg
+*.gif
+# Python cache
+__pycache__/
+*.pyc
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+# OS files
+.DS_Store
+Thumbs.db
+# Keep CImg.h
+!CImg.h
