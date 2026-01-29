@@ -1,6 +1,7 @@
 # Build outputs
 output/
 build-openmp/
+build-em/
 *.wasm
 *.js.mem
 # Test images

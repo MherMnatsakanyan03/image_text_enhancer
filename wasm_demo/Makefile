@@ -1,24 +1,30 @@
 # Makefile for WASM Image Processing Demo with OpenMP and ITE
-# Refactored to support multi-threading and ITE integration
+# Refactored to build everything (including libomp) with Emscripten
 
-# Configuration
-OUTPUT_DIR = output
-CIMG_PATH = .
-ITE_PATH = ../src/lib
-# OpenMP paths based on build_openmp_emscripten.sh output
-OPENMP_BUILD_DIR = build-openmp/lib
-OPENMP_INCLUDE_DIR = build-openmp/include
+PROJECT_DIR := $(realpath .)
+BUILD_DIR := $(PROJECT_DIR)/build-em
 
-# Output files
-WASM_OUTPUT = $(OUTPUT_DIR)/wasm_bridge.js
-WEB_FILES = index.html main.js
+# Compiler Configuration
+EMSDK_DIR := $(PROJECT_DIR)/emsdk
+EMSDK_ENV := $(EMSDK_DIR)/emsdk_env.sh
+SHELL := /bin/bash
 
-# Source files
-# Bridge
-SOURCES = wasm_bridge.cpp
+# Helper to run commands in emsdk environment
+RUN_EM := source $(EMSDK_ENV) > /dev/null 2>&1 &&
 
-# ITE Library Sources
-SOURCES += $(ITE_PATH)/ite.cpp \
+# OpenMP Configuration
+OPENMP_DIR := $(PROJECT_DIR)/llvm-project/openmp
+OPENMP_LIB := $(BUILD_DIR)/lib/libomp.a
+OPENMP_INCLUDE_DIR := $(BUILD_DIR)/include
+
+# ITE Configuration
+ITE_PATH := ../src/lib
+OUTPUT_DIR := output
+CIMG_PATH := .
+
+# Source Files
+SOURCES := wasm_bridge.cpp \
+           $(ITE_PATH)/ite.cpp \
            $(ITE_PATH)/core/integral_image.cpp \
            $(ITE_PATH)/color/grayscale.cpp \
            $(ITE_PATH)/color/contrast.cpp \
@@ -29,84 +35,77 @@ SOURCES += $(ITE_PATH)/ite.cpp \
            $(ITE_PATH)/filters/filters.cpp \
            $(ITE_PATH)/io/image_io.cpp
 
-# Compiler and flags
-CXX = emcc
-# Flags: C++17, Opts, Pthreads, OpenMP, Includes, SIMD
-CXXFLAGS = -std=c++17 -O2 -pthread -fopenmp=libomp -Dcimg_display=0 \
-           -I$(CIMG_PATH) -I$(ITE_PATH) -I$(OPENMP_INCLUDE_DIR) \
-           -L$(OPENMP_BUILD_DIR) -msimd128 -msse -msse2
+# Compiler and Flags
+CXX := emcc
+CXXFLAGS := -std=c++17 -O3 -pthread -fopenmp=libomp -Dcimg_display=0 \
+            -I$(CIMG_PATH) -I$(ITE_PATH) -I$(OPENMP_INCLUDE_DIR) \
+            -L$(BUILD_DIR)/lib \
+            -msimd128 \
+			-U__SSE__ -U__SSE2__ # do not allow x86 flags
 
-# Emscripten-specific flags
-EMFLAGS = \
-	-s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency \
-	-s ALLOW_MEMORY_GROWTH=1 \
-	-s INITIAL_MEMORY=67108864 \
-	-s EXPORTED_FUNCTIONS='["_process_image", "_process_image_with_options", "_wasm_get_thread_count", "_malloc", "_free"]' \
-	-s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
-	-s MODULARIZE=0 \
-	-s EXPORT_NAME="Module" \
-	-s ENVIRONMENT=web,worker \
-	--no-entry
+EMFLAGS := -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency \
+           -s ALLOW_MEMORY_GROWTH=1 \
+           -s INITIAL_MEMORY=67108864 \
+           -s EXPORTED_FUNCTIONS='["_process_image", "_process_image_with_options", "_wasm_get_thread_count", "_malloc", "_free"]' \
+           -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' \
+           -s MODULARIZE=0 \
+           -s EXPORT_NAME="Module" \
+           -s ENVIRONMENT=web,worker \
+           --no-entry
+
+OUTPUT := $(OUTPUT_DIR)/wasm_bridge.js
 
 # Default target
-.PHONY: all
-all: libomp check-emcc check-cimg build copy-files success
+all: $(OUTPUT)
 
-# Build OpenMP runtime using the provided script
-.PHONY: libomp
-libomp:
-	@echo "Building OpenMP runtime..."
-	@if [ ! -f "$(OPENMP_BUILD_DIR)/libomp.a" ]; then \
-		bash build_openmp_emscripten.sh; \
-	else \
-		echo "✓ LibOMP already built."; \
-	fi
-
-# Check if Emscripten is available
-.PHONY: check-emcc
-check-emcc:
-	@which emcc > /dev/null || (echo "❌ Error: Emscripten (emcc) not found!" && exit 1)
-
-# Check if CImg exists
-.PHONY: check-cimg
-check-cimg:
-	@test -f $(CIMG_PATH)/CImg.h || (echo "❌ Error: CImg.h not found!" && exit 1)
-
-# Create output directory
-$(OUTPUT_DIR):
+# Compile the application (depends on OpenMP library and EMSDK)
+$(OUTPUT): $(SOURCES) $(OPENMP_LIB) $(EMSDK_ENV)
 	@mkdir -p $(OUTPUT_DIR)
+	@echo "Building application..."
+	$(RUN_EM) $(CXX) $(CXXFLAGS) $(EMFLAGS) $(SOURCES) -o $(OUTPUT)
+	@echo "Build complete: $(OUTPUT)"
 
-# Build the WASM module
-.PHONY: build
-build: $(OUTPUT_DIR)
-	@echo "🔨 Building WASM module..."
-	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(WASM_OUTPUT) $(EMFLAGS)
-	@echo "✓ Build complete: $(WASM_OUTPUT)"
+# Build the OpenMP runtime library using Emscripten
+$(OPENMP_LIB): $(OPENMP_DIR) $(EMSDK_ENV)
+	@echo "Building OpenMP Runtime..."
+	@mkdir -p $(BUILD_DIR)
+	$(RUN_EM) emcmake cmake \
+		-DCMAKE_C_FLAGS="-DPAGESIZE=65536" \
+		-DCMAKE_CXX_FLAGS="-DPAGESIZE=65536" \
+        -DOPENMP_STANDALONE_BUILD=ON \
+        -DOPENMP_ENABLE_OMPT_TOOLS=OFF \
+        -DOPENMP_ENABLE_LIBOMPTARGET=OFF \
+        -DLIBOMP_HAVE_OMPT_SUPPORT=OFF \
+        -DLIBOMP_OMPT_SUPPORT=OFF \
+        -DLIBOMP_OMPD_SUPPORT=OFF \
+        -DLIBOMP_USE_DEBUGGER=OFF \
+        -DLIBOMP_FORTRAN_MODULES=OFF \
+        -DLIBOMP_ENABLE_SHARED=OFF \
+        -DCMAKE_INSTALL_PREFIX=$(BUILD_DIR) \
+        -DCMAKE_BUILD_TYPE=Release \
+        -B $(BUILD_DIR) \
+        -S $(OPENMP_DIR)
+	$(RUN_EM) emmake make -C $(BUILD_DIR) -j
+	$(RUN_EM) emmake make install -C $(BUILD_DIR)
 
-# Copy web files
-.PHONY: copy-files
-copy-files:
-	@echo "📦 Copying web files to $(OUTPUT_DIR)/"
-	@cp $(WEB_FILES) $(OUTPUT_DIR)/
-	@echo "✓ Files copied"
+# Emscripten SDK Setup
+$(EMSDK_ENV):
+	@echo "Setting up Emscripten SDK..."
+	@if [ ! -d "$(EMSDK_DIR)" ]; then \
+		echo "Cloning emsdk..."; \
+		git clone https://github.com/emscripten-core/emsdk.git $(EMSDK_DIR); \
+	fi
+	cd $(EMSDK_DIR) && ./emsdk update
+	cd $(EMSDK_DIR) && ./emsdk install latest
+	cd $(EMSDK_DIR) && ./emsdk activate latest
+	touch $(EMSDK_ENV)
 
-# Success message
-.PHONY: success
-success:
-	@echo ""
-	@echo "========================================="
-	@echo "  ✅ Build Complete!"
-	@echo "========================================="
-	@echo "Run: make serve"
+# Check if OpenMP sources exist
+$(OPENMP_DIR):
+	$(error "OpenMP sources not found at $(OPENMP_DIR). Please clone llvm-project.")
 
-# Start development server
-.PHONY: serve
-serve:
-	@echo "🚀 Starting development server..."
-	@python3 serve.py
-
-# Clean
-.PHONY: clean
 clean:
-	rm -rf $(OUTPUT_DIR)
+	rm -rf $(BUILD_DIR) $(OUTPUT_DIR)
+
+.PHONY: all clean
 
