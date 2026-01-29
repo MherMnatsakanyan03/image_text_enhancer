@@ -38,21 +38,21 @@
 
 \author{Daniel Motz}
 \affiliation{%
-  \institution{Friedrich Schiller University Jena}
+  \institution{Friedrich Schiller University}
   \city{Jena}
   \country{Germany}}
 \email{daniel.motz@uni-jena.de}
 
 \author{Leonard Teschner}
 \affiliation{%
-  \institution{Friedrich Schiller University Jena}
+  \institution{Friedrich Schiller University}
   \city{Jena}
   \country{Germany}}
 \email{leonard.teschnner@uni-jena.de}
 
 \author{Mher Mnatsakanyan}
 \affiliation{%
-  \institution{Friedrich Schiller University Jena}
+  \institution{Friedrich Schiller University}
   \city{Jena}
   \country{Germany}}
 \email{mher.mnatsakanyan@uni-jena.de}
@@ -85,17 +85,23 @@ The five-finger pattern:
 \section{Introduction}
 \label{sec:intro}
 
+Possible Research Questions
+\begin{enumerate}
+  \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
+  \item all of the above, and it can be compiled to run as WASM!
+\end{enumerate}
+
 \subsection{Background}
 \label{sec:background}
 
-In the age of digitalisation, many printed, handwritten and historical documents are digitised using a scanner or handheld smartphone camera. This often results in poor-quality images that are not suitable for digital image processing methods such as text recognition. \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015,review_document_binarization_yang_2024,review_degradation_image_enhancement_zhou_2023}.
-There are different challenges that can arise during digitization, depending on the type of capture method and the type of document: documents scanned with a smartphone camera cannot capture all the details that a dedicated document scanner can. This results in blurry and distorted images. The angle and distance of the camera from the document also affect the quality. Lighting conditions may cause shadows, glare, and reflections. Furthermore, smartphone cameras may capture text that does not belong to the scanned document itself. Distorted perspectives and text alignment problems can occur \cite{comprehensive_review_document_image_binarization_bataineh_2025, Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}.
-Historical documents in particular are of great interest for digitization. They can then be preserved and analyzed by digitalization and text recognition. However, due to their age, storage conditions, and the way they were created, they frequently suffer from deterioration. They are subject to fading and noise, which can make the text illegible for Humans and aswell for computer programms. Handwritten notes, overlapping text, stylistic variations, damaged pages, tears, and mold spots make digitization more complex \cite{comprehensive_review_document_image_binarization_bataineh_2025,degraded_historical_document_binarization_sulaiman_2019}.
+In the age of digitisation, many printed, handwritten and historical documents are digitised using a scanner or handheld smartphone camera. This often results in poor-quality images that are not suitable for digital image processing methods such as text recognition. \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015,review_document_binarization_yang_2024,review_degradation_image_enhancement_zhou_2023}.
+There are different challenges that can arise during digitisation, depending on the type of capture method and the type of document: documents scanned with a smartphone camera cannot capture all the details that a dedicated document scanner can. This results in blurry and distorted images. The angle and distance of the camera from the document also affect the quality. Lighting conditions may cause shadows, glare, and reflections. Furthermore, smartphone cameras may capture text that does not belong to the scanned document itself. Distorted perspectives and text alignment problems can occur \cite{comprehensive_review_document_image_binarization_bataineh_2025, Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}.
+Historical documents in particular are of great interest for digitisation. They can then be preserved and analyzed by digitisation and text recognition. However, due to their age, storage conditions, and the way they were created, they frequently suffer from deterioration. They are subject to fading and noise, which can make the text illegible for Humans and as well for computer programs. Handwritten notes, overlapping text, stylistic variations, damaged pages, tears, and mold spots make digitisation more complex \cite{comprehensive_review_document_image_binarization_bataineh_2025,degraded_historical_document_binarization_sulaiman_2019}.
 
 \subsection{Related Work}
 \label{sec:related-work}
 \begin{comment}
-  Tools die binarisierung bereits können:
+  Tools die Document Enhancement bereits können:
   - OpenCV
   - Tesseract
   - Leptonica - von copilopt vorgeschlagen
