@@ -34,7 +34,6 @@ wasm_demo/
 
 ```bash
 # Clone and install Emscripten SDK
-git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
 ./emsdk install latest
 ./emsdk activate latest
@@ -56,19 +55,9 @@ python3 --version  # Should be 3.6+
 
 ## Build Instructions
 
-### Step 1: Activate Emscripten environment
-
-```bash
-# If not already in your shell's PATH:
-source /path/to/emsdk/emsdk_env.sh
-```
-
-### Step 2: Run the build script
-
 ```bash
 cd wasm_demo
-chmod +x build.sh
-./build.sh
+make
 ```
 
 This will:

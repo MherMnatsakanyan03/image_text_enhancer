@@ -1,0 +1,7 @@
+[submodule "wasm_demo/emsdk"]
+	path = wasm_demo/emsdk
+	url = https://github.com/emscripten-core/emsdk.git
+[submodule "wasm_demo/llvm-project"]
+	path = wasm_demo/llvm-project
+	url = https://github.com/llvm/llvm-project.git
+	branch = release/18.x

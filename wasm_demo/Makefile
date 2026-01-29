@@ -72,6 +72,8 @@ $(OPENMP_LIB): $(OPENMP_DIR) $(EMSDK_ENV)
 	$(RUN_EM) emcmake cmake \
 		-DCMAKE_C_FLAGS="-DPAGESIZE=65536" \
 		-DCMAKE_CXX_FLAGS="-DPAGESIZE=65536" \
+        -DCMAKE_C_COMPILER=$(EMSDK_DIR)/upstream/emscripten/emcc \
+        -DCMAKE_CXX_COMPILER=$(EMSDK_DIR)/upstream/emscripten/em++ \
         -DOPENMP_STANDALONE_BUILD=ON \
         -DOPENMP_ENABLE_OMPT_TOOLS=OFF \
         -DOPENMP_ENABLE_LIBOMPTARGET=OFF \
