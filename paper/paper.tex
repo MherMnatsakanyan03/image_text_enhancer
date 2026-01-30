@@ -29,14 +29,14 @@
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
 %% TODO: think about good title
-\title[Image Text Enhancer]{Image Text Enhancer}
-\subtitle{\large Algorithm Engineering 2026 Project Paper}
+\title[Parallelized Document Enhancement in WebAssembly]{Parallelized Document Enhancement in WebAssembly}
 
 %%
 %% The "author" command and its associated commands are used to define
 %% the authors and their affiliations.
 
 \author{Daniel Motz}
+\orcid{0009-0005-5380-5464}
 \affiliation{%
   \institution{Friedrich Schiller University}
   \city{Jena}
@@ -88,7 +88,7 @@ The five-finger pattern:
 Possible Research Questions
 \begin{enumerate}
   \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
-  \item all of the above, and it can be compiled to run as WASM! The question would be: How easy is it to compile a C++ image processing pipeline with OpenMP and CImg to WASM? (This would show, that you can take a lightweight C++ library and just put it in the browser with great parallelisation.)
+  \item all of the above, and it can be compiled to run as WASM (compare to \href{https://silvia-odwyer.github.io/photon/}{Photon} and \href{https://www.npmjs.com/package/wasm-vips}{wasm-vips})! The question would be: How easy is it to compile a C++ image processing pipeline with OpenMP and CImg to WASM? (This would show, that you can take a lightweight C++ library and just put it in the browser with great parallelisation.)
   \item We could additionally try and implement one of the filters or binarization methods in WASM SIMD (which is not platform specific) and show which of the two is faster. The conclusion could then be: is it worth it to manually write SIMD for WASM or is OpenMP good enough (which would be an interesting conclusion)?
 \end{enumerate}
 
@@ -278,6 +278,15 @@ As the final step in the pipeline, the binarized image can be used to obtain the
 
 \section{Experiments}
 \label{sec:experiments}
+
+\begin{comment}
+  WASM single threaded: 2407.4 ms
+  WASM 32 vCores OpenMP: 666.29 ms
+  Local single threaded: 1437.51 ms
+  Local 32 vCores OpenMP: 527.78 ms
+
+  This is fucking good.
+\end{comment}
 
 \begin{comment}
   In der Literatur wird die Binarisierung durch Benchmark Datasets evaluiert, die ground truth Bilder enthalten. Es ergibt aber keinen Sinn für unserer Pipeline diese zu nutzen, da wir nicht nur binarisieren, sondern auch andere Schritte durchführen.
