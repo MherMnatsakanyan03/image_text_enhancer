@@ -69,7 +69,7 @@ def run_ite_visualizer():
                     file_tags.append(k)
             else:
                 cmd.extend([f"--{k}", str(v)])
-                file_tags.append(f"{k}:{v}")
+                file_tags.append(f"{k}={v}")
 
         output_filename = f"out_{i:03d}_" + "_".join(file_tags) + ".png"
         output_path = os.path.join(output_dir, output_filename)
