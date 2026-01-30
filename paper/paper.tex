@@ -17,6 +17,8 @@
 
 \acmConference[AEPRO 2026]{AEPRO 2026: Algorithm Engineering Projects}{March 1}{Jena, Germany}
 
+\acmDOI{} % prints no DOI
+
 % convert text to title case
 % http://individed.com/code/to-title-case/
 
@@ -69,13 +71,21 @@ The five-finger pattern:
 \item \textbf{Conclusions or implications:} What do these findings mean? What broader issues do they speak to?
 \end{enumerate}
 
+With increasing heterogeneity of compute environments, portable execution environments have grown in importance. This work demonstrates that a fully featured document-enhancement pipeline implemented with mature general-purpose C++ libraries, CImg and OpenMP, can be compiled for WebAssembly (WASM) with low effort. As a proof of concept, we compile the pipeline and its dependencies to WASM and run it in a Chromium-based browser using the V8 engine. The results confirm that the application executes correctly in this platform-independent setting and achieves comparable runtime performance to a native x86 build for limited workloads. Overall, our findings support WASM as a possible target for porting existing C++ applications and therefore a promising building block for portable execution across heterogeneous systems.
+
+%% This paper examines the feasibility of running a parallel, SIMD-ready, fully featured document-enhancement pipeline using general C++ libraries in a platform-independent setting--an increasingly relevant goal as compute environments become more heterogeneous and WebAssembly (WASM) matures as an execution target \cite{exploring_web_assembly_in_hpc_chadha_2023}. We ask whether the pipeline and its dependencies can be compiled to WASM and executed in practice without major compromises in runtime performance compared to a native x86 build. As a proof of concept, we ran the performance tests on the pipeline using the V8 engine of a Chromium based browser. The experiment demonstrates that the pipeline can be executed successfully in this setting and that its runtime performance is broadly comparable to the x86 version for limited workloads. These results indicate that, WASM is a promising target for existing parallel algorithms, pointing toward the broader potential of portable execution models for heterogeneous systems.
+
+
+%% with focus in HPC
+%% This paper investigates whether a parallel, fully featured document-enhancement pipeline can run in a platform-independent environment -- an increasingly relevant goal as compute clusters become more heterogeneous and WebAssembly (WASM) gains interest in high-performance computing \cite{exploring_web_assembly_in_hpc_chadha_2023}. We ask whether the pipeline and its full set of dependencies can be compiled to WASM and executed without sacrificing the capabilities expected from a native x86 implementation. To answer this, we ported the pipeline and dependencies to WASM and evaluated the resulting system's runtime performance against the x86 baseline. Our results show that the WASM implementation achieves runtime performance comparable to the x86 version, without major compromises. These findings suggest that WASM could become a deployment target for parallel workloads and supports the broader case for using WASM to improve portability.
+
 
 \end{abstract}
 
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{noise reduction, background removal, image filter, binarization}
+\keywords{document enhancement, parallel, OpenMP, CImg, pipeline, platform independent, WebAssembly}
 
 %%
 %% This command processes the author and affiliation and title
