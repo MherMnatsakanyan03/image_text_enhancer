@@ -362,3 +362,86 @@ URL = {https://www.mdpi.com/2313-433X/5/4/48}
 
 
 
+
+
+
+
+
+@inproceedings{Mpi_Wasm_Chadha_2023,
+author = {Chadha, Mohak and Krueger, Nils and John, Jophin and Jindal, Anshul and Gerndt, Michael and Benedict, Shajulin},
+title = {Exploring the Use of WebAssembly in HPC},
+year = {2023},
+isbn = {9798400700156},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+doi = {10.1145/3572848.3577436},
+abstract = {Containerization approaches based on namespaces offered by the Linux kernel have seen an increasing popularity in the HPC community both as a means to isolate applications and as a format to package and distribute them. However, their adoption and usage in HPC systems faces several challenges. These include difficulties in unprivileged running and building of scientific application container images directly on HPC resources, increasing heterogeneity of HPC architectures, and access to specialized networking libraries available only on HPC systems. These challenges of container-based HPC application development closely align with the several advantages that a new universal intermediate binary format called WebAssembly (Wasm) has to offer. These include a lightweight userspace isolation mechanism and portability across operating systems and processor architectures. In this paper, we explore the usage of Wasm as a distribution format for MPI-based HPC applications. To this end, we present MPIWasm, a novel Wasm embedder for MPI-based HPC applications that enables high-performance execution of Wasm code, has low-overhead for MPI calls, and supports high-performance networking interconnects present on HPC systems. We evaluate the performance and overhead of MPIWasm on a production HPC system and AWS Graviton2 nodes using standardized HPC benchmarks. Results from our experiments demonstrate that MPIWasm delivers competitive native application performance across all scenarios. Moreover, we observe that Wasm binaries are 139.5x smaller on average as compared to the statically-linked binaries for the different standardized benchmarks.},
+booktitle = {Proceedings of the 28th ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming},
+pages = {92–106},
+numpages = {15},
+keywords = {HPC, MPI, WebAssembly, wasm, wasmer},
+location = {Montreal, QC, Canada},
+series = {PPoPP '23},
+url = {https://doi.org/10.1145/3572848.3577436}
+}
+@misc{baradaran2024reusinglegacycodewebassembly,
+      title={Reusing Legacy Code in WebAssembly: Key Challenges of Cross-Compilation and Code Semantics Preservation}, 
+      author={Sara Baradaran and Liyan Huang and Mukund Raghothaman and Weihang Wang},
+      year={2024},
+      eprint={2412.20258},
+      archivePrefix={arXiv},
+      primaryClass={cs.SE},
+      url={https://arxiv.org/abs/2412.20258}, 
+}
+
+@article{wasm_runtimes_survey_zhang_2025,
+author = {Zhang, Yixuan and Liu, Mugeng and Wang, Haoyu and Ma, Yun and Huang, Gang and Liu, Xuanzhe},
+title = {Research on WebAssembly Runtimes: A Survey},
+year = {2025},
+issue_date = {November 2025},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {34},
+number = {8},
+issn = {1049-331X},
+url = {https://doi.org/10.1145/3714465},
+doi = {10.1145/3714465},
+abstract = {WebAssembly (abbreviated as Wasm) was initially introduced for the Web and quickly extended its reach into various domains beyond the Web. To create Wasm applications, developers can compile high-level programming languages into Wasm binaries or manually write the textual format of Wasm and translate it into Wasm binaries by the toolchain. Regardless of whether it is utilized within or outside the Web, the execution of Wasm binaries is supported by the Wasm runtime. Such a runtime provides a secure, memory-efficient, and sandboxed execution environment to execute Wasm binaries. This article provides a comprehensive survey of research on Wasm runtimes with 103 collected research papers related to Wasm runtimes following the traditional systematic literature review process. It characterizes existing studies from two different angles, including the internal research of Wasm runtimes (Wasm runtime design, testing, and analysis) and the external research (applying Wasm runtimes to various domains). This article also proposes future research directions about Wasm runtimes.},
+journal = {ACM Trans. Softw. Eng. Methodol.},
+month = oct,
+articleno = {239},
+numpages = {47},
+keywords = {WebAssembly, WebAssembly runtime, WebAssembly System Interface}
+}
+
+@misc{server_vs_client_wasm_alevarn_2021,
+   author = {Alev{\"a}rn, Marcus},
+   institution = {KTH, School of Electrical Engineering and Computer Science (EECS)},
+   pages = {45},
+   school = {KTH, School of Electrical Engineering and Computer Science (EECS)},
+   title = {Server-side image processing in native code compared to client- side image processing in WebAssembly},
+   series = {TRITA-EECS-EX},
+   number = {2021:298},
+   keywords = {WebAssembly, Native code, Server-side, Client-side, Image processing, Performance, WebAssembly, Maskinkod, Serversidan, Klientsidan, Bildbehandling, Prestanda},
+   abstract = {Today, companies are developing processor demanding applications on the web, for example, 3D visualization software and video and audio software. Some of these companies have a native desktop application written in for example C++. These C++ codebases can consist of several hundred thousand lines of code, and companies would therefore like to reuse their codebase in the web version of the software. This thesis makes a performance comparison between two different approaches that can be taken to reuse the C++ codebase. The first approach is to compile the C++ codebase to WebAssembly and run it on the client-side. The second approach is to compile the C++ codebase to native code and run it on the server-side. It is not clear which approach to take if the goal is to achieve low execution times. This thesis will therefore answer the question of whether a client-side solution inWebAssembly is faster than a server-side solution in native code. To answer this question, this project work looked at one use case namely image processing. Two different web applications were developed, one that did image processing on the server-side in native code, and another one that did image processing on the client-side in WebAssembly. Execution time measurements were collected from both web applications. The results showed that for most algorithms WebAssembly was a factor of 1.5 slower than native code, without considering the additional delay from the internet that will affect the web application that performs image processing on the server-side. If this delay is taken into account, the web application that performs image processing on the client-side inWebAssembly will be faster than the server-side solution in native code for most users in the world. If the Round-Trip Time (RTT) is 1 ms the required average throughput needed to make the two web applications equally fast is 249 Mbps (Google Chrome) or 226 Mbps (Firefox). Most users in the world do not have such a high average throughput.  },
+   year = {2021}
+}
+
+
+@inproceedings{WASM_Haas_2017,
+author = {Haas, Andreas and Rossberg, Andreas and Schuff, Derek L. and Titzer, Ben L. and Holman, Michael and Gohman, Dan and Wagner, Luke and Zakai, Alon and Bastien, JF},
+title = {Bringing the web up to speed with WebAssembly},
+year = {2017},
+isbn = {9781450349888},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3062341.3062363},
+doi = {10.1145/3062341.3062363},
+abstract = {The maturation of the Web platform has given rise to sophisticated and demanding Web applications such as interactive 3D visualization, audio and video software, and games. With that, efficiency and security of code on the Web has become more important than ever. Yet JavaScript as the only built-in language of the Web is not well-equipped to meet these requirements, especially as a compilation target.  Engineers from the four major browser vendors have risen to the challenge and collaboratively designed a portable low-level bytecode called WebAssembly. It offers compact representation, efficient validation and compilation, and safe low to no-overhead execution. Rather than committing to a specific programming model, WebAssembly is an abstraction over modern hardware, making it language-, hardware-, and platform-independent, with use cases beyond just the Web. WebAssembly has been designed with a formal semantics from the start. We describe the motivation, design and formal semantics of WebAssembly and provide some preliminary experience with implementations.},
+booktitle = {Proceedings of the 38th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+pages = {185–200},
+numpages = {16},
+keywords = {virtual machines, type systems, programming languages, just-in-time compilers, assembly languages},
+location = {Barcelona, Spain},
+series = {PLDI 2017}
+}
