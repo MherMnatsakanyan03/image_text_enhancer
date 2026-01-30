@@ -165,7 +165,7 @@ namespace ite
     // Full Enhancement Pipeline
     // ============================================================================
 
-    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt)
+    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt, const int block_h)
     {
         CImg<uint> result = input_image;
         CImg<uint> color_image;
@@ -195,7 +195,7 @@ namespace ite
         // 4. Denoising
         if (opt.do_adaptive_gaussian_blur)
         {
-            filters::adaptive_gaussian_blur(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, 8, opt.boundary_conditions);
+            filters::adaptive_gaussian_blur(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, block_h, opt.boundary_conditions);
         }
         else if (opt.do_gaussian_blur)
         {
@@ -207,7 +207,7 @@ namespace ite
         }
         if (opt.do_adaptive_median)
         {
-            filters::adaptive_median_filter(result, opt.adaptive_median_max_window);
+            filters::adaptive_median_filter(result, opt.adaptive_median_max_window, block_h);
         }
 
         // 5. Binarization
