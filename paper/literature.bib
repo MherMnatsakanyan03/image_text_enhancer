@@ -359,6 +359,22 @@ URL = {https://www.mdpi.com/2313-433X/5/4/48}
 
 
 
-
+@inproceedings{exploring_web_assembly_in_hpc_chadha_2023,
+author = {Chadha, Mohak and Krueger, Nils and John, Jophin and Jindal, Anshul and Gerndt, Michael and Benedict, Shajulin},
+title = {Exploring the Use of WebAssembly in HPC},
+year = {2023},
+isbn = {9798400700156},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3572848.3577436},
+doi = {10.1145/3572848.3577436},
+abstract = {Containerization approaches based on namespaces offered by the Linux kernel have seen an increasing popularity in the HPC community both as a means to isolate applications and as a format to package and distribute them. However, their adoption and usage in HPC systems faces several challenges. These include difficulties in unprivileged running and building of scientific application container images directly on HPC resources, increasing heterogeneity of HPC architectures, and access to specialized networking libraries available only on HPC systems. These challenges of container-based HPC application development closely align with the several advantages that a new universal intermediate binary format called WebAssembly (Wasm) has to offer. These include a lightweight userspace isolation mechanism and portability across operating systems and processor architectures. In this paper, we explore the usage of Wasm as a distribution format for MPI-based HPC applications. To this end, we present MPIWasm, a novel Wasm embedder for MPI-based HPC applications that enables high-performance execution of Wasm code, has low-overhead for MPI calls, and supports high-performance networking interconnects present on HPC systems. We evaluate the performance and overhead of MPIWasm on a production HPC system and AWS Graviton2 nodes using standardized HPC benchmarks. Results from our experiments demonstrate that MPIWasm delivers competitive native application performance across all scenarios. Moreover, we observe that Wasm binaries are 139.5x smaller on average as compared to the statically-linked binaries for the different standardized benchmarks.},
+booktitle = {Proceedings of the 28th ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming},
+pages = {92–106},
+numpages = {15},
+keywords = {HPC, MPI, WebAssembly, wasm, wasmer},
+location = {Montreal, QC, Canada},
+series = {PPoPP '23}
+}
 
 
