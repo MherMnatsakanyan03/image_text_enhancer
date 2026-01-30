@@ -115,8 +115,8 @@ $(OPENMP_LIB): $(OPENMP_DIR) $(EMSDK_ENV)
 	@echo "Building OpenMP Runtime..."
 	@mkdir -p $(BUILD_DIR)
 	$(RUN_EM) emcmake cmake \
-        -DCMAKE_C_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory" \
-        -DCMAKE_CXX_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory" \
+        -DCMAKE_C_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory -msimd128" \
+        -DCMAKE_CXX_FLAGS="-DPAGESIZE=65536 -pthread -matomics -mbulk-memory -msimd128" \
         -DCMAKE_CXX_COMPILER=$(EMSDK_DIR)/upstream/emscripten/em++ \
         -DOPENMP_STANDALONE_BUILD=ON \
         -DOPENMP_ENABLE_OMPT_TOOLS=OFF \
