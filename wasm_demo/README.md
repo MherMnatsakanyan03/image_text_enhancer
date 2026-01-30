@@ -36,8 +36,10 @@ wasm_demo/
 
 ## Requirements
 
-1.  **Emscripten SDK**: This project expects `emsdk` to be available.
-2.  **Python 3**: For the local development server.
+In addition to the regular build tools for your platform (i.e. C/C++ toolchain), you will need **Python 3** for the local development server.
+
+The git repository includes `emsdk` and the `llvm-project` at compatible commits. It is important to match them, so that the ABI works.
+If necessary, you can change the `emsdk` version at the top of the `Makefile` and you can change the `llvm-project` version by simply checking out the appropriate commit.
 
 ---
 
@@ -75,7 +77,7 @@ Output files are generated in the `output/` directory:
 - `-msimd128`: Enable SIMD instructions
 - `-fopenmp`: Enable OpenMP (for threaded build)
 - `PTHREAD_POOL_SIZE=navigator.hardwareConcurrency`: Automatically utilize available CPU cores
-- `INITIAL_MEMORY=2GB`: Pre-allocated memory to handle large images (ALLOW_MEMORY_GROWTH disabled for performance/stability with large initial heap)
+- `INITIAL_MEMORY=4GB`: Pre-allocated memory to handle large images (ALLOW_MEMORY_GROWTH disabled for performance/stability with large initial heap)
 
 ---
 

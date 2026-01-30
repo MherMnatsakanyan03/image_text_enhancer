@@ -7,6 +7,9 @@ PROJECT_DIR := $(realpath .)
 BUILD_DIR   := $(PROJECT_DIR)/build-em
 OUTPUT_DIR  := output
 
+# Emscripten Version
+EMSDK_VERSION := 5.0.0
+
 # Compiler Configuration
 EMSDK_DIR := $(PROJECT_DIR)/emsdk
 EMSDK_ENV := $(EMSDK_DIR)/emsdk_env.sh
@@ -136,14 +139,13 @@ $(OPENMP_LIB): $(OPENMP_DIR) $(EMSDK_ENV)
 
 # Emscripten SDK Setup
 $(EMSDK_ENV):
-	@echo "Setting up Emscripten SDK..."
-	@if [ ! -d "$(EMSDK_DIR)" ]; then \
-		echo "Cloning emsdk..."; \
-		git clone https://github.com/emscripten-core/emsdk.git $(EMSDK_DIR); \
+	@echo "Setting up Emscripten SDK $(EMSDK_VERSION)..."
+	@if [ ! -f "$(EMSDK_DIR)/emsdk" ]; then \
+		echo "Initializing emsdk submodule..."; \
+		git submodule update --init --recursive; \
 	fi
-	cd $(EMSDK_DIR) && ./emsdk update
-	cd $(EMSDK_DIR) && ./emsdk install latest
-	cd $(EMSDK_DIR) && ./emsdk activate latest
+	cd $(EMSDK_DIR) && ./emsdk install $(EMSDK_VERSION)
+	cd $(EMSDK_DIR) && ./emsdk activate $(EMSDK_VERSION)
 	touch $(EMSDK_ENV)
 
 # Check if OpenMP sources exist (only matters when OPENMP=1 and we try to build libomp)
