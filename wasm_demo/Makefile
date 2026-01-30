@@ -90,6 +90,16 @@ OUTPUT      := $(OUTPUT_DIR)/wasm_bridge.js
 WEB_FILES   := index.html main.js
 OUTPUT_WEB  := $(addprefix $(OUTPUT_DIR)/, $(WEB_FILES))
 
+# Test Target Configuration
+TEST_SHMEM_SOURCE := test_shared_memory_capability.cpp
+TEST_SHMEM_OUTPUT := $(OUTPUT_DIR)/test_shared_memory.html
+# Minimal flags for test executable (needs main, no special exports)
+EMFLAGS_TEST := -s ALLOW_MEMORY_GROWTH=1 \
+                -s ALLOW_TABLE_GROWTH=1 \
+                -s INITIAL_MEMORY=64MB \
+                -s ENVIRONMENT=web,worker \
+                -s EXIT_RUNTIME=1
+
 # Default target
 all: $(OUTPUT) $(OUTPUT_WEB)
 
@@ -99,6 +109,15 @@ omp:
 
 noomp:
 	@$(MAKE) OPENMP=0 all
+
+test_shmem: $(TEST_SHMEM_OUTPUT)
+
+# Compile the Shared Memory Test
+$(TEST_SHMEM_OUTPUT): $(TEST_SHMEM_SOURCE) $(EMSDK_ENV) Makefile $(OMP_DEPS)
+	@mkdir -p $(OUTPUT_DIR)
+	@echo "Building Shared Memory Test..."
+	$(RUN_EM) $(CXX) $(CXXFLAGS_COMMON) $(CXXFLAGS_OMP) $(EMFLAGS_TEST) $(EMFLAGS_OMP) $(TEST_SHMEM_SOURCE) $(OMP_LIBS) -o $(TEST_SHMEM_OUTPUT)
+	@echo "Build complete: $(TEST_SHMEM_OUTPUT)"
 
 # Copy web files
 $(OUTPUT_DIR)/%: %

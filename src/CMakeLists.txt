@@ -32,6 +32,13 @@ target_compile_options(ITE_cli PRIVATE
     -march=native
 )
 
+option(ITE_KEEP_ASM "Keep compiler-generated .s files" ON)
+
+if(ITE_KEEP_ASM)
+    target_compile_options(ITE_cli  PRIVATE -save-temps=obj -fverbose-asm)
+    target_compile_options(ITE_demo PRIVATE -save-temps=obj -fverbose-asm)
+endif()
+
 if(OpenMP_CXX_FOUND)
     target_link_libraries(ITE_cli PRIVATE OpenMP::OpenMP_CXX)
 endif()
