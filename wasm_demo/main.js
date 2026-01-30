@@ -192,7 +192,7 @@ function processImage() {
 
         // Call WASM processing function
         console.log('[WASM] Calling process_image_with_options...');
-        iteWasmModule._process_image_with_options(imgPtr, width, height, optsPtr);
+        const time = iteWasmModule._process_image_with_options(imgPtr, width, height, optsPtr);
 
         // Read processed data back
         const processedPixels = new Uint8ClampedArray(iteWasmModule.HEAPU8.buffer, imgPtr, numBytes);
@@ -214,14 +214,15 @@ function processImage() {
         outputCtx.putImageData(outputImageData, 0, 0);
 
         const endTime = performance.now();
-        const processTime = (endTime - startTime).toFixed(2);
+        const processTime = endTime - startTime;
 
-        console.log(`[WASM] Processing complete in ${processTime} ms`);
+        console.log(`[WASM] Processing complete in ${time} ms`);
+        console.log(`[WASM] Measured in JS ${processTime} ms`);
 
         // Update stats
-        document.getElementById('processTime').textContent = processTime;
+        document.getElementById('processTime').textContent = (time*1000).toFixed(2);;
 
-        setStatus(`Processing complete in ${processTime} ms`, 'success');
+        setStatus(`Processing including JS overhead completed in ${processTime} ms`, 'success');
 
     } catch (error) {
         setStatus(`Processing failed: ${error.message}`, 'error');

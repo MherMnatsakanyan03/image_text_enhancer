@@ -54,10 +54,9 @@ CXXFLAGS_COMMON := -std=c++17 -O3 -Dcimg_display=0 \
                    -Wno-unknown-pragmas
 
 # Common emscripten flags (both builds)
-EMFLAGS_COMMON := -s ALLOW_MEMORY_GROWTH=0 \
+EMFLAGS_COMMON := -s ALLOW_MEMORY_GROWTH=1 \
                   -s ALLOW_TABLE_GROWTH=1 \
-                  -s INITIAL_MEMORY=2147483648 \
-                  -s EXPORTED_FUNCTIONS='["_process_image", "_process_image_with_options", "_get_default_options", "_wasm_get_thread_count", "_malloc", "_free"]' \
+                  -s EXPORTED_FUNCTIONS='["_process_image_with_options", "_get_default_options", "_wasm_get_thread_count", "_malloc", "_free"]' \
                   -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "HEAPU8", "getValue", "setValue"]' \
                   -s MODULARIZE=0 \
                   -s EXPORT_NAME="Module" \

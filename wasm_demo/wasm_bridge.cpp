@@ -71,13 +71,13 @@ ite::EnhanceOptions to_cpp_options(const WasmEnhanceOptions* opts) {
 extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
-void process_image_with_options(uint8_t* rgba_data, int width, int height, WasmEnhanceOptions* opts) {
+double process_image_with_options(uint8_t* rgba_data, int width, int height, WasmEnhanceOptions* opts) {
 
     std::cout << "[WASM] process_image_with_options called: " << width << "x" << height << std::endl;
 
     if (!rgba_data || width <= 0 || height <= 0) {
         std::cerr << "[WASM] Error: invalid inputs" << std::endl;
-        return;
+        return -1;
     }
 
     try {
@@ -85,7 +85,7 @@ void process_image_with_options(uint8_t* rgba_data, int width, int height, WasmE
         cimg_library::CImg<unsigned int> img(width, height, 1, 4);
 
         std::cout << "[WASM] Reading input data..." << std::endl;
-        #pragma omp parallel for
+#pragma omp parallel for collapse(2)
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 int idx = (y * width + x) * 4;
@@ -99,7 +99,9 @@ void process_image_with_options(uint8_t* rgba_data, int width, int height, WasmE
         ite::EnhanceOptions cpp_opts = to_cpp_options(opts);
 
         std::cout << "[WASM] Calling ite::enhance..." << std::endl;
+        double start = omp_get_wtime();
         cimg_library::CImg<unsigned int> result = ite::enhance(img, cpp_opts);
+        double end = omp_get_wtime();
         
         if (result.width() != width || result.height() != height) {
              std::cerr << "[WASM] Warning: Result dimensions differ. Resizing to fit original buffer." << std::endl;
@@ -133,11 +135,14 @@ void process_image_with_options(uint8_t* rgba_data, int width, int height, WasmE
         }
         
         std::cout << "[WASM] Processing complete." << std::endl;
+        return end-start;
 
     } catch (const std::exception& e) {
         std::cerr << "[WASM] Exception: " << e.what() << std::endl;
+        return -1;
     } catch (...) {
         std::cerr << "[WASM] Unknown exception" << std::endl;
+        return -1;
     }
 }
 
@@ -170,13 +175,6 @@ void get_default_options(WasmEnhanceOptions* opts) {
     opts->sauvola_window_size = defaults.sauvola_window_size;
     opts->sauvola_k = defaults.sauvola_k;
     opts->sauvola_delta = defaults.sauvola_delta;
-}
-
-EMSCRIPTEN_KEEPALIVE
-void process_image(uint8_t* rgba_data, int width, int height) {
-    WasmEnhanceOptions opts;
-    get_default_options(&opts);
-    process_image_with_options(rgba_data, width, height, &opts);
 }
 
 EMSCRIPTEN_KEEPALIVE
