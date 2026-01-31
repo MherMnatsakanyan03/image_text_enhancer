@@ -10,6 +10,17 @@ using namespace cimg_library;
 
 namespace ite::geometry
 {
+    /**
+     * @brief Detects the skew angle of the text using a fast projection profile method.
+     * Uses Sauvola binarization and coordinate projection (Radon transform)
+     */
+    double detect_skew_angle(const CImg<uint> &input_image, const int window_size = 15, const float k = 0.2, const float delta = 0.0);
+
+    /**
+     * @brief Rotates the image by the specified angle.
+     */
+    void apply_deskew(CImg<uint> &input_image, double angle, int boundary_conditions);
+
 
     /**
      * @brief Detects and corrects skew (rotation) in an image (in-place).
@@ -31,15 +42,5 @@ namespace ite::geometry
      * @param delta Optional offset subtracted from threshold (default: 0.0).
      */
     void deskew_projection_profile(CImg<uint> &input_image, int boundary_conditions = 1, int window_size = 15, float k = 0.2f, float delta = 0.0f);
-
-    /**
-     * @brief Detects the skew angle without applying the correction.
-     *
-     * Useful for diagnostics or when you want to apply the rotation separately.
-     *
-     * @param image The image to analyze.
-     * @return The detected skew angle in degrees. Positive = clockwise.
-     */
-    double detect_skew_angle_projection_profile(const CImg<uint> &image);
 
 } // namespace ite::geometry
