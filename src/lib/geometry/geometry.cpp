@@ -2,51 +2,70 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
+#include <vector>
 #include "../binarization/binarization.h"
 #include "../core/utils.h"
+#include "color/grayscale.h"
 
 using namespace ite::utils;
 
-
 namespace ite::geometry
 {
-
-    // Score: variance of horizontal projection profile
-    static double score_angle_variance(const CImg<unsigned char> &bin, int roi_x0, int roi_y0, int roi_w, int roi_h, double angle_deg)
+    struct Point
     {
-        CImg<unsigned char> rot = bin.get_rotate(angle_deg, 0, 0);
+        int x, y;
+    };
 
-        const int W = rot.width();
-        const unsigned char* p = rot.data();
+    // Optimized Score: Projects points onto a rotated vertical axis (Radon Transform)
+    static double score_angle_radon(const std::vector<Point> &points, int w, int h, double angle_deg)
+    {
+        if (points.empty())
+            return 0.0;
 
-        double sum = 0.0;
-        double sum_sq = 0.0;
+        // Convert to radians
+        const double rad = angle_deg * M_PI / 180.0;
+        const double sin_a = std::sin(rad);
+        const double cos_a = std::cos(rad);
 
-        for (int y = roi_y0; y < roi_y0 + roi_h; ++y)
+        // Determine histogram size (diagonal covers all possible projections)
+        const int max_dim = w + h;
+        const int center_offset = max_dim; // Offset to handle negative projections
+        std::vector<int> hist(max_dim * 2, 0);
+
+        // Project every pixel: y' = x * -sin(a) + y * cos(a)
+        for (const auto &p : points)
         {
-            const unsigned char* row = p + y * W + roi_x0;
-            int row_sum = 0;
-            for (int x = 0; x < roi_w; ++x)
-                row_sum += row[x];
+            int y_rot = static_cast<int>(-p.x * sin_a + p.y * cos_a);
+            int idx = y_rot + center_offset;
 
-            sum += static_cast<double>(row_sum);
-            sum_sq += static_cast<double>(row_sum) * static_cast<double>(row_sum);
+            if (idx >= 0 && idx < (int)hist.size())
+            {
+                hist[idx]++;
+            }
         }
 
-        const double invH = 1.0 / static_cast<double>(roi_h);
-        const double mean = sum * invH;
-        return sum_sq * invH - mean * mean;
+        // Calculate Sum of Squares (Energy)
+        double sum_sq = 0.0;
+        for (int count : hist)
+        {
+            if (count > 0)
+            {
+                sum_sq += static_cast<double>(count) * static_cast<double>(count);
+            }
+        }
+
+        return sum_sq;
     }
 
-    static std::pair<double, double> search_best_angle(const CImg<unsigned char> &bin, int roi_x0, int roi_y0, int roi_w, int roi_h, double start_deg,
-                                                       double end_deg, double step_deg)
+    static std::pair<double, double> search_best_angle_radon(const std::vector<Point> &points, int w, int h, double start_deg, double end_deg, double step_deg)
     {
         if (step_deg <= 0.0)
             return {0.0, -1.0};
         if (end_deg < start_deg)
             std::swap(start_deg, end_deg);
 
-        const int N = static_cast<int>(std::floor((end_deg - start_deg) / step_deg)) + 1;
+        const int N_steps = static_cast<int>(std::floor((end_deg - start_deg) / step_deg)) + 1;
+
         double best_angle = 0.0;
         double best_score = -1.0;
 
@@ -56,10 +75,10 @@ namespace ite::geometry
             double local_best_s = -1.0;
 
 #pragma omp for schedule(static) nowait
-            for (int i = 0; i < N; ++i)
+            for (int i = 0; i < N_steps; ++i)
             {
                 const double a = start_deg + static_cast<double>(i) * step_deg;
-                const double s = score_angle_variance(bin, roi_x0, roi_y0, roi_w, roi_h, a);
+                const double s = score_angle_radon(points, w, h, a);
                 if (s > local_best_s)
                 {
                     local_best_s = s;
@@ -80,14 +99,15 @@ namespace ite::geometry
         return {best_angle, best_score};
     }
 
-    void deskew_projection_profile(CImg<uint> &input_image, int boundary_conditions, int window_size, float k, float delta)
+    double detect_skew_angle(const CImg<uint> &input_image, const int window_size, const float k, const float delta)
     {
         const int inW = input_image.width();
         const int inH = input_image.height();
         if (inW <= 1 || inH <= 1)
-            return;
+            return 0.0;
 
-        // Downscale for speed
+        // Downscale for speed (Target 600px long side)
+        // This makes Sauvola fast because the image is small.
         constexpr double target_long = 600.0;
         const int long_side = std::max(inW, inH);
         double scale = target_long / static_cast<double>(long_side);
@@ -98,115 +118,84 @@ namespace ite::geometry
         int new_h = std::max(1, static_cast<int>(std::lround(inH * scale)));
 
         CImg<uint> small = input_image.get_resize(new_w, new_h, 1, input_image.spectrum());
+        ite::color::to_grayscale_rec601(small);
 
-        // Convert to grayscale (as CImg<uint> for Sauvola)
-        CImg<uint> gray(new_w, new_h, 1, 1);
-        if (small.spectrum() >= 3)
+        // We use Sauvola here because it handles shading better than Otsu,
+        // ensuring we actually get text lines even in shadowed corners.
+        // Parameters: window=15, k=0.2, delta=10 (Standard robust defaults)
+        binarization::binarize_sauvola(small, window_size, k, delta);
+
+        // Extract Foreground Points
+        // Sauvola outputs 0 (black/text) and 255 (white/background).
+        // We just need to collect the 0s (or 255s if inverted).
+
+        // Check polarity (Text is usually the minority)
+        const size_t total_pixels = small.size();
+        const uint* ptr = small.data();
+        long count_0 = 0;
+        long count_255 = 0;
+
+#pragma omp parallel for reduction(+ : count_0, count_255)
+        for (size_t i = 0; i < total_pixels; ++i)
         {
-            for (int y = 0; y < new_h; ++y)
+            if (ptr[i] < 128)
+                count_0++;
+            else
+                count_255++;
+        }
+
+        // If 0s are minority, assume 0 is text. Otherwise assume 255 is text (inverted image).
+        uint text_val = (count_0 < count_255) ? 0 : 255;
+
+        std::vector<Point> points;
+        points.reserve(total_pixels / 10);
+
+        for (int y = 0; y < new_h; ++y)
+        {
+            const uint* row_ptr = small.data(0, y);
+            for (int x = 0; x < new_w; ++x)
             {
-                for (int x = 0; x < new_w; ++x)
+                if (row_ptr[x] == text_val)
                 {
-                    const uint r = small(x, y, 0, 0);
-                    const uint g = small(x, y, 0, 1);
-                    const uint b = small(x, y, 0, 2);
-                    const double yv = 0.2126 * static_cast<double>(r) + 0.7152 * static_cast<double>(g) + 0.0722 * static_cast<double>(b);
-                    gray(x, y) = static_cast<unsigned char>(std::clamp(static_cast<int>(std::lround(yv)), 0, 255));
-                }
-            }
-        }
-        else
-        {
-            for (int y = 0; y < new_h; ++y)
-                for (int x = 0; x < new_w; ++x)
-                    gray(x, y) = clamp_to_u8(small(x, y, 0, 0));
-        }
-
-        // Binarize with Sauvola
-        binarization::binarize_sauvola(gray, window_size, k, delta);
-
-        // Build binary image (Sauvola produces 0 or 255, convert to 0 or 1)
-        CImg<unsigned char> bin(new_w, new_h, 1, 1);
-        {
-            const int N = new_w * new_h;
-            const uint* pg = gray.data();
-            unsigned char* pb = bin.data();
-
-            int fg = 0;
-            for (int i = 0; i < N; ++i)
-            {
-                const unsigned char b = (pg[i] > 0) ? 1u : 0u;
-                pb[i] = b;
-                fg += b;
-            }
-
-            // If foreground > 50%, invert (ensure foreground is minority)
-            if (fg > N / 2)
-            {
-                for (int i = 0; i < N; ++i)
-                    pb[i] = static_cast<unsigned char>(1u - pb[i]);
-            }
-        }
-
-        // Crop to content
-        int minx = new_w, miny = new_h, maxx = -1, maxy = -1;
-        {
-            const unsigned char* pb = bin.data();
-            for (int y = 0; y < new_h; ++y)
-            {
-                const unsigned char* row = pb + y * new_w;
-                for (int x = 0; x < new_w; ++x)
-                {
-                    if (row[x])
-                    {
-                        minx = std::min(minx, x);
-                        miny = std::min(miny, y);
-                        maxx = std::max(maxx, x);
-                        maxy = std::max(maxy, y);
-                    }
+                    points.push_back({x, y});
                 }
             }
         }
 
-        if (maxx < 0 || maxy < 0)
-            return;
+        if (points.empty())
+            return 0.0;
 
-        const int margin = std::max(2, static_cast<int>(std::lround(0.02 * std::min(new_w, new_h))));
-        minx = std::max(0, minx - margin);
-        miny = std::max(0, miny - margin);
-        maxx = std::min(new_w - 1, maxx + margin);
-        maxy = std::min(new_h - 1, maxy + margin);
+        // Coarse-to-fine Search (Radon)
+        // Identical to before - using the points list is still fast regardless of how we got them.
+        double base_score = score_angle_radon(points, new_w, new_h, 0.0);
 
-        CImg<unsigned char> work = bin.get_crop(minx, miny, maxx, maxy);
-        const int W = work.width();
-        const int H = work.height();
-        if (W <= 8 || H <= 8)
-            return;
+        auto [a1, s1] = search_best_angle_radon(points, new_w, new_h, -15.0, 15.0, 1.0);
+        auto [a2, s2] = search_best_angle_radon(points, new_w, new_h, a1 - 1.0, a1 + 1.0, 0.2);
+        auto [a3, s3] = search_best_angle_radon(points, new_w, new_h, a2 - 0.3, a2 + 0.3, 0.05);
 
-        // Central ROI
-        const double pad = 0.10;
-        const int roi_w = std::max(1, static_cast<int>(std::lround(W * (1.0 - 2.0 * pad))));
-        const int roi_h = std::max(1, static_cast<int>(std::lround(H * (1.0 - 2.0 * pad))));
-        const int roi_x0 = (W - roi_w) / 2;
-        const int roi_y0 = (H - roi_h) / 2;
+        double best_angle = a3;
+        double best_score = s3;
 
-        const double base_score = score_angle_variance(work, roi_x0, roi_y0, roi_w, roi_h, 0.0);
-
-        // Coarse-to-fine search
-        auto [a1, s1] = search_best_angle(work, roi_x0, roi_y0, roi_w, roi_h, -15.0, 15.0, 1.0);
-        auto [a2, s2] = search_best_angle(work, roi_x0, roi_y0, roi_w, roi_h, a1 - 1.0, a1 + 1.0, 0.2);
-        auto [a3, s3] = search_best_angle(work, roi_x0, roi_y0, roi_w, roi_h, a2 - 0.3, a2 + 0.3, 0.05);
-
-        const double best_angle = a3;
-        const double best_score = s3;
-
-        const double abs_a = std::abs(best_angle);
-        const bool angle_ok = (abs_a > 0.05);
-        const bool improve_ok = (best_score > base_score + 1e-9) && (base_score <= 0.0 ? true : (best_score >= base_score * 1.002));
-
-        if (angle_ok && improve_ok)
+        if (best_score < base_score * 1.005)
         {
-            input_image.rotate(best_angle, 2, boundary_conditions);
+            return 0.0;
+        }
+
+        return best_angle;
+    }
+
+    void apply_deskew(CImg<uint> &input_image, double angle, int boundary_conditions)
+    {
+        if (std::abs(angle) > 0.05)
+        {
+            input_image.rotate(-angle, 2, boundary_conditions); // 2 = Linear Interpolation
         }
     }
+
+    void deskew_projection_profile(CImg<uint> &input_image, int boundary_conditions, const int window_size, const float k, const float delta)
+    {
+        double angle = detect_skew_angle(input_image, window_size, k, delta);
+        apply_deskew(input_image, angle, boundary_conditions);
+    }
+
 } // namespace ite::geometry
