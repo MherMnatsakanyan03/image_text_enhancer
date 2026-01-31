@@ -1,0 +1,132 @@
+==============================================================================
+                        ITE LIBRARY OPTIMIZATION LOG
+==============================================================================
+
+GRAYSCALE CONVERSION
+------------------------------------------------------------------------------
+File: src/color/grayscale.cpp
+Function: to_grayscale_rec601
+- Optimization 1 (Parallelization): Added OpenMP `parallel for` to the pixel 
+  processing loop.
+- Optimization 2 (Memory Management): Replaced the final deep copy assignment 
+  (`input = result`) with a pointer swap (`input.swap(result)`). 
+- Result: Reduced execution time from ~4ms to ~3ms.
+
+DESKEWING (Major Optimization)
+------------------------------------------------------------------------------
+File: src/geometry/geometry.cpp
+Function: detect_skew_angle, apply_deskew
+- Optimization 1 (Algorithm Change): Replaced the "Rotate-and-Project" method 
+  (which rotates the full image ~50 times) with a **Radon Transform** approach. 
+  Instead of moving pixels, we extract foreground coordinates and mathematically 
+  project them.
+- Optimization 2 (Downscaling): Detection is now run on a resized version of 
+  the image (target 600px long side) rather than the full resolution.
+- Optimization 3 (Logic Split): Split detection and application. The angle is 
+  detected ONCE using the grayscale image, and the result is applied to both 
+  grayscale and color images. Previously, detection ran twice.
+- Optimization 4 (Detection Quality): Re-enabled Sauvola binarization for the 
+  detection phase (on the small image) to ensure robustness against shadows, 
+  which Otsu failed to handle.
+- Correction: Fixed rotation direction logic to ensure image is straightened 
+  rather than skewed further.
+- Result: Massive reduction from ~95ms down to ~7ms.
+
+CONTRAST ENHANCEMENT
+------------------------------------------------------------------------------
+File: src/color/contrast.cpp
+Function: contrast_linear_stretch
+- Optimization 1 (Parallel Histogram): Parallelized the histogram bin counting 
+  using thread-local buffers to prevent false sharing/locking.
+- Optimization 2 (Lookup Table - LUT): Pre-calculated the linear stretch formula 
+  into a 256-byte array. The main loop now performs a simple O(1) array lookup 
+  (`out = lut[in]`) instead of floating-point math (`(val - min) * scale`) per pixel.
+- Optimization 3 (Vectorization): Replaced `if/else` branching in the pixel 
+  loop with `std::min` clamping, allowing the compiler to auto-vectorize using SIMD.
+- Result: Reduced execution time from ~1ms down to ~0.7ms.
+
+ADAPTIVE GAUSSIAN BLUR
+------------------------------------------------------------------------------
+File: src/filters/filters.cpp
+Function: adaptive_gaussian_blur
+- Optimization 1 (Allocation Removal): Removed `std::vector` allocations inside 
+  the hot loop. Used a "Ping-Pong" strategy where the `high_blur` image acts as 
+  the destination buffer, swapping pointers at the end. Eliminates heap contention.
+- Optimization 2 (Math Simplification): Replaced floating-point `smoothstep` 
+  math with a pre-calculated 512-entry LUT based on gradient magnitude.
+- Optimization 3 (Integer Arithmetic): Converted the pixel blending formula to 
+  pure integer math with bit-shifting (`>> 8`) instead of float multiplication.
+- Optimization 4 (Loop Splitting): Split the processing into "Left Edge", 
+  "Center" (no boundary checks), and "Right Edge". This removed conditional 
+  checks from the main processing loop.
+- Result: Reduced execution time from ~16ms down to ~14ms (approx 12% gain).
+
+ADAPTIVE MEDIAN FILTER
+------------------------------------------------------------------------------
+File: src/filters/filters.cpp
+Function: adaptive_median_filter
+- Optimization 1 (Memory Hoisting): Moved the `std::vector` buffer allocation 
+  OUTSIDE the pixel loop. Previously, the buffer was being allocated and freed 
+  for every single pixel block, causing massive heap contention.
+- Optimization 2 (Fast Math): Replaced the manual loop for min/max finding 
+  with `std::min/max({initializer_list})`, allowing compiler vectorization.
+- Result: Improved stability and slight performance gain (now ~47ms).
+
+CORE UTILITIES (Infrastructure)
+------------------------------------------------------------------------------
+File: src/core/integral_image.cpp / .h
+Function: compute_fused_integrals, get_sum_padded
+- Optimization 1 (Fused Calculation): Created a new function that calculates 
+  both the Sum ($I$) and Sum-of-Squares ($I^2$) in a **single pass** over the 
+  image. This halves the memory bandwidth required.
+- Optimization 2 (Zero Allocation): Switched from returning heavy `CImg<double>` 
+  objects to using pre-allocated `std::vector<double>` buffers passed by reference.
+- Optimization 3 (Padding): The integral buffers are now padded by 1 pixel 
+  (size $W+1, H+1$). This allows the `get_sum` function to be completely 
+  branchless (no `if (x>0)` checks), as boundary conditions are handled by the 
+  zero-initialized padding.
+
+BINARIZATION (Bataineh) - **MASSIVE GAIN**
+------------------------------------------------------------------------------
+The Bottleneck: 
+The algorithm determines the optimal window size dynamically for every pixel. 
+To do this, it needs to count "Red" and "Black" pixels in a local region.
+The original code used a nested loop: for every pixel (x,y), it looped over 
+the entire window (u,v) to count. This is O(ImageSize * WindowSize). 
+For large windows (common in Bataineh), this resulted in billions of redundant 
+checks (re-counting 99% of the same pixels for every neighbor).
+
+The Fix (Integral Images):
+We pre-calculate two "Integral Images": one strictly for counting Red pixels, 
+one for counting Black pixels. 
+An Integral Image allows us to calculate the sum of ANY rectangular area 
+using just 4 values from the corners of the rectangle.
+
+The Result:
+Counting pixels in a window went from 3,600 operations (for a 60x60 window) 
+down to exactly 4 operations. Crucially, the cost is now independent of the 
+window size.
+
+File: src/binarization/binarization.cpp
+Function: binarize_bataineh
+- Optimization 1 (Algorithmic Fix): Identified a critical $O(N \cdot W^2)$ flaw 
+  in the "Adaptive Window Size" calculation. Previously, for every pixel, the 
+  code iterated over the entire local window to count "Red" and "Black" pixels.
+- Optimization 2 (Integral Classification): Implemented two new Integral Images 
+  (`I_black` and `I_red`). We classify pixels once globally, then use O(1) 
+  integral lookups to count Red/Black pixels in the window. 
+  Complexity reduced to linear $O(N)$.
+- Optimization 3 (Fused Core): Switched to the new `core::compute_fused_integrals` 
+  for the main statistics calculation.
+- Optimization 4 (Swap): Replaced deep copy assignment with `input.swap(output)`.
+- Result: Execution time dropped from ~340ms to ~20ms (approx 16x speedup).
+
+BINARIZATION (Sauvola)
+------------------------------------------------------------------------------
+File: src/binarization/binarization.cpp
+Function: binarize_sauvola
+- Optimization 1 (Memory Management): Removed the conversion of the entire 8-bit 
+  image to `CImg<double>` (twice). Now uses the lightweight fused vector builder.
+- Optimization 2 (Branchless Lookup): Switched to `core::get_sum_padded`, 
+  removing 4 boundary checks per pixel.
+- Result: Execution time dropped to ~7ms.
