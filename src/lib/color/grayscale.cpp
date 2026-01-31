@@ -29,7 +29,8 @@ namespace ite::color
             }
         }
 
-        input_image = gray_image;
+        // OPTIMIZATION: Swap pointers instead of deep copying data
+        input_image.swap(gray_image);
     }
 
 } // namespace ite::color
