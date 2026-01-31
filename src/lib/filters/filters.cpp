@@ -1,24 +1,17 @@
 #include "filters.h"
-
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <vector>
-
 #include "core/utils.h"
-
 
 namespace ite::filters
 {
-
     // ================= Gaussian blur =================
+    void simple_gaussian_blur(CImg<uint> &image, float sigma, int boundary_conditions) { image.blur(sigma, boundary_conditions, true); }
 
-    void simple_gaussian_blur(CImg<uint> &image, float sigma, int boundary_conditions)
-    {
-        // CImg blur: sigma, boundary_conditions (0=Dirichlet, 1=Neumann, ...), is_gaussian (true)
-        image.blur(sigma, boundary_conditions, true);
-    }
-
-    // ================= Adaptive Gaussian blur (edge-adaptive blend of two Gaussians) =================
+    // ================= Adaptive Gaussian blur =================
     // Idea: compute a low-sigma blur (preserve edges) and a high-sigma blur (smooth flats),
     // then blend per-pixel using an edge strength measure (fast gradient).
     // The border condition is "replicate".
@@ -26,27 +19,12 @@ namespace ite::filters
     // Parallel: OpenMP over (channel, depth, row-block).
 
     // In-place adaptive Gaussian blur
-    void adaptive_gaussian_blur(CImg<uint> &img, float sigma_low, float sigma_high,
-                                    float edge_thresh, // gradient threshold controlling blend (typical 30..80 for 8-bit)
-                                    int block_h, int boundary_conditions)
+    void adaptive_gaussian_blur(CImg<uint> &img, float sigma_low, float sigma_high, float edge_thresh, int block_h, int boundary_conditions)
     {
         if (img.is_empty())
             return;
 
-        const int w = img.width();
-        const int h = img.height();
-        const int d = img.depth();
-        const int s = img.spectrum();
-
-        if (w <= 1 || h <= 1)
-        {
-            // degenerate: just do a normal blur (or nothing)
-            if (sigma_low > 0.0f)
-                simple_gaussian_blur(img, sigma_low, boundary_conditions);
-            return;
-        }
-
-        // If no real adaptation requested, fall back to regular blur
+        // Validation
         if (!(sigma_high > sigma_low) || sigma_high <= 0.0f)
         {
             if (sigma_low > 0.0f)
@@ -56,101 +34,125 @@ namespace ite::filters
 
         if (block_h < 8)
             block_h = 8;
+        const int w = img.width();
+        const int h = img.height();
+        const int d = img.depth();
+        const int s = img.spectrum();
 
-        // 1) Compute the high-sigma blur into a single extra image
+        // 1. Prepare Buffers
+        // 'high' will start as the High-Sigma blur
+        // 'img' will become the Low-Sigma blur
         CImg<uint> high = img;
         simple_gaussian_blur(high, sigma_high, boundary_conditions);
 
-        // 2) Compute the low-sigma blur in-place (img becomes "low")
         if (sigma_low > 0.0f)
             simple_gaussian_blur(img, sigma_low, boundary_conditions);
 
-        // 3) Blend using edge strength from the low-blur image (row-block buffering => safe in-place write)
+        // 2. Precompute Blending LUT (Integer Math)
+        // Max gradient is 255+255 = 510. Size 512 for safety.
+        uint8_t alpha_lut[512];
         const float invT = (edge_thresh > 1e-6f) ? (1.0f / edge_thresh) : 0.0f;
 
-#pragma omp parallel for collapse(3) schedule(static) default(none) shared(img, high, s, d, h, w, invT, block_h)
+        for (int i = 0; i < 512; ++i)
+        {
+            float grad = (float)i;
+            // Calculate t = clamp(grad / threshold)
+            float t = (invT > 0.0f) ? std::min(grad * invT, 1.0f) : 1.0f;
+
+            // Smoothstep: a = t*t*(3 - 2*t)
+            // a=1 means "High Gradient" -> Use Low Blur (preserve edge)
+            // a=0 means "Low Gradient"  -> Use High Blur (flatten noise)
+            float a = t * t * (3.0f - 2.0f * t);
+
+            // Store as 0..255 integer
+            alpha_lut[i] = static_cast<uint8_t>(a * 255.0f + 0.5f);
+        }
+
+        // 3. Parallel Blend
+        // We read from 'img' (Low) and 'high' (High), calculate gradient on 'img',
+        // and write result into 'high' (reusing memory).
+#pragma omp parallel for collapse(3)
         for (int c = 0; c < s; ++c)
         {
             for (int z = 0; z < d; ++z)
             {
-                for (int y0 = 0; y0 < h; y0 += block_h)
+                for (int y = 0; y < h; ++y)
                 {
-                    const int y1 = std::min(y0 + block_h, h);
-                    const int halo_h = (y1 - y0) + 2; // +2 for y-1 and y+1 (r=1)
-                    std::vector<uint> lowbuf((size_t)halo_h * w);
+                    // Pointers for fast access
+                    // Low blur (Source for edges & color)
+                    const uint* row_low = img.data(0, y, z, c);
+                    const uint* row_low_prev = (y > 0) ? img.data(0, y - 1, z, c) : row_low;
+                    const uint* row_low_next = (y < h - 1) ? img.data(0, y + 1, z, c) : row_low;
 
-                    uint* low_base = img.data(0, 0, z, c);
-                    const uint* hi_base = high.data(0, 0, z, c);
+                    // High blur (Source for color & Destination for result)
+                    uint* row_dest = high.data(0, y, z, c);
 
-                    // Copy low-blur block + halo rows into thread-local buffer (replicate boundary)
-                    for (int yy = 0; yy < halo_h; ++yy)
+                    // 3a. Handle Left Edge (x=0)
                     {
-                        const int ys = utils::clampi(y0 + yy - 1, 0, h - 1);
-                        const uint* src = low_base + (size_t)ys * w;
-                        uint* dst = lowbuf.data() + (size_t)yy * w;
-                        std::copy(src, src + w, dst);
+                        int x = 0;
+                        int val_l = row_low[x];
+                        int val_r = (w > 1) ? row_low[x + 1] : val_l;
+
+                        // Simple Gradient (Forward difference at edge)
+                        int dx = std::abs(val_r - val_l);
+                        int dy = std::abs((int)row_low_next[x] - (int)row_low_prev[x]);
+
+                        int grad = std::min(dx + dy, 511);
+
+                        uint alpha = alpha_lut[grad];
+                        uint low_val = row_low[x];
+                        uint high_val = row_dest[x]; // Current value in 'high' image
+
+                        // Blend: (alpha * Low + (255-alpha) * High) / 255
+                        // Fast approx: >> 8
+                        row_dest[x] = (alpha * low_val + (255 - alpha) * high_val) >> 8;
                     }
 
-                    // Blend and write back into img
-                    for (int y = y0; y < y1; ++y)
+                    // 3b. Fast Center Loop (No boundary checks)
+                    // Uses pointers directly, SIMD-friendly
+                    for (int x = 1; x < w - 1; ++x)
                     {
-                        const int by = (y - y0) + 1; // offset into lowbuf (accounts for halo)
-                        const uint* r_up = lowbuf.data() + (size_t)(by - 1) * w;
-                        const uint* r_mid = lowbuf.data() + (size_t)(by)*w;
-                        const uint* r_down = lowbuf.data() + (size_t)(by + 1) * w;
+                        // Gradient on Low Blur image
+                        // dx = abs(right - left), dy = abs(down - up)
+                        int dx = std::abs((int)row_low[x + 1] - (int)row_low[x - 1]);
+                        int dy = std::abs((int)row_low_next[x] - (int)row_low_prev[x]);
 
-                        uint* out = low_base + (size_t)y * w;
-                        const uint* hi = hi_base + (size_t)y * w;
+                        // Clamp to LUT size
+                        int grad = std::min(dx + dy, 511);
 
-                        // x = 0 (replicate left)
-                        {
-                            const int dx = (int)r_mid[1] - (int)r_mid[0];
-                            const int dy = (int)r_down[0] - (int)r_up[0];
-                            auto grad = (float)(std::abs(dx) + std::abs(dy)); // fast L1 magnitude
+                        uint alpha = alpha_lut[grad];
+                        uint low_val = row_low[x];
+                        uint high_val = row_dest[x];
 
-                            float t = invT > 0.0f ? utils::clampf(grad * invT, 0.0f, 1.0f) : 1.0f;
-                            // smoothstep for stable blending
-                            float a = t * t * (3.0f - 2.0f * t); // a=1 -> prefer low (edges), a=0 -> prefer high (flats)
+                        // Integer Blend
+                        row_dest[x] = (alpha * low_val + (255 - alpha) * high_val) >> 8;
+                    }
 
-                            auto lv = (float)r_mid[0];
-                            auto hv = (float)hi[0];
-                            out[0] = utils::clamp_float_to_u8(a * lv + (1.0f - a) * hv);
-                        }
+                    // 3c. Handle Right Edge (x=w-1)
+                    if (w > 1)
+                    {
+                        int x = w - 1;
+                        int val_l = row_low[x - 1];
+                        int val_r = row_low[x];
 
-                        // center
-                        for (int x = 1; x < w - 1; ++x)
-                        {
-                            const int dx = (int)r_mid[x + 1] - (int)r_mid[x - 1];
-                            const int dy = (int)r_down[x] - (int)r_up[x];
-                            auto grad = (float)(std::abs(dx) + std::abs(dy));
+                        int dx = std::abs(val_r - val_l);
+                        int dy = std::abs((int)row_low_next[x] - (int)row_low_prev[x]);
 
-                            float t = invT > 0.0f ? utils::clampf(grad * invT, 0.0f, 1.0f) : 1.0f;
-                            float a = t * t * (3.0f - 2.0f * t);
+                        int grad = std::min(dx + dy, 511);
 
-                            auto lv = (float)r_mid[x];
-                            auto hv = (float)hi[x];
-                            out[x] = utils::clamp_float_to_u8(a * lv + (1.0f - a) * hv);
-                        }
+                        uint alpha = alpha_lut[grad];
+                        uint low_val = row_low[x];
+                        uint high_val = row_dest[x];
 
-                        // x = w-1 (replicate right)
-                        {
-                            const int xm1 = w - 2;
-                            const int x = w - 1;
-                            const int dx = (int)r_mid[x] - (int)r_mid[xm1];
-                            const int dy = (int)r_down[x] - (int)r_up[x];
-                            auto grad = (float)(std::abs(dx) + std::abs(dy));
-
-                            float t = invT > 0.0f ? utils::clampf(grad * invT, 0.0f, 1.0f) : 1.0f;
-                            float a = t * t * (3.0f - 2.0f * t);
-
-                            auto lv = (float)r_mid[x];
-                            auto hv = (float)hi[x];
-                            out[x] = utils::clamp_float_to_u8(a * lv + (1.0f - a) * hv);
-                        }
+                        row_dest[x] = (alpha * low_val + (255 - alpha) * high_val) >> 8;
                     }
                 }
             }
         }
+
+        // 4. Output Swap
+        // The result is currently in 'high'. We want it in 'img'.
+        img.swap(high);
     }
 
     // ===================== Noise / edge estimators (parallel + histogram based) =====================
@@ -327,9 +329,9 @@ namespace ite::filters
         }
     }
 
-    uint median9(uint p0, uint p1, uint p2, uint p3, uint p4, uint p5, uint p6, uint p7, uint p8)
+    // Fast 3x3 Median (Network Sort) - operates on local copies
+    static inline uint fast_median_3x3(uint p0, uint p1, uint p2, uint p3, uint p4, uint p5, uint p6, uint p7, uint p8)
     {
-        // Proven correct "opt_med9" style network
         pix_sort(p1, p2);
         pix_sort(p4, p5);
         pix_sort(p7, p8);
@@ -352,58 +354,37 @@ namespace ite::filters
         return p4; // median
     }
 
-    // ---------- Histogram helpers for adaptive median ----------
-    static inline void hist_add(std::array<uint16_t, 256> &hist, std::array<uint8_t, 256> &touched, int &ntouched, uint v)
+    static inline void get_min_med_max_from_hist(const uint16_t* hist, int total, uint &zmin, uint &zmed, uint &zmax)
     {
-        const uint8_t b = (uint8_t)v;
-        if (hist[b]++ == 0)
-            touched[ntouched++] = b;
-    }
-
-    static inline void hist_reset(std::array<uint16_t, 256> &hist, const std::array<uint8_t, 256> &touched, int ntouched)
-    {
-        for (int i = 0; i < ntouched; ++i)
-            hist[touched[i]] = 0;
-    }
-
-    static inline void hist_min_med_max(const std::array<uint16_t, 256> &hist, int total, uint &zmin, uint &zmed, uint &zmax)
-    {
-        // min
+        // Find min
         int i = 0;
         while (i < 256 && hist[i] == 0)
             ++i;
-        zmin = (i < 256) ? (uint)i : 0u;
+        zmin = i;
 
-        // max
+        // Find max
         int j = 255;
         while (j >= 0 && hist[j] == 0)
             --j;
-        zmax = (j >= 0) ? (uint)j : 255u;
+        zmax = j;
 
-        // median
-        const int target = (total + 1) / 2;
+        // Find median
+        int target = (total + 1) / 2;
         int cum = 0;
-        for (int k = 0; k < 256; ++k)
+        for (int k = i; k <= j; ++k)
         {
-            cum += (int)hist[k];
+            cum += hist[k];
             if (cum >= target)
             {
-                zmed = (uint)k;
+                zmed = k;
                 return;
             }
         }
         zmed = zmax;
     }
 
-    /**
-     * Adaptive Median Filter (AMF), in-place, OpenMP, space-efficient.
-     * - Starts with 3x3. If pixel looks like impulse noise, expands window up to max_window_size (odd).
-     * - Great for scan speckle / salt-and-pepper while preserving text edges (often leaves non-impulse pixels unchanged).
-     *
-     * Params:
-     *   max_window_size: odd >=3 (typical 5/7/9)
-     *   block_h: row-block height for cache + in-place safety
-     */
+    // ===================== Adaptive Median Filter =====================
+
     void adaptive_median_filter(CImg<uint> &img, int max_window_size, int block_h)
     {
         if (img.is_empty())
@@ -413,143 +394,152 @@ namespace ite::filters
         const int h = img.height();
         const int d = img.depth();
         const int s = img.spectrum();
+
         if (w < 2 || h < 2)
             return;
 
+        // Validate window size
         if (max_window_size < 3)
             max_window_size = 3;
         if ((max_window_size & 1) == 0)
-            ++max_window_size;
-        const int max_r = (max_window_size - 1) / 2;
+            ++max_window_size; // Ensure odd
 
+        const int max_r = (max_window_size - 1) / 2;
         if (block_h < 8)
             block_h = 8;
 
-#pragma omp parallel for collapse(3) schedule(static)
+#pragma omp parallel for collapse(2) schedule(static)
         for (int c = 0; c < s; ++c)
         {
             for (int z = 0; z < d; ++z)
             {
+                // -- Per-Thread Allocations (Hoisted) --
+                // Buffer to hold image strip + halo
+                std::vector<uint> buffer_vec;
+                // Reusable histogram (zero-init)
+                uint16_t hist[256];
+
                 for (int y0 = 0; y0 < h; y0 += block_h)
                 {
-
                     const int y1 = std::min(y0 + block_h, h);
                     const int halo_h = (y1 - y0) + 2 * max_r;
 
-                    // Copy block + halo rows into thread-local buffer (replicate boundary).
-                    std::vector<uint> src((size_t)halo_h * w);
-                    uint* base = img.data(0, 0, z, c);
+                    // Resize buffer only if strictly necessary (re-uses capacity)
+                    if (buffer_vec.size() < (size_t)halo_h * w)
+                    {
+                        buffer_vec.resize((size_t)halo_h * w);
+                    }
+                    uint* src_buf = buffer_vec.data();
+
+                    // Copy Block + Halo
+                    uint* base_img = img.data(0, 0, z, c);
                     for (int yy = 0; yy < halo_h; ++yy)
                     {
-                        const int ys = utils::clampi(y0 + yy - max_r, 0, h - 1);
-                        const uint* row_src = base + (size_t)ys * w;
-                        uint* row_dst = src.data() + (size_t)yy * w;
-                        std::copy(row_src, row_src + w, row_dst);
+                        const int img_y = utils::clampi(y0 + yy - max_r, 0, h - 1);
+                        const uint* src_row_ptr = base_img + (size_t)img_y * w;
+                        std::copy_n(src_row_ptr, w, src_buf + (size_t)yy * w);
                     }
 
-                    // Per-thread reusable histogram state (no per-pixel allocations).
-                    std::array<uint16_t, 256> hist{};
-                    std::array<uint8_t, 256> touched{};
-
-                    // Process rows in block; write back into original image.
+                    // Process Pixels
                     for (int y = y0; y < y1; ++y)
                     {
-                        const int by = (y - y0) + max_r; // center row index in src buffer
-                        uint* out = base + (size_t)y * w;
+                        const int by = (y - y0) + max_r; // Buffer Y index
+                        uint* out_ptr = base_img + (size_t)y * w;
 
-                        const uint* r_m1 = src.data() + (size_t)(by - 1) * w;
-                        const uint* r_0 = src.data() + (size_t)(by)*w;
-                        const uint* r_p1 = src.data() + (size_t)(by + 1) * w;
+                        // Pre-calculate row pointers for 3x3 (most common case)
+                        const uint* r_m1 = src_buf + (size_t)(by - 1) * w;
+                        const uint* r_0 = src_buf + (size_t)(by)*w;
+                        const uint* r_p1 = src_buf + (size_t)(by + 1) * w;
 
                         for (int x = 0; x < w; ++x)
                         {
-                            const int xm1 = (x == 0) ? 0 : x - 1;
-                            const int xp1 = (x == w - 1) ? (w - 1) : x + 1;
+                            // 1. Fast Path: 3x3 Window
+                            const int xm1 = (x > 0) ? x - 1 : 0;
+                            const int xp1 = (x < w - 1) ? x + 1 : w - 1;
 
-                            const uint zxy = r_0[x];
-
-                            // Stage with 3x3 using very fast ops
                             uint p0 = r_m1[xm1], p1 = r_m1[x], p2 = r_m1[xp1];
                             uint p3 = r_0[xm1], p4 = r_0[x], p5 = r_0[xp1];
                             uint p6 = r_p1[xm1], p7 = r_p1[x], p8 = r_p1[xp1];
 
-                            uint zmed = median9(p0, p1, p2, p3, p4, p5, p6, p7, p8);
-                            uint zmin = p0, zmax = p0;
-                            // min/max of 9 (cheap)
-                            uint arr9[9] = {p0, p1, p2, p3, p4, p5, p6, p7, p8};
-                            for (int i = 1; i < 9; ++i)
-                            {
-                                zmin = std::min(zmin, arr9[i]);
-                                zmax = std::max(zmax, arr9[i]);
-                            }
+                            uint zmed = fast_median_3x3(p0, p1, p2, p3, p4, p5, p6, p7, p8);
 
-                            // AMF Stage A / B decision at r=1
+                            // Fast Min/Max (Compiler vectorizes std::min/max with initializer lists)
+                            uint zmin = std::min({p0, p1, p2, p3, p4, p5, p6, p7, p8});
+                            uint zmax = std::max({p0, p1, p2, p3, p4, p5, p6, p7, p8});
+
+                            uint zxy = r_0[x];
+
+                            // Level A Check (Is median reliable?)
                             if (zmed > zmin && zmed < zmax)
                             {
-                                // Stage B
-                                out[x] = (zxy > zmin && zxy < zmax) ? zxy : zmed;
+                                // Level B Check (Is current pixel an impulse?)
+                                out_ptr[x] = (zxy > zmin && zxy < zmax) ? zxy : zmed;
                                 continue;
                             }
 
-                            // Need to expand: initialize histogram with 3x3 (already loaded)
-                            int ntouched = 0;
-                            hist_add(hist, touched, ntouched, p0);
-                            hist_add(hist, touched, ntouched, p1);
-                            hist_add(hist, touched, ntouched, p2);
-                            hist_add(hist, touched, ntouched, p3);
-                            hist_add(hist, touched, ntouched, p4);
-                            hist_add(hist, touched, ntouched, p5);
-                            hist_add(hist, touched, ntouched, p6);
-                            hist_add(hist, touched, ntouched, p7);
-                            hist_add(hist, touched, ntouched, p8);
+                            // 2. Slow Path: Expansion (Histogram)
+                            // We only enter here if 3x3 failed (very noisy area)
+
+                            // Clear histogram (fast memset)
+                            std::fill(std::begin(hist), std::end(hist), 0);
+
+                            // Load initial 3x3 into histogram
+                            hist[p0]++;
+                            hist[p1]++;
+                            hist[p2]++;
+                            hist[p3]++;
+                            hist[p4]++;
+                            hist[p5]++;
+                            hist[p6]++;
+                            hist[p7]++;
+                            hist[p8]++;
 
                             int total = 9;
-                            uint outv = zmed;
+                            uint out_val = zmed; // Default fallback
 
-                            // Expand window: r = 2..max_r
+                            // Expand radius r from 2 to max_r
                             for (int r = 2; r <= max_r; ++r)
                             {
-                                // Add ring pixels (8r pixels) with replicate boundary in x, halo already in y.
-                                const int xl = utils::clampi(x - r, 0, w - 1);
-                                const int xr = utils::clampi(x + r, 0, w - 1);
+                                // Add Ring pixels
+                                int xl = utils::clampi(x - r, 0, w - 1);
+                                int xr = utils::clampi(x + r, 0, w - 1);
+                                int yt = by - r; // Buffer indices, no clamp needed as buffer has halos
+                                int yb = by + r;
 
-                                // Vertical sides for dy in [-r..r]
-                                for (int dy = -r; dy <= r; ++dy)
+                                // Top & Bottom rows of the ring
+                                const uint* row_t = src_buf + (size_t)yt * w;
+                                const uint* row_b = src_buf + (size_t)yb * w;
+
+                                for (int k = -r + 1; k <= r - 1; ++k)
                                 {
-                                    const uint* row = src.data() + (size_t)(by + dy) * w;
-                                    hist_add(hist, touched, ntouched, row[xl]);
-                                    hist_add(hist, touched, ntouched, row[xr]);
+                                    int xk = utils::clampi(x + k, 0, w - 1);
+                                    hist[row_t[xk]]++;
+                                    hist[row_b[xk]]++;
                                 }
-                                // Top & bottom (excluding corners) for dx in [-(r-1)..(r-1)]
-                                const uint* rowt = src.data() + (size_t)(by - r) * w;
-                                const uint* rowb = src.data() + (size_t)(by + r) * w;
-                                for (int dx = -(r - 1); dx <= (r - 1); ++dx)
+
+                                // Left & Right columns of the ring (including corners)
+                                for (int k = -r; k <= r; ++k)
                                 {
-                                    const int xx = utils::clampi(x + dx, 0, w - 1);
-                                    hist_add(hist, touched, ntouched, rowt[xx]);
-                                    hist_add(hist, touched, ntouched, rowb[xx]);
+                                    const uint* row = src_buf + (size_t)(by + k) * w;
+                                    hist[row[xl]]++;
+                                    hist[row[xr]]++;
                                 }
 
                                 total = (2 * r + 1) * (2 * r + 1);
-                                hist_min_med_max(hist, total, zmin, zmed, zmax);
+                                get_min_med_max_from_hist(hist, total, zmin, zmed, zmax);
 
                                 if (zmed > zmin && zmed < zmax)
                                 {
-                                    outv = (zxy > zmin && zxy < zmax) ? zxy : zmed;
+                                    out_val = (zxy > zmin && zxy < zmax) ? zxy : zmed;
                                     break;
                                 }
-                                outv = zmed; // if we hit max_r, this is what we'd output
                             }
 
-                            out[x] = outv;
-                            hist_reset(hist, touched, ntouched);
+                            out_ptr[x] = out_val;
                         }
                     }
                 }
             }
         }
     }
-
-    // ===================== END Median blur =====================
-
 } // namespace ite::filters
