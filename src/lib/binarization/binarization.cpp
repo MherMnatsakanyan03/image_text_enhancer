@@ -3,12 +3,12 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
+#include <vector>
 #include "../core/integral_image.h"
 
 
 namespace ite::binarization
 {
-
     void binarize_sauvola(CImg<uint> &input_image, const int window_size, const float k, const float delta)
     {
         if (input_image.spectrum() != 1)
@@ -16,48 +16,71 @@ namespace ite::binarization
             throw std::runtime_error("Sauvola requires a grayscale image.");
         }
 
-        CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
+        const int w = input_image.width();
+        const int h = input_image.height();
+        const int d = input_image.depth();
 
-        CImg<double> integral_img = core::calculate_integral_image(img_double);
-        CImg<double> integral_sq_img = core::calculate_integral_image(img_double.get_sqr()); // Integral of (pixel*pixel)
-
-        CImg<uint> output_image(input_image.width(), input_image.height(), input_image.depth(), 1);
-        const float R = 128.0f; // Max std. dev (for normalization)
+        const float R = 128.0f;
         const int w_half = window_size / 2;
+        const int stride = w + 1;
 
-#pragma omp parallel for collapse(2)
-        for (int z = 0; z < input_image.depth(); ++z)
+        // Buffers for Integral Images (Reused across Z slices)
+        // This avoids allocating 3 full CImg objects per slice.
+        std::vector<double> integral_img;
+        std::vector<double> integral_img_sqr;
+
+        CImg<uint> output_image(w, h, d, 1);
+
+        // Process each depth slice independently
+        for (int z = 0; z < d; ++z)
         {
-            for (int y = 0; y < input_image.height(); ++y)
+            // 1. Build Integral Images (Fused & Parallel)
+            core::compute_fused_integrals(input_image, z, integral_img, integral_img_sqr);
+
+            // 2. Apply Sauvola (Parallel)
+#pragma omp parallel for collapse(2)
+            for (int y = 0; y < h; ++y)
             {
-                for (int x = 0; x < input_image.width(); ++x)
+                for (int x = 0; x < w; ++x)
                 {
-                    // Define the local window (clamp to edges)
+                    // Window coordinates (clamped to image 0..w-1)
+                    // Padded Integral Image logic handles -1 implicitly via 0-row/col
                     const int x1 = std::max(0, x - w_half);
                     const int y1 = std::max(0, y - w_half);
-                    const int x2 = std::min(input_image.width() - 1, x + w_half);
-                    const int y2 = std::min(input_image.height() - 1, y + w_half);
+                    const int x2 = std::min(w - 1, x + w_half);
+                    const int y2 = std::min(h - 1, y + w_half);
 
-                    const double N = (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
+                    // Integral Image Coordinates (Padded: +1)
+                    // D(x2, y2) - B(x1-1, y2) - C(x2, y1-1) + A(x1-1, y1-1)
+                    // Since x1/y1 are inclusive, "left/top" is x1, so we access index x1 (which corresponds to x1-1 in 0-based unpadded logic)
+                    // Wait:
+                    // Padded Index i maps to Image Pixel i-1.
+                    // Sum(0..i) is stored at index i+1.
+                    // Sum(x1..x2) = Sum(0..x2) - Sum(0..x1-1).
+                    // In padded array: Data[x2+1] - Data[x1].
 
-                    // Get sum and sum of squares from integral images
-                    const double sum = core::get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
-                    const double sum_sq = core::get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
+                    const int idx_D = (y2 + 1) * stride + (x2 + 1);
+                    const int idx_B = (y2 + 1) * stride + x1;
+                    const int idx_C = y1 * stride + (x2 + 1);
+                    const int idx_A = y1 * stride + x1;
 
-                    // Calculate local mean and std. deviation
+                    const double sum = integral_img[idx_D] - integral_img[idx_B] - integral_img[idx_C] + integral_img[idx_A];
+                    const double sum_sq = integral_img_sqr[idx_D] - integral_img_sqr[idx_B] - integral_img_sqr[idx_C] + integral_img_sqr[idx_A];
+
+                    const double N = (double)((x2 - x1 + 1) * (y2 - y1 + 1));
+
                     const double mean = sum / N;
-                    const double std_dev = std::sqrt(std::max(0.0, (sum_sq / N) - (mean * mean)));
+                    const double var = (sum_sq / N) - (mean * mean);
+                    const double std_dev = std::sqrt(std::max(0.0, var));
 
-                    // Calculate Sauvola's threshold
                     const double threshold = mean * (1.0 + k * ((std_dev / R) - 1.0)) - delta;
 
-                    // Apply threshold
-                    output_image(x, y, z) = (input_image(x, y, z) > threshold) * 255;
+                    output_image(x, y, z) = (input_image(x, y, z) > threshold) ? 255 : 0;
                 }
             }
         }
 
-        input_image = output_image;
+        input_image.swap(output_image);
     }
 
     int compute_otsu_threshold(const CImg<unsigned char> &g)
@@ -185,252 +208,182 @@ namespace ite::binarization
      */
     void binarize_bataineh(CImg<uint> &input_image)
     {
-        /*
-        Calculates adaptive binarization while using adaptive window sizes to improve
-        results, as described in Bataineh et al., "An adaptive local binarization
-        method for document images based on a novel thresholding method and dynamic
-        windows", 2011.
-
-        Calculation of adaptive binarization consists of two main parts:
-        1. Calculation of max and min std. deviation of the adaptive window sizes to
-        determine adaptive binarization thresholds.
-        2. Binarization using global max and min std. deviation for each pixel's
-        adaptive window.
-
-        Calculation of adaptive window sizes is based on image characteristics and
-        consists of 5 steps:
-        1. Compute Confusion Threshold T_con
-        2. Classify pixels based on T_con and calculation of probabilities p
-        3. Determine primary window size pw_size based on probability p
-        4. Set final window size W_size based on pw_size and image dimensions
-        5. Use W_size for adaptive binarization
-        Steps 4 and 5 are integrated in the binarization process below.
-
-        Adaptiv window size 1-3 is calculated once per image at the beginning.
-        Steps 4-5 are calculated for each pixel during second step of the adaptive binarization.
-        */
         if (input_image.spectrum() != 1)
-        {
             throw std::runtime_error("Adaptive Binarization requires a grayscale image.");
-        }
 
-        CImg<double> img_double = input_image; // Convert CImg<uint> to CImg<double>
-        CImg<double> integral_img = core::calculate_integral_image(input_image);
-        CImg<double> integral_sq_img = core::calculate_integral_image(input_image.get_sqr()); // Integral of (pixel*pixel)
+        const int w = input_image.width();
+        const int h = input_image.height();
 
-        // set usefull constants
-        const double mean_global = img_double.mean();
-        const int img_width = img_double.width();
-        const int img_height = img_double.height();
-        const int img_depth = img_double.depth();
+        // 1. Build Standard Integral Images using
+        std::vector<double> integral_img;
+        std::vector<double> integral_img_sqr;
+        core::compute_fused_integrals(input_image, 0, integral_img, integral_img_sqr);
 
-        // ============================================================================
-        // adaptive window size steps 1-3
-        // ============================================================================
+        // Calculate global stats (using integral image for the whole area 0,0 to w-1,h-1)
+        double total_sum = core::get_sum_padded(integral_img, w, 0, 0, w - 1, h - 1);
+        double total_sq = core::get_sum_padded(integral_img_sqr, w, 0, 0, w - 1, h - 1);
+        double N_total = (double)(w * h);
 
-        // First step: compute Confusion Threshold T_con
-        const double std_dev = std::sqrt(img_double.variance());
-        const double max_intensity = img_double.max();
-        const double T_con = mean_global - ((mean_global * mean_global * std_dev) / ((mean_global + std_dev) * (0.5 * max_intensity + std_dev)));
-        const double offset = std_dev / 2.0;
+        const double mean_global = total_sum / N_total;
+        const double var_global = (total_sq / N_total) - (mean_global * mean_global);
+        const double std_dev_global = std::sqrt(std::max(0.0, var_global));
 
-        // Second step: classify pixels based on T_con and calculation of
-        // probabilities p
-        long n_black = 0;
-        long n_red = 0;
-        long n_white = 0;
-        cimg_forXYZ(img_double, x, y, z)
+        // Find max intensity
+        uint max_val_int = 0;
+#pragma omp parallel for reduction(max : max_val_int)
+        for (size_t i = 0; i < input_image.size(); ++i)
         {
-            double pixel_value = img_double(x, y, z);
-            if (pixel_value <= T_con - offset)
-            {
-                n_black++;
-            }
-            else if (pixel_value >= T_con + offset)
-            {
-                n_white++;
-            }
-            else
-            {
-                n_red++;
-            }
+            if (input_image[i] > max_val_int)
+                max_val_int = input_image[i];
         }
+        const double max_intensity = (double)max_val_int;
 
-        double p = (n_red == 0) ? 10.0 : (double)n_black / n_red;
+        // 2. Compute Confusion Threshold T_con
+        const double T_con =
+            mean_global - ((mean_global * mean_global * std_dev_global) / ((mean_global + std_dev_global) * (0.5 * max_intensity + std_dev_global)));
+        const double offset = std_dev_global / 2.0;
 
-        // Third step: determine primary window size pw_size based on probability p
-        // pw_size = [pw_size_x, pw_size_y]
-        int pw_size[2];
-        if (p >= 2.5 || (std_dev < 0.1 * max_intensity)) // large text size, low contact images
+        // 3. Classify Pixels & Build Count Integral Images
+        // Create masks: 1.0 where condition is true, 0.0 otherwise
+        CImg<double> mask_black(w, h, 1, 1, 0);
+        CImg<double> mask_red(w, h, 1, 1, 0);
+
+        long n_black_total = 0;
+        long n_red_total = 0;
+
+#pragma omp parallel for reduction(+ : n_black_total, n_red_total)
+        for (int i = 0; i < w * h; ++i)
         {
-            pw_size[0] = img_width / 6; // 6
-            pw_size[1] = img_height / 4; // 4
+            double val = (double)input_image[i];
+            if (val <= T_con - offset)
+            {
+                mask_black[i] = 1.0;
+                n_black_total++;
+            }
+            else if (val < T_con + offset)
+            {
+                mask_red[i] = 1.0;
+                n_red_total++;
+            }
         }
-        else if (1 < p || (img_width + img_height) < 400)
-        { // fine and normal images
-            pw_size[0] = img_width / 30; // 30
-            pw_size[1] = img_height / 20; // 20
+
+        // Create Integral Images for the Counts
+        CImg<double> integral_img_black = core::calculate_integral_image(mask_black);
+        CImg<double> integral_img_red = core::calculate_integral_image(mask_red);
+
+        // 4. Determine Primary Window Size (pw_size)
+        double p = (n_red_total == 0) ? 10.0 : (double)n_black_total / n_red_total;
+
+        int pw_size_x, pw_size_y;
+        if (p >= 2.5 || (std_dev_global < 0.1 * max_intensity))
+        {
+            pw_size_x = w / 6;
+            pw_size_y = h / 4;
+        }
+        else if (1 < p || (w + h) < 400)
+        {
+            pw_size_x = w / 30;
+            pw_size_y = h / 20;
         }
         else
-        { // very fine text size, high contact images
-            pw_size[0] = img_width / 40; // 40
-            pw_size[1] = img_height / 30; // 30
+        {
+            pw_size_x = w / 40;
+            pw_size_y = h / 30;
         }
 
-        // check if window sizes are odd numbers, if not make them odd
-        if (pw_size[0] % 2 == 0)
+        if (pw_size_x % 2 == 0)
+            pw_size_x++;
+        if (pw_size_y % 2 == 0)
+            pw_size_y++;
+
+        const int pw_x_half = pw_size_x / 2;
+        const int pw_y_half = pw_size_y / 2;
+
+        // 5. Calculate global Min/Max local Std Dev
+        // We use the primary window size
+        double min_std_dev = 255.0;
+        double max_std_dev = 0.0;
+
+#pragma omp parallel for collapse(2) reduction(min : min_std_dev) reduction(max : max_std_dev)
+        for (int y = 0; y < h; ++y)
         {
-            pw_size[0]++;
-        }
-        if (pw_size[1] % 2 == 0)
-        {
-            pw_size[1]++;
-        }
-
-        // usefull constants for later
-        const int pw_x_half = pw_size[0] / 2;
-        const int pw_y_half = pw_size[1] / 2;
-
-        // ============================================================================
-        // End adaptive window size steps 1-3
-        // ============================================================================
-
-        CImg<uint> output_image(img_width, img_height, img_depth, 1);
-        double min_std_dev = 255.0; // initialize to max possible value -> can only go down
-        double max_std_dev = 0.0; // initialize to min possible value -> can only go up
-
-        // ============================================================================
-        // adaptive binarization
-        // ============================================================================
-
-        // 1. Calculate local std. deviation for each window and determine global min and max std. deviation
-#pragma omp parallel for collapse(3) reduction(min : min_std_dev) reduction(max : max_std_dev)
-        for (int z = 0; z < img_depth; ++z)
-        {
-            for (int y = 0; y < img_height; ++y)
+            for (int x = 0; x < w; ++x)
             {
-                for (int x = 0; x < img_width; ++x)
-                {
-                    // use primary window size pw_size for each pixel in step 1
-                    // Define the local window (clamp to edges)
-                    const int x1 = std::max(0, x - pw_x_half);
-                    const int y1 = std::max(0, y - pw_y_half);
-                    const int x2 = std::min(img_width - 1, x + pw_x_half);
-                    const int y2 = std::min(img_height - 1, y + pw_y_half);
+                const int x1 = std::max(0, x - pw_x_half);
+                const int y1 = std::max(0, y - pw_y_half);
+                const int x2 = std::min(w - 1, x + pw_x_half);
+                const int y2 = std::min(h - 1, y + pw_y_half);
 
-                    // Get sum and sum of squares from integral images
-                    double sum = core::get_area_sum(integral_img, x1, y1, z, 0, x2, y2);
-                    double sum_sq = core::get_area_sum(integral_sq_img, x1, y1, z, 0, x2, y2);
+                double N = (double)((x2 - x1 + 1) * (y2 - y1 + 1));
+                double s = core::get_sum_padded(integral_img, w, x1, y1, x2, y2);
+                double sq = core::get_sum_padded(integral_img_sqr, w, x1, y1, x2, y2);
 
-                    const double N = (x2 - x1 + 1) * (y2 - y1 + 1); // Number of pixels in window
+                double m = s / N;
+                double v = (sq / N) - (m * m);
+                double sd = std::sqrt(std::max(0.0, v));
 
-                    // Calculate local mean and std. deviation
-                    const double mean = sum / N;
-                    const double std_dev = std::sqrt(std::max(0.0, (sum_sq / N) - (mean * mean)));
-
-                    // set min and max global std deviation for normalization
-                    if (std_dev < min_std_dev)
-                    {
-                        min_std_dev = std_dev;
-                    }
-                    if (std_dev > max_std_dev)
-                    {
-                        max_std_dev = std_dev;
-                    }
-                }
+                if (sd < min_std_dev)
+                    min_std_dev = sd;
+                if (sd > max_std_dev)
+                    max_std_dev = sd;
             }
         }
 
-        // calculate range once and set a small epsilon to avoid division by zero
         const double std_dev_range = (max_std_dev - min_std_dev) > 1e-5 ? (max_std_dev - min_std_dev) : 1e-5;
+        CImg<uint> output_image(w, h, 1, 1);
 
-        // 2. Binarize using local std. deviation
-#pragma omp parallel for collapse(3)
-        for (int z = 0; z < img_depth; ++z)
+// 6. Final Binarization Pass
+#pragma omp parallel for collapse(2)
+        for (int y = 0; y < h; ++y)
         {
-            for (int y = 0; y < img_height; ++y)
+            for (int x = 0; x < w; ++x)
             {
-                for (int x = 0; x < img_width; ++x)
-                {
-                    // Define the local window (clamp to edges)
-                    const int x1 = std::max(0, x - pw_x_half);
-                    const int y1 = std::max(0, y - pw_y_half);
-                    const int x2 = std::min(img_width - 1, x + pw_x_half);
-                    const int y2 = std::min(img_height - 1, y + pw_y_half);
+                // Primary Window Coords
+                const int x1 = std::max(0, x - pw_x_half);
+                const int y1 = std::max(0, y - pw_y_half);
+                const int x2 = std::min(w - 1, x + pw_x_half);
+                const int y2 = std::min(h - 1, y + pw_y_half);
 
-                    // ============================================================================
-                    // adaptive window size steps 4-5
-                    // ============================================================================
-                    // Fourth step: Set final window size W_size based on pw_size and image dimensions count number of black and red pixels in primary window
-                    long n_w_black = 0;
-                    long n_w_red = 0;
-                    for (int i = y1; i < y2; ++i)
-                    {
-                        for (int j = x1; j < x2; ++j)
-                        {
-                            double w_pixel_value = input_image(j, i, z);
-                            if (w_pixel_value <= T_con - offset)
-                            {
-                                n_w_black++;
-                            }
-                            else if (w_pixel_value < T_con + offset)
-                            {
-                                n_w_red++;
-                            }
-                        }
-                    }
-                    // if more red pixels than black pixels, decrease window size if not use
-                    // normal pw_size
-                    bool use_sub_window = (n_w_red > n_w_black);
-                    int final_w_x_half = use_sub_window ? pw_x_half / 2 : pw_x_half;
-                    int final_w_y_half = use_sub_window ? pw_y_half / 2 : pw_y_half;
+                // OPTIMIZATION: Get counts from Integral Images (O(1))
+                double n_w_black = core::get_area_sum(integral_img_black, x1, y1, 0, 0, x2, y2);
+                double n_w_red = core::get_area_sum(integral_img_red, x1, y1, 0, 0, x2, y2);
 
-                    // Fifth step: redefine the local window with final window size
-                    const int x1_final = std::max(0, x - final_w_x_half);
-                    const int y1_final = std::max(0, y - final_w_y_half);
-                    const int x2_final = std::min(img_width - 1, x + final_w_x_half);
-                    const int y2_final = std::min(img_height - 1, y + final_w_y_half);
+                bool use_sub_window = (n_w_red > n_w_black);
 
-                    // ============================================================================
-                    // end adaptive window size steps 4-5
-                    // ============================================================================
+                int curr_x_half = use_sub_window ? pw_x_half / 2 : pw_x_half;
+                int curr_y_half = use_sub_window ? pw_y_half / 2 : pw_y_half;
 
-                    // Get sum and sum of squares from integral images
-                    double sum = core::get_area_sum(integral_img, x1_final, y1_final, z, 0, x2_final, y2_final);
-                    double sum_sq = core::get_area_sum(integral_sq_img, x1_final, y1_final, z, 0, x2_final, y2_final);
-                    const double N = (x2_final - x1_final + 1) * (y2_final - y1_final + 1); // Number of pixels in window
+                // Final Window Coords
+                const int x1_f = std::max(0, x - curr_x_half);
+                const int y1_f = std::max(0, y - curr_y_half);
+                const int x2_f = std::min(w - 1, x + curr_x_half);
+                const int y2_f = std::min(h - 1, y + curr_y_half);
 
-                    // Calculate local mean and std. deviation
-                    const double mean_window_val = sum / N;
-                    const double std_dev_window_val = std::sqrt(std::max(0.0, (sum_sq / N) - (mean_window_val * mean_window_val)));
+                double N = (double)((x2_f - x1_f + 1) * (y2_f - y1_f + 1));
+                double s = core::get_sum_padded(integral_img, w, x1_f, y1_f, x2_f, y2_f);
+                double sq = core::get_sum_padded(integral_img_sqr, w, x1_f, y1_f, x2_f, y2_f);
 
-                    // not part of Bataineh's method, but needed for fourther adjusting
-                    // threshold
-                    double k = 1.0;
-                    if (std_dev_window_val < 5.0)
-                    {
-                        k = 1.4;
-                    }
-                    else if (std_dev_window_val > 30.0)
-                    {
-                        k = 0.8;
-                    }
+                double mean_w = s / N;
+                double var_w = (sq / N) - (mean_w * mean_w);
+                double std_dev_w = std::sqrt(std::max(0.0, var_w));
 
-                    // Calculate adaptive threshold
-                    double std_dev_adaptive = (std_dev_window_val - min_std_dev) / std_dev_range;
+                double k = 1.0;
+                if (std_dev_w < 5.0)
+                    k = 1.4;
+                else if (std_dev_w > 30.0)
+                    k = 0.8;
 
-                    // define threshold based on adaptive std deviation
-                    const double threshold = mean_window_val -
-                        k *
-                            (((mean_window_val * mean_window_val) - std_dev_window_val) /
-                             ((mean_global + std_dev_window_val) * (std_dev_adaptive + std_dev_window_val)));
+                double std_dev_adaptive = (std_dev_w - min_std_dev) / std_dev_range;
 
-                    // Apply threshold - new image needed because of race conditions in the parallel for loops
-                    output_image(x, y, z) = (img_double(x, y, z) > threshold) * 255;
-                }
+                double term = ((mean_w * mean_w) - std_dev_w) / ((mean_global + std_dev_w) * (std_dev_adaptive + std_dev_w));
+
+                double threshold = mean_w - k * term;
+
+                output_image(x, y) = (input_image(x, y) > threshold) ? 255 : 0;
             }
         }
-        input_image = output_image;
+
+        input_image.swap(output_image);
     }
 
 } // namespace ite::binarization

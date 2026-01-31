@@ -1,4 +1,6 @@
 #include "integral_image.h"
+#include <algorithm>
+#include <vector>
 
 namespace ite::core
 {
@@ -44,4 +46,61 @@ namespace ite::core
         return D - B - C + A;
     }
 
+    void compute_fused_integrals(const CImg<uint> &src, int z, std::vector<double> &S, std::vector<double> &S2)
+    {
+        const int w = src.width();
+        const int h = src.height();
+        const int stride = w + 1;
+
+        // Resize and Zero-init
+        if (S.size() != (size_t)(stride * (h + 1)))
+        {
+            S.assign(stride * (h + 1), 0.0);
+            S2.assign(stride * (h + 1), 0.0);
+        }
+        else
+        {
+            // Technically only need to zero first row/col, but fill is safe/fast
+            std::fill(S.begin(), S.end(), 0.0);
+            std::fill(S2.begin(), S2.end(), 0.0);
+        }
+
+        // Pass 1: Row Accumulation
+        // We use OpenMP here because building the rows is independent
+#pragma omp parallel for
+        for (int y = 0; y < h; ++y)
+        {
+            double row_sum = 0.0;
+            double row_sq_sum = 0.0;
+
+            const uint* row_src = src.data(0, y, z);
+            double* row_S = S.data() + (size_t)(y + 1) * stride;
+            double* row_S2 = S2.data() + (size_t)(y + 1) * stride;
+
+            for (int x = 0; x < w; ++x)
+            {
+                double val = (double)row_src[x];
+                row_sum += val;
+                row_sq_sum += val * val;
+
+                // Write 1-based index
+                row_S[x + 1] = row_sum;
+                row_S2[x + 1] = row_sq_sum;
+            }
+        }
+
+        // Pass 2: Column Accumulation
+        // Dependent on previous row, but columns are independent
+#pragma omp parallel for
+        for (int x = 1; x <= w; ++x)
+        {
+            for (int y = 1; y <= h; ++y)
+            {
+                int curr = y * stride + x;
+                int prev = (y - 1) * stride + x;
+                S[curr] += S[prev];
+                S2[curr] += S2[prev];
+            }
+        }
+    }
 } // namespace ite::core
