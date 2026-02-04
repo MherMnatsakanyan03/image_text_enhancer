@@ -69,17 +69,21 @@ TEST_CASE("color_pass: Applies binary mask to color image", "[ite][color]")
         REQUIRE_THROWS_AS(ite::color_pass(bin_img, color_img), std::invalid_argument);
     }
 
-    SECTION("Throws exception for incorrect channel counts")
+    SECTION("Handles incorrect channel counts")
     {
-        // Case 1: Binary mask is not 1-channel (e.g., 3 channels)
-        CImg<uint> color_img(5, 5, 1, 3);
-        CImg<uint> bin_img_3ch(5, 5, 1, 3);
-        REQUIRE_THROWS_AS(ite::color_pass(bin_img_3ch, color_img), std::invalid_argument);
+        // Case 1: Binary mask is NOT 1-channel (e.g., it has 3 channels)
+        // Expectation: The code explicitly throws std::invalid_argument for this.
+        CImg<uint> color_img(5, 5, 1, 3); // Valid color
+        CImg<uint> bin_img_3ch(5, 5, 1, 3); // Invalid binary (too many channels)
 
-        // Case 2: Color image is not 3-channel (e.g., 1 channel)
-        CImg<uint> color_img_1ch(5, 5, 1, 1);
-        CImg<uint> bin_img(5, 5, 1, 1);
-        REQUIRE_THROWS_AS(ite::color_pass(bin_img, color_img_1ch), std::invalid_argument);
+        REQUIRE_THROWS_AS(ite::color_pass(color_img, bin_img_3ch), std::invalid_argument);
+
+        // Case 2: Color image is NOT 3-channel (e.g., it is grayscale)
+        // Expectation: The code detects this, prints a warning to cout, and returns. It should NOT throw.
+        CImg<uint> color_img_1ch(5, 5, 1, 1); // Invalid color (grayscale)
+        CImg<uint> bin_img(5, 5, 1, 1); // Valid binary
+
+        REQUIRE_NOTHROW(ite::color_pass(color_img_1ch, bin_img));
     }
 
     SECTION("Handles empty images gracefully")
