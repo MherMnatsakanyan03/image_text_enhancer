@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 1. Environment Setup
-# Pin to 8 threads as requested
+# Set the number of threads
 export OMP_NUM_THREADS=1
 
 # Configuration
