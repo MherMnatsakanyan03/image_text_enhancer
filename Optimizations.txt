@@ -129,4 +129,17 @@ Function: binarize_sauvola
   image to `CImg<double>` (twice). Now uses the lightweight fused vector builder.
 - Optimization 2 (Branchless Lookup): Switched to `core::get_sum_padded`, 
   removing 4 boundary checks per pixel.
-- Result: Execution time dropped to ~7ms.
+
+MORPHOLOGY (Dilation & Erosion)
+------------------------------------------------------------------------------
+File: src/morphology/morphology.cpp
+Function: dilation_square, erosion_square
+- Optimization 1 (Separable Filters): Decomposed the expensive 2D square kernel 
+  operation into two sequential 1D passes (Horizontal followed by Vertical). 
+  
+  This initially reduced complexity from O(K^2) to O(2K) per pixel.
+- Optimization 2 (Monotonic Queue): Implemented the "Sliding Window Min/Max" 
+  algorithm using a monotonic queue (deque). This allows computing the min/max 
+  of any window size in amortized O(1) constant time.
+- Result: The operation is now **linear time** O(N) regardless of the kernel size. 
+  A massive 50x50 erosion now runs just as fast as a 3x3 erosion.
