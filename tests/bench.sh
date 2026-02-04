@@ -12,8 +12,8 @@ TRIALS=1000
 WARMUP=10
 
 # Processing Flags
-# Note: -t is CRITICAL here to trigger the internal benchmark mode and table printing
-FLAGS="-t --do-adaptive-gaussian --do-adaptive-median --do-dilation --do-erosion --median-size 15 --do-deskew --sauvola-k 0.4"
+# -t : Enable benchmark table
+FLAGS="-t --do-deskew --do-adaptive-gaussian --do-median --do-adaptive-median --binarization bataineh --do-despeckle --do-dilation --do-erosion --do-color-pass"
 
 # 2. Validation
 if [ ! -f "$PROG" ]; then
