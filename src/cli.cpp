@@ -1,6 +1,13 @@
+#include <cmath>
+#include <filesystem>
 #include <getopt.h>
+#include <iomanip>
 #include <iostream>
+#include <map>
+#include <numeric>
+#include <omp.h>
 #include <string>
+#include <vector>
 #include "ite.h"
 
 // Define IDs for long-only options to keep the switch statement clean
@@ -24,10 +31,12 @@ enum : int
     OPT_ADAPTIVE_MEDIAN_MAX,
     OPT_KERNEL_SIZE,
     OPT_DESPECKLE_THRESH,
+    OPT_BINARIZATION_METHOD,
     OPT_SAUVOLA_WINDOW,
     OPT_SAUVOLA_K,
     OPT_SAUVOLA_DELTA,
-    OPT_TIME,
+    OPT_TRIALS,
+    OPT_WARMUP
 };
 
 static void die_usage(const std::string &msg, int exit_code = 2)
@@ -113,6 +122,7 @@ static void print_help(const char* prog)
               << "      --do-adaptive-median      Apply adaptive median filter (default: " << (d.do_adaptive_median ? "ON" : "OFF") << ")\n\n"
 
               << "BINARIZATION (Sauvola Algorithm):\n"
+              << "      --binarization <name>         Method: otsu, sauvola, bataineh (default: bataineh)\n"
               << "      --sauvola-window <int>    Local window size (default: " << d.sauvola_window_size << ")\n"
               << "      --sauvola-k <float>       Sensitivity parameter k (default: " << d.sauvola_k << ")\n"
               << "      --sauvola-delta <float>   Threshold offset delta (default: " << d.sauvola_delta << ")\n\n"
@@ -126,26 +136,71 @@ static void print_help(const char* prog)
 
               << "OUTPUT OPTIONS:\n"
               << "      --do-color-pass           Re-apply original color to binarized mask (default: " << (d.do_color_pass ? "ON" : "OFF") << ")\n"
-              << "  -t, --time                    Report execution time of enhance function\n"
-              << "  -h, --help                    Show this help\n";
+              << "  -h, --help                    Show this help\n"
+              << "  -v, --verbose                     Enable per-step timing output during execution\n"
+              << "      --trials <int>                Number of trials for benchmark (default: 1)\n"
+              << "      --warmup <int>                Number of warmup runs before benchmark\n";
+}
+
+void print_benchmark_table(const std::map<std::string, std::vector<double>> &aggregated_data, const std::vector<std::string> &step_order, int trials)
+{
+    std::cout << "\n" << std::string(85, '-') << "\n";
+    std::cout << "BENCHMARK RESULTS (" << trials << " trials)\n";
+    std::cout << std::string(85, '-') << "\n";
+    std::cout << std::left << std::setw(30) << "Step" << std::right << std::setw(12) << "Avg (ms)" << std::setw(12) << "Min (ms)" << std::setw(12) << "Max (ms)"
+              << std::setw(12) << "StdDev" << "\n"
+              << std::string(85, '-') << "\n";
+
+    for (const auto &step_name : step_order)
+    {
+        if (aggregated_data.find(step_name) == aggregated_data.end())
+            continue;
+
+        const auto &times = aggregated_data.at(step_name);
+        if (times.empty())
+            continue;
+
+        double sum = std::accumulate(times.begin(), times.end(), 0.0);
+        double mean = sum / times.size();
+
+        double sq_sum = std::inner_product(times.begin(), times.end(), times.begin(), 0.0);
+        double stdev = std::sqrt(std::max(0.0, sq_sum / times.size() - mean * mean));
+
+        double min_v = *std::min_element(times.begin(), times.end());
+        double max_v = *std::max_element(times.begin(), times.end());
+
+        std::cout << std::left << std::setw(30) << step_name << std::right << std::fixed << std::setprecision(3) << std::setw(12) << mean << std::setw(12)
+                  << min_v << std::setw(12) << max_v << std::setw(12) << stdev << "\n";
+    }
+    std::cout << std::string(85, '-') << "\n";
 }
 
 int main(int argc, char* argv[])
 {
+#ifdef _OPENMP
+    std::cout << "_OPENMP defined. Max threads available: " << omp_get_max_threads() << "\n";
+#endif
+
     ite::EnhanceOptions opt;
     std::string input_path, output_path;
     bool measure_time = false;
+    bool verbose_log = false;
+    int trials = 1;
+    int warmup = 0;
 
     // getopt settings:
     // - leading ':' => we handle missing arg as ':' return value
     // - opterr = 0 => we print our own errors
     opterr = 0;
-    auto shortopts = ":i:o:th";
+    auto shortopts = ":i:o:thv";
 
     const option longopts[] = {{"input", required_argument, nullptr, 'i'},
                                {"output", required_argument, nullptr, 'o'},
                                {"help", no_argument, nullptr, 'h'},
                                {"time", no_argument, nullptr, 't'},
+                               {"verbose", no_argument, nullptr, 'v'},
+                               {"trials", required_argument, nullptr, OPT_TRIALS},
+                               {"warmup", required_argument, nullptr, OPT_WARMUP},
 
                                // Toggles
                                {"do-gaussian", no_argument, nullptr, OPT_DO_GAUSSIAN},
@@ -159,6 +214,7 @@ int main(int argc, char* argv[])
                                {"do-color-pass", no_argument, nullptr, OPT_DO_COLOR_PASS},
 
                                // Values
+                               {"binarization", required_argument, nullptr, OPT_BINARIZATION_METHOD},
                                {"sigma", required_argument, nullptr, OPT_SIGMA},
                                {"sigma-low", required_argument, nullptr, OPT_SIGMA_LOW},
                                {"sigma-high", required_argument, nullptr, OPT_SIGMA_HIGH},
@@ -191,7 +247,16 @@ int main(int argc, char* argv[])
         case 't':
             measure_time = true;
             break;
-
+        case 'v':
+            verbose_log = true;
+            break;
+        case OPT_TRIALS:
+            trials = (int)parse_uint(optarg, "--trials");
+            require_positive("--trials", trials);
+            break;
+        case OPT_WARMUP:
+            warmup = (int)parse_uint(optarg, "--warmup");
+            break;
         case OPT_DO_GAUSSIAN:
             opt.do_gaussian_blur = true;
             break;
@@ -219,100 +284,76 @@ int main(int argc, char* argv[])
         case OPT_DO_COLOR_PASS:
             opt.do_color_pass = true;
             break;
+        case OPT_BINARIZATION_METHOD:
+            std::string method = optarg;
+            for (auto &c : method)
+                c = tolower(c);
 
-        case OPT_SIGMA:
-            {
-                opt.sigma = parse_float(optarg, "--sigma");
-                require_positive_f("--sigma", opt.sigma);
-            }
+            if (method == "otsu")
+                opt.binarization_method = ite::BinarizationMethod::Otsu;
+            else if (method == "sauvola")
+                opt.binarization_method = ite::BinarizationMethod::Sauvola;
+            else if (method == "bataineh")
+                opt.binarization_method = ite::BinarizationMethod::Bataineh;
+            else
+                die_usage("Unknown binarization method: " + method + " (allowed: otsu, sauvola, bataineh)");
             break;
-
+        case OPT_SIGMA:
+            opt.sigma = parse_float(optarg, "--sigma");
+            require_positive_f("--sigma", opt.sigma);
+            break;
         case OPT_SIGMA_LOW:
-            {
-                opt.adaptive_sigma_low = parse_float(optarg, "--sigma-low");
-                require_positive_f("--sigma-low", opt.adaptive_sigma_low);
-            }
+            opt.adaptive_sigma_low = parse_float(optarg, "--sigma-low");
+            require_positive_f("--sigma-low", opt.adaptive_sigma_low);
             break;
         case OPT_SIGMA_HIGH:
-            {
-                opt.adaptive_sigma_high = parse_float(optarg, "--sigma-high");
-                require_positive_f("--sigma-high", opt.adaptive_sigma_high);
-            }
+            opt.adaptive_sigma_high = parse_float(optarg, "--sigma-high");
+            require_positive_f("--sigma-high", opt.adaptive_sigma_high);
             break;
         case OPT_EDGE_THRESH:
             opt.adaptive_edge_thresh = parse_float(optarg, "--edge-thresh");
             break;
-
         case OPT_MEDIAN_SIZE:
-            {
-                opt.median_kernel_size = (int)parse_uint(optarg, "--median-size");
-                require_positive("--median-size", opt.median_kernel_size);
-            }
+            opt.median_kernel_size = (int)parse_uint(optarg, "--median-size");
+            require_positive("--median-size", opt.median_kernel_size);
             break;
-
         case OPT_MEDIAN_THRESH:
             opt.median_threshold = (int)parse_uint(optarg, "--median-thresh");
             break;
-
         case OPT_ADAPTIVE_MEDIAN_MAX:
-            {
-                opt.adaptive_median_max_window = (int)parse_uint(optarg, "--adaptive-median-max");
-                require_positive("--adaptive-median-max", opt.adaptive_median_max_window);
-                if ((opt.adaptive_median_max_window % 2) == 0)
-                    die_usage("--adaptive-median-max must be odd");
-                if (opt.adaptive_median_max_window < 3)
-                    die_usage("--adaptive-median-max must be >= 3");
-            }
+            opt.adaptive_median_max_window = (int)parse_uint(optarg, "--adaptive-median-max");
+            require_positive("--adaptive-median-max", opt.adaptive_median_max_window);
+            if ((opt.adaptive_median_max_window % 2) == 0)
+                die_usage("--adaptive-median-max must be odd");
+            if (opt.adaptive_median_max_window < 3)
+                die_usage("--adaptive-median-max must be >= 3");
             break;
-
         case OPT_KERNEL_SIZE:
-            {
-                opt.kernel_size = (int)parse_uint(optarg, "--kernel-size");
-                require_positive("--kernel-size", opt.kernel_size);
-            }
+            opt.kernel_size = (int)parse_uint(optarg, "--kernel-size");
+            require_positive("--kernel-size", opt.kernel_size);
             break;
-
         case OPT_DESPECKLE_THRESH:
             opt.despeckle_threshold = (int)parse_uint(optarg, "--despeckle-thresh");
             require_non_negative("--despeckle-thresh", opt.despeckle_threshold);
             break;
-
         case OPT_SAUVOLA_WINDOW:
-            {
-                opt.sauvola_window_size = (int)parse_uint(optarg, "--sauvola-window");
-                require_positive("--sauvola-window", opt.sauvola_window_size);
-            }
+            opt.sauvola_window_size = (int)parse_uint(optarg, "--sauvola-window");
+            require_positive("--sauvola-window", opt.sauvola_window_size);
             break;
-
         case OPT_SAUVOLA_K:
-            {
-                opt.sauvola_k = parse_float(optarg, "--sauvola-k");
-                require_positive_f("--sauvola-k", opt.sauvola_k);
-            }
+            opt.sauvola_k = parse_float(optarg, "--sauvola-k");
+            require_positive_f("--sauvola-k", opt.sauvola_k);
             break;
-
         case OPT_SAUVOLA_DELTA:
             opt.sauvola_delta = parse_float(optarg, "--sauvola-delta");
             break;
 
-        case ':': // missing required argument
+        case ':':
             die_usage(std::string("Missing value for option '-") + static_cast<char>(optopt) + "'");
             break;
-
         case '?':
-            { // unknown option
-                if (optopt)
-                {
-                    die_usage(std::string("Unknown option '-") + static_cast<char>(optopt) + "'");
-                }
-                else
-                {
-                    // For long options, getopt_long sets optopt to 0; argv[optind-1] is the token.
-                    die_usage(std::string("Unknown option '") + argv[optind - 1] + "'");
-                }
-            }
+            die_usage(std::string("Unknown option"));
             break;
-
         default:
             die_usage("Unknown parsing error");
         }
@@ -326,19 +367,65 @@ int main(int argc, char* argv[])
 
     try
     {
-        std::cout << "Processing: " << input_path << " -> " << output_path << std::endl;
+        std::cout << "Loading: " << input_path << std::endl;
         auto img = ite::loadimage(input_path);
 
-        auto start = omp_get_wtime();
-        auto result = ite::enhance(img, opt, 64);
-        auto end = omp_get_wtime();
+        // Fix logic for Grayscale vs Color Pass
+        if (img.spectrum() < 3 && opt.do_color_pass)
+        {
+            std::cout << "[INFO] Input image is grayscale (1 channel). Disabling --do-color-pass." << std::endl;
+            opt.do_color_pass = false;
+        }
+
+        // --- WARMUP ---
+        if (warmup > 0)
+        {
+            std::cout << "Warming up (" << warmup << " runs)..." << std::flush;
+            for (int i = 0; i < warmup; ++i)
+            {
+                // Pass nullptr log, false verbose
+                ite::enhance(img, opt, 64, nullptr, false);
+            }
+            std::cout << " Done." << std::endl;
+        }
+
+        // --- BENCHMARK ---
+        std::map<std::string, std::vector<double>> aggregated_data;
+        std::vector<std::string> step_order;
+        ite::TimingLog log;
+        log.reserve(20);
+
+        std::cout << "Processing " << trials << " trial(s)..." << std::endl;
+
+        CImg<uint> result;
+        for (int i = 0; i < trials; ++i)
+        {
+            log.clear();
+
+            // Only be verbose on the first trial if explicitly requested (to avoid spam)
+            // But if verbose_log is true, we pass true.
+            // If measure_time (-t) is true, we pass the log pointer.
+            bool current_verbose = verbose_log && (i == 0 || trials == 1);
+
+            result = ite::enhance(img, opt, 64, measure_time ? &log : nullptr, current_verbose);
+
+            if (measure_time)
+            {
+                for (const auto &entry : log)
+                {
+                    aggregated_data[entry.name].push_back(entry.duration_us / 1000.0);
+                    if (i == 0)
+                        step_order.push_back(entry.name);
+                }
+            }
+        }
 
         ite::writeimage(result, output_path);
-        std::cout << "Success!" << std::endl;
+        std::cout << "Saved: " << output_path << std::endl;
 
         if (measure_time)
         {
-            std::cout << "Enhancement time: " << end-start << " s" << std::endl;
+            print_benchmark_table(aggregated_data, step_order, trials);
         }
     }
     catch (const std::exception &e)

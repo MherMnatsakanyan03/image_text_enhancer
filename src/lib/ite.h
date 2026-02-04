@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 #include "CImg.h"
 
 using namespace cimg_library;
@@ -10,6 +11,14 @@ using namespace cimg_library;
  */
 namespace ite
 {
+    struct TimingEvent
+    {
+        std::string name;
+        long long duration_us;
+    };
+
+    using TimingLog = std::vector<TimingEvent>;
+
     /**
      *  @brief Binarization methods available.
      */
@@ -248,5 +257,5 @@ namespace ite
      * @param block_h Height of the blocks for parallel processing (default: 64).
      * @return An enhanced image, ready for OCR.
      */
-    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt = {}, int block_h = 64);
+    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt = {}, int block_h = 64, TimingLog* log = nullptr, bool verbose = false);
 } // namespace ite

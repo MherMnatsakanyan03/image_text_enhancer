@@ -17,8 +17,26 @@
 #include "io/image_io.h"
 #include "morphology/morphology.h"
 
+#include <chrono> // Added for high-resolution timing
+#include <iostream> // Added for logging output
+
 namespace ite
 {
+    namespace
+    {
+        void record_time(TimingLog* log, const std::string &name, long long us, bool verbose = false)
+        {
+            if (log)
+            {
+                log->push_back({name, us});
+            }
+
+            if (verbose)
+            {
+                std::cout << "[ITE] " << name + ":\t" << us << " us" << std::endl;
+            }
+        }
+    } // namespace
 
     // ============================================================================
     // I/O Operations
@@ -165,8 +183,14 @@ namespace ite
     // Full Enhancement Pipeline
     // ============================================================================
 
-    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt, const int block_h)
+    CImg<uint> enhance(const CImg<uint> &input_image, const EnhanceOptions &opt, const int block_h, TimingLog* log, bool verbose)
     {
+        using Clock = std::chrono::steady_clock;
+        using Us = std::chrono::microseconds;
+
+        auto total_start = Clock::now();
+        auto step_start = total_start;
+
         CImg<uint> result = input_image;
         CImg<uint> color_image;
 
@@ -176,10 +200,17 @@ namespace ite
             color_image = input_image;
         }
 
-        // 1. Convert to grayscale
-        color::to_grayscale_rec601(result);
+        auto now = Clock::now();
+        record_time(log, "Init & Copy", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+        step_start = now;
 
-        // 2. Deskew if requested
+        // 2. Grayscale
+        color::to_grayscale_rec601(result);
+        now = Clock::now();
+        record_time(log, "Grayscale", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+        step_start = now;
+
+        // 3. Deskew
         if (opt.do_deskew)
         {
             geometry::deskew_projection_profile(result, opt.boundary_conditions);
@@ -187,66 +218,111 @@ namespace ite
             {
                 geometry::deskew_projection_profile(color_image, opt.boundary_conditions);
             }
+            now = Clock::now();
+            record_time(log, "Deskew", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
 
-        // 3. Contrast enhancement
+        // 4. Contrast
         color::contrast_linear_stretch(result);
+        now = Clock::now();
+        record_time(log, "Contrast", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+        step_start = now;
 
-        // 4. Denoising
+        // 5. Denoising
         if (opt.do_adaptive_gaussian_blur)
         {
-            filters::adaptive_gaussian_blur(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, block_h, opt.boundary_conditions);
+            filters::adaptive_gaussian_blur(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, block_h,
+                                            opt.boundary_conditions);
+            now = Clock::now();
+            record_time(log, "Adaptive Gaussian", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
         else if (opt.do_gaussian_blur)
         {
             filters::simple_gaussian_blur(result, opt.sigma, opt.boundary_conditions);
+            now = Clock::now();
+            record_time(log, "Gaussian Blur", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
+
         if (opt.do_median_blur)
         {
             filters::simple_median_blur(result, opt.median_kernel_size, opt.median_threshold);
+            now = Clock::now();
+            record_time(log, "Median Blur", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
+
         if (opt.do_adaptive_median)
         {
             filters::adaptive_median_filter(result, opt.adaptive_median_max_window, block_h);
+            now = Clock::now();
+            record_time(log, "Adaptive Median", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
 
-        // 5. Binarization
+        // 6. Binarization
         switch (opt.binarization_method)
         {
         case BinarizationMethod::Otsu:
             binarization::binarize_otsu(result);
+            now = Clock::now();
+            record_time(log, "Binarization (Otsu)", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             break;
         case BinarizationMethod::Sauvola:
             binarization::binarize_sauvola(result, opt.sauvola_window_size, opt.sauvola_k, opt.sauvola_delta);
+            now = Clock::now();
+            record_time(log, "Binarization (Sauvola)", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             break;
         case BinarizationMethod::Bataineh:
             binarization::binarize_bataineh(result);
+            now = Clock::now();
+            record_time(log, "Binarization (Bataineh)", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             break;
         }
+        step_start = now;
 
-        // 6. Despeckle if requested
+        // 7. Morphology
         if (opt.do_despeckle)
         {
             morphology::despeckle_ccl(result, static_cast<uint>(opt.despeckle_threshold), opt.diagonal_connections);
+            now = Clock::now();
+            record_time(log, "Despeckle", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
 
-        // 7. Morphological operations
         if (opt.do_dilation)
         {
             morphology::dilation_square(result, opt.kernel_size);
+            now = Clock::now();
+            record_time(log, "Dilation", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
 
         if (opt.do_erosion)
         {
             morphology::erosion_square(result, opt.kernel_size);
+            now = Clock::now();
+            record_time(log, "Erosion", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+            step_start = now;
         }
 
-        // 8. Color pass if requested
+        // 8. Color Pass
         if (opt.do_color_pass)
         {
             color::color_pass_inplace(color_image, result);
+            now = Clock::now();
+            record_time(log, "Color Pass", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
+
+            auto total_time = std::chrono::duration_cast<Us>(now - total_start).count();
+            record_time(log, "TOTAL", total_time, verbose);
             return color_image;
         }
+
+        now = Clock::now();
+        auto total_time = std::chrono::duration_cast<Us>(now - total_start).count();
+        record_time(log, "TOTAL", total_time, verbose);
 
         return result;
     }
