@@ -1,6 +1,6 @@
 #include "color.h"
+#include <iostream>
 #include <stdexcept>
-
 
 namespace ite::color
 {
@@ -16,9 +16,10 @@ namespace ite::color
         {
             throw std::invalid_argument("Binary mask must have a single channel.");
         }
-        if (color_image.spectrum() != 3)
+        if (color_image.spectrum() < 3)
         {
-            throw std::invalid_argument("Color image must have 3 channels.");
+            std::cout << "WARNING (Colorpass):\tColor image has less than 3 channels." << std::endl;
+            return;
         }
         if (color_image.width() != bin_image.width() || color_image.height() != bin_image.height())
         {
