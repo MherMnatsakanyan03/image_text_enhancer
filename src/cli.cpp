@@ -285,19 +285,21 @@ int main(int argc, char* argv[])
             opt.do_color_pass = true;
             break;
         case OPT_BINARIZATION_METHOD:
-            std::string method = optarg;
-            for (auto &c : method)
-                c = tolower(c);
+            {
+                std::string method = optarg;
+                for (auto &c : method)
+                    c = tolower(c);
 
-            if (method == "otsu")
-                opt.binarization_method = ite::BinarizationMethod::Otsu;
-            else if (method == "sauvola")
-                opt.binarization_method = ite::BinarizationMethod::Sauvola;
-            else if (method == "bataineh")
-                opt.binarization_method = ite::BinarizationMethod::Bataineh;
-            else
-                die_usage("Unknown binarization method: " + method + " (allowed: otsu, sauvola, bataineh)");
-            break;
+                if (method == "otsu")
+                    opt.binarization_method = ite::BinarizationMethod::Otsu;
+                else if (method == "sauvola")
+                    opt.binarization_method = ite::BinarizationMethod::Sauvola;
+                else if (method == "bataineh")
+                    opt.binarization_method = ite::BinarizationMethod::Bataineh;
+                else
+                    die_usage("Unknown binarization method: " + method + " (allowed: otsu, sauvola, bataineh)");
+                break;
+            }
         case OPT_SIGMA:
             opt.sigma = parse_float(optarg, "--sigma");
             require_positive_f("--sigma", opt.sigma);
