@@ -372,6 +372,10 @@ int main(int argc, char* argv[])
         std::cout << "Loading: " << input_path << std::endl;
         auto img = ite::loadimage(input_path);
 
+        std::filesystem::path p(input_path);
+        std::cout << "Image Info: " << p.filename().string() << " (" << img.width() << "x" << img.height() << ", " << img.spectrum() << " channels)"
+                  << std::endl;
+
         // Fix logic for Grayscale vs Color Pass
         if (img.spectrum() < 3 && opt.do_color_pass)
         {
@@ -399,6 +403,11 @@ int main(int argc, char* argv[])
 
         std::cout << "Processing " << trials << " trial(s)..." << std::endl;
 
+        // Setup for Progress Monitor
+        using Clock = std::chrono::steady_clock;
+        auto bench_start_time = Clock::now();
+        int progress_update_freq = std::max(1, trials / 100);
+
         CImg<uint> result;
         for (int i = 0; i < trials; ++i)
         {
@@ -420,6 +429,28 @@ int main(int argc, char* argv[])
                         step_order.push_back(entry.name);
                 }
             }
+
+            if (!verbose_log && (i % progress_update_freq == 0 || i == trials - 1))
+            {
+                auto now = Clock::now();
+                auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - bench_start_time).count();
+
+                int completed = i + 1;
+                double avg_ms = (double)elapsed_ms / completed;
+                double remaining_ms = avg_ms * (trials - completed);
+                double remaining_sec = remaining_ms / 1000.0;
+
+                std::filesystem::path p(input_path);
+                std::string filename = p.filename().string();
+
+                std::cerr << "\r[Benchmark: " << filename << "] " << int((float)completed / trials * 100.0) << "% " << "(" << completed << "/" << trials << ") "
+                          << "ETA: " << std::fixed << std::setprecision(1) << remaining_sec << "s   " << std::flush;
+            }
+        }
+
+        if (!verbose_log)
+        {
+            std::cerr << std::endl;
         }
 
         ite::writeimage(result, output_path);
