@@ -27,3 +27,4 @@ Copyright (c) 2012. EPITA Research and Development Laboratory (LRDE) with permis
 
 http://www.lrde.epita.fr/cgi-bin/twiki/view/Publications/201302-IJDAR
 
+Upsacling with: https://imgupscaler.ai/
