@@ -11,10 +11,11 @@ LOG_DIR="bench_logs"
 OUTPUT_DIR="output"
 TRIALS=1000
 WARMUP=10
+TIME_LIMIT=30 # Minutes
 
 # Processing Flags
 # -t : Enable benchmark table
-FLAGS="-t --do-deskew --do-adaptive-gaussian --do-median --do-adaptive-median --binarization bataineh --do-despeckle --do-dilation --do-erosion --do-color-pass"
+FLAGS="-t --time-limit $TIME_LIMIT --do-deskew --do-adaptive-gaussian --do-median --do-adaptive-median --binarization bataineh --do-despeckle --do-dilation --do-erosion --do-color-pass"
 
 # 2. Validation
 if [ ! -f "$PROG" ]; then
@@ -38,6 +39,7 @@ echo " Binary:      $PROG"
 echo " Threads:     $OMP_NUM_THREADS"
 echo " Trials:      $TRIALS"
 echo " Warmup:      $WARMUP"
+echo " Time Limt:   $TIME_LIMIT m"
 echo " Affinity:    Cores 0-7 (via taskset)"
 echo " Input Dir:   $TEST_DIR"
 echo " Log Dir:     $LOG_DIR"

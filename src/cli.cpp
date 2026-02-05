@@ -36,7 +36,8 @@ enum : int
     OPT_SAUVOLA_K,
     OPT_SAUVOLA_DELTA,
     OPT_TRIALS,
-    OPT_WARMUP
+    OPT_WARMUP,
+    OPT_TIME_LIMIT
 };
 
 static void die_usage(const std::string &msg, int exit_code = 2)
@@ -139,7 +140,8 @@ static void print_help(const char* prog)
               << "  -h, --help                    Show this help\n"
               << "  -v, --verbose                     Enable per-step timing output during execution\n"
               << "      --trials <int>                Number of trials for benchmark (default: 1)\n"
-              << "      --warmup <int>                Number of warmup runs before benchmark\n";
+              << "      --warmup <int>                Number of warmup runs before benchmark\n"
+              << "      --time-limit <int>        Max duration in minutes per image (default: 0 = no limit)\n";
 }
 
 void print_benchmark_table(const std::map<std::string, std::vector<double>> &aggregated_data, const std::vector<std::string> &step_order, int trials)
@@ -201,6 +203,7 @@ int main(int argc, char* argv[])
                                {"verbose", no_argument, nullptr, 'v'},
                                {"trials", required_argument, nullptr, OPT_TRIALS},
                                {"warmup", required_argument, nullptr, OPT_WARMUP},
+                               {"time-limit", required_argument, nullptr, OPT_TIME_LIMIT},
 
                                // Toggles
                                {"do-gaussian", no_argument, nullptr, OPT_DO_GAUSSIAN},
@@ -231,6 +234,7 @@ int main(int argc, char* argv[])
                                {nullptr, 0, nullptr, 0}};
 
     int c = 0;
+    int time_limit_min = 0;
     while ((c = getopt_long(argc, argv, shortopts, longopts, nullptr)) != -1)
     {
         switch (c)
@@ -256,6 +260,9 @@ int main(int argc, char* argv[])
             break;
         case OPT_WARMUP:
             warmup = (int)parse_uint(optarg, "--warmup");
+            break;
+        case OPT_TIME_LIMIT:
+            time_limit_min = (int)parse_uint(optarg, "--time-limit");
             break;
         case OPT_DO_GAUSSIAN:
             opt.do_gaussian_blur = true;
@@ -408,6 +415,10 @@ int main(int argc, char* argv[])
         auto bench_start_time = Clock::now();
         int progress_update_freq = std::max(1, trials / 100);
 
+        // for early finish
+        double limit_seconds = time_limit_min * 60.0;
+        int actual_trials = 0;
+
         CImg<uint> result;
         for (int i = 0; i < trials; ++i)
         {
@@ -426,8 +437,26 @@ int main(int argc, char* argv[])
                 {
                     aggregated_data[entry.name].push_back(entry.duration_us / 1000.0);
                     if (i == 0)
+                    {
                         step_order.push_back(entry.name);
+                    }
                 }
+            }
+
+            actual_trials++;
+
+            // --- TIME LIMIT CHECK ---
+            auto now = Clock::now();
+            auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - bench_start_time).count();
+            double elapsed_sec = elapsed_ms / 1000.0;
+
+            if (time_limit_min > 0 && elapsed_sec >= limit_seconds)
+            {
+                if (!verbose_log)
+                {
+                    std::cerr << "\n[Benchmark] Time limit reached (" << time_limit_min << "m). Stopping early." << std::endl;
+                }
+                break;
             }
 
             if (!verbose_log && (i % progress_update_freq == 0 || i == trials - 1))
@@ -437,8 +466,18 @@ int main(int argc, char* argv[])
 
                 int completed = i + 1;
                 double avg_ms = (double)elapsed_ms / completed;
-                double remaining_ms = avg_ms * (trials - completed);
-                double remaining_sec = remaining_ms / 1000.0;
+                double remaining_sec_trials = (avg_ms * (trials - completed)) / 1000.0;
+                double remaining_sec = remaining_sec_trials;
+
+                // If time limit is active, show the smaller remaining time
+                if (time_limit_min > 0)
+                {
+                    double remaining_sec_time = limit_seconds - elapsed_sec;
+                    if (remaining_sec_time < remaining_sec)
+                        remaining_sec = remaining_sec_time;
+                }
+
+                remaining_sec = std::max(0.0, remaining_sec);
 
                 std::filesystem::path p(input_path);
                 std::string filename = p.filename().string();
@@ -458,7 +497,7 @@ int main(int argc, char* argv[])
 
         if (measure_time)
         {
-            print_benchmark_table(aggregated_data, step_order, trials);
+            print_benchmark_table(aggregated_data, step_order, actual_trials);
         }
     }
     catch (const std::exception &e)
