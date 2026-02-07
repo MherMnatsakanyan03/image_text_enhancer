@@ -9,8 +9,8 @@ Function: to_grayscale_rec601
 - Optimization 1 (Parallelization): Added OpenMP `parallel for` to the pixel 
   processing loop.
 - Optimization 2 (Memory Management): Replaced the final deep copy assignment 
-  (`input = result`) with a pointer swap (`input.swap(result)`). 
-- Result: Reduced execution time from ~4ms to ~3ms.
+  (`input = result`) with a pointer swap (`input.swap(result)`).
+  - no memory tests were done to see how the program behaves in size
 
 DESKEWING (Major Optimization)
 ------------------------------------------------------------------------------
@@ -20,16 +20,9 @@ Function: detect_skew_angle, apply_deskew
   (which rotates the full image ~50 times) with a **Radon Transform** approach. 
   Instead of moving pixels, we extract foreground coordinates and mathematically 
   project them.
-- Optimization 2 (Downscaling): Detection is now run on a resized version of 
-  the image (target 600px long side) rather than the full resolution.
-- Optimization 3 (Logic Split): Split detection and application. The angle is 
+- Optimization 2 (Logic Split): Split detection and application. The angle is 
   detected ONCE using the grayscale image, and the result is applied to both 
   grayscale and color images. Previously, detection ran twice.
-- Optimization 4 (Detection Quality): Re-enabled Sauvola binarization for the 
-  detection phase (on the small image) to ensure robustness against shadows, 
-  which Otsu failed to handle.
-- Correction: Fixed rotation direction logic to ensure image is straightened 
-  rather than skewed further.
 - Result: Massive reduction from ~95ms down to ~7ms.
 
 CONTRAST ENHANCEMENT
@@ -43,34 +36,23 @@ Function: contrast_linear_stretch
   (`out = lut[in]`) instead of floating-point math (`(val - min) * scale`) per pixel.
 - Optimization 3 (Vectorization): Replaced `if/else` branching in the pixel 
   loop with `std::min` clamping, allowing the compiler to auto-vectorize using SIMD.
-- Result: Reduced execution time from ~1ms down to ~0.7ms.
+  - this possibly already happens under the hood by the compiler, no assembly checks were done
 
 ADAPTIVE GAUSSIAN BLUR
 ------------------------------------------------------------------------------
 File: src/filters/filters.cpp
 Function: adaptive_gaussian_blur
-- Optimization 1 (Allocation Removal): Removed `std::vector` allocations inside 
+- Optimization (Allocation Removal): Removed `std::vector` allocations inside 
   the hot loop. Used a "Ping-Pong" strategy where the `high_blur` image acts as 
-  the destination buffer, swapping pointers at the end. Eliminates heap contention.
-- Optimization 2 (Math Simplification): Replaced floating-point `smoothstep` 
-  math with a pre-calculated 512-entry LUT based on gradient magnitude.
-- Optimization 3 (Integer Arithmetic): Converted the pixel blending formula to 
-  pure integer math with bit-shifting (`>> 8`) instead of float multiplication.
-- Optimization 4 (Loop Splitting): Split the processing into "Left Edge", 
-  "Center" (no boundary checks), and "Right Edge". This removed conditional 
-  checks from the main processing loop.
-- Result: Reduced execution time from ~16ms down to ~14ms (approx 12% gain).
+  the destination buffer, swapping pointers at the end.
 
 ADAPTIVE MEDIAN FILTER
 ------------------------------------------------------------------------------
 File: src/filters/filters.cpp
 Function: adaptive_median_filter
-- Optimization 1 (Memory Hoisting): Moved the `std::vector` buffer allocation 
+- Optimization: Moved the `std::vector` buffer allocation 
   OUTSIDE the pixel loop. Previously, the buffer was being allocated and freed 
   for every single pixel block, causing massive heap contention.
-- Optimization 2 (Fast Math): Replaced the manual loop for min/max finding 
-  with `std::min/max({initializer_list})`, allowing compiler vectorization.
-- Result: Improved stability and slight performance gain (now ~47ms).
 
 CORE UTILITIES (Infrastructure)
 ------------------------------------------------------------------------------
@@ -86,7 +68,7 @@ Function: compute_fused_integrals, get_sum_padded
   branchless (no `if (x>0)` checks), as boundary conditions are handled by the 
   zero-initialized padding.
 
-BINARIZATION (Bataineh) - **MASSIVE GAIN**
+BINARIZATION (Bataineh, Major Optimization)
 ------------------------------------------------------------------------------
 The Bottleneck: 
 The algorithm determines the optimal window size dynamically for every pixel. 
@@ -118,7 +100,6 @@ Function: binarize_bataineh
   Complexity reduced to linear $O(N)$.
 - Optimization 3 (Fused Core): Switched to the new `core::compute_fused_integrals` 
   for the main statistics calculation.
-- Optimization 4 (Swap): Replaced deep copy assignment with `input.swap(output)`.
 - Result: Execution time dropped from ~340ms to ~20ms (approx 16x speedup).
 
 BINARIZATION (Sauvola)
@@ -136,10 +117,18 @@ File: src/morphology/morphology.cpp
 Function: dilation_square, erosion_square
 - Optimization 1 (Separable Filters): Decomposed the expensive 2D square kernel 
   operation into two sequential 1D passes (Horizontal followed by Vertical). 
-  
   This initially reduced complexity from O(K^2) to O(2K) per pixel.
 - Optimization 2 (Monotonic Queue): Implemented the "Sliding Window Min/Max" 
   algorithm using a monotonic queue (deque). This allows computing the min/max 
   of any window size in amortized O(1) constant time.
-- Result: The operation is now **linear time** O(N) regardless of the kernel size. 
-  A massive 50x50 erosion now runs just as fast as a 3x3 erosion.
+
+
+### Why did 16k fail on main branch (unoptimized):
+
+- Because the deskew angle is detected twice (once for color, once for grayscale),
+  microscopic rounding differences in the downscaling and binarization phases cause
+  the algorithm to return two slightly different angles
+- High resolution magnifies these tiny angular errors. On a 16K image,
+  the massive height acts as a long lever; a  discrepancy that rounds to 0 pixels
+  on a small image is amplified into a multi-pixel discrepancy on a large canvas.
+- hence, the binary image ended up with slightly different dimensions than the color-img
