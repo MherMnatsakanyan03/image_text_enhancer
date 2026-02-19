@@ -28,7 +28,7 @@
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
 %% TODO: think about good title
-\title[Task Parallelism in WebAssembly]{Task Parallelism in WebAssembly: Porting and Evaluating OpenMP-driven Image Processing Pipelines}
+\title{Image Enhancement: A Lightweight, Easy-to-Use, and Efficient C++ Library}
 \subtitle{\large Algorithm Engineering 2026 Project}
 
 %%
@@ -77,17 +77,8 @@
 Possible Research Questions
 \begin{enumerate}
   \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
-  \item all of the above, and it can be compiled to run as WASM! The question would be: How easy is it to compile a C++ image processing pipeline with OpenMP and CImg to WASM? (This would show, that you can take a lightweight C++ library and just put it in the browser with great parallelisation.)
-  \item We could additionally try and implement one of the filters or binarization methods in WASM SIMD (which is not platform specific) and show which of the two is faster. The conclusion could then be: is it worth it to manually write SIMD for WASM or is OpenMP good enough (which would be an interesting conclusion)? -> future work
 \end{enumerate}
 
-What would be necessary to make our project run in WASM?
-\begin{enumerate}
-  \item Minimum working example of OpenMP can be found here: \href{https://github.com/abrown/wasm-openmp-examples}{WASM OpenMP Examples}
-  \item Compile using O3 and look for automatic SIMD usage
-  \item Put SIMD where it was not put by the compiler
-  \item Some background on the compiler (WASI)?
-\end{enumerate}
 
 \subsection{Background}
 \label{sec:background}
@@ -111,38 +102,41 @@ In this paper, we examine whether and how well OpenMP-based parallelism is compa
 
 \subsection{Related Work}
 \label{sec:related-work}
-
+\begin{comment}
+  
 Since the introduction of WASM in 2017 \cite{WASM_Haas_2017}, research has progressed in a variety of ways. For instance, significant investment has gone into the 'internal' WASM runtime, either to add features or to investigate its performance and energy efficiency . Another area of research has investigated the use of WASM in various application \cite{wasm_runtimes_survey_zhang_2025} areas, such as web applications, the Internet of Things, and high-performance computing \cite{wasm_runtimes_survey_zhang_2025}. 
 Of particular mention is the work of Chadha et al., who examine the use of WASM in the HPC domain in \cite{Mpi_Wasm_Chadha_2023}. Since parallelisation is essential for HPC applications, they have developed a WASM embedder that enables the MPI library to be used in WASM applications.  
+\end{comment}
 
 \begin{comment}
   Tools die Document Enhancement bereits können:
-  - OpenCV -> viel zu groß und abhöngig von vielen anderen Bibliotheken
-  - Tesseract - 
-  - Leptonica - 
-  - ImageMagick - 
-  - Unpaper - spezialisiert auf Scans von Büchern, viele Abhängigkeiten (ffmpeg etc), nicht so einfach erweiterbar
-\end{comment}
+  - OpenCV -> viel zu groß und abhöngig von vielen anderen Bibliotheken, BSD Lizenz
+  - Tesseract - Open Source OCR Engine, die einige Bildverbesserungsfunktionen bietet, aber hauptsächlich auf OCR ausgerichtet ist, nicht einfach erweiterbar, preprocessing sind nicht als allgemeine Enhnancement Methoden gedacht, Apache lizenz
+  - Leptonica - C-Bibliothek für Bildverarbeitung, hauptsächlich auf OCR ausgerichtet, BCD Lizenz
+  - ImageMagick - Umfassende Kommandozeilen-Tool und Bibliothek für Bildbearbeitung, aber nicht speziell auf die Verbesserung von gescannten oder fotografierten Textbildern ausgerichtet, viele Abhängigkeiten, nicht so einfach erweiterbar, Apache Lizenz
+  - Unpaper - spezialisiert auf Nachbearbeitung von Scans von Büchern, viele Abhängigkeiten (ffmpeg etc), nicht so einfach erweiterbar und stark spezialisiert, GPL Lizenz
+\end{comment} 
 
-\begin{comment}
-  Diese Paper wurden nicht von mir gelesen, aber in \cite{review_document_binarization_yang_2024} als beispiel für die verschiedenen Kategorien von Binarisierungsmethoden genannt:
-  \cite{Yang2008}, \cite{Lu2010}, cite{Tong2009}
-\end{comment}
+Image Enhancement und Dokumenten Preprocessing wurden von einer weitreichenden Anzahl an open-source Tools und kommerzieller Software abgedeckt. Sie reichen von umfassenden Bildbearbeitungsbibliotheken, Object Character Recognition OCR Bibliotheken, bis hin zu spezialisierten Tools für die Nachbearbeitung von gescannten Dokumenten. 
 
-When improving images and analyzing digitized documents using OCR text recognition and other recognition systems, segmenting the background and foreground is an essential step \cite{review_document_binarization_yang_2024}. Segmentation is implemented using binarization. There are traditional methods for binarization, which use a global \cite{Otsu1979}, local \cite{adaptive_thresholding_methods_bataineh_2011, adaptive_thresholding_integral_image_bradley_roth_2007, image_binarization_sauvola_2000} or mixed thresholds \cite{Yang2008, review_document_binarization_yang_2024}. These are used to classify the pixels as foreground and background, pixel by pixel. Image feature methods such as edge detection \cite{Lu2010, review_document_binarization_yang_2024} and fuzzy logic \cite{Tong2009, review_document_binarization_yang_2024} have also been used for binarization. In recent years, deep learning binarization methods have been evolved in addition to the traditional methods. These are based on convolutional neural networks, generative adversarial networks, or attention mechanisms \cite{review_document_binarization_yang_2024}. 
 
-In addition to methods that solely rely on binarization, there are approaches that combine several image processing methods to improve the quality of text images. For example, Alqudah et al. \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015} present a pipeline that combines entropy filters and morphological operations with binarization. In \cite{image_binarization_end_to_end_text_understanding_milyaev_2013} Niblack's binarization is combined with a Laplace edge filter and global optimization. Another approach is described by Vlasceanu et al. \cite{voting_method_image_binarization_vlasceanu_2022}. This approach combines different binarization methods and uses a voting mechanism to decide which pixels should be assigned to the foreground or background.
+\label{sec:general-purpose-libraries}
+Eine der weitverbreitesten Bibliothekt für allgemeine Bildverarbeitung ist OpenCV. OpenCV wurde von Bradski entwickelt und bietet eine Vielzahl von Funktionen und Algorithmen für die Bildverarbeitung, beispielsweise Filter, Transformationen, Segmentierunt und Feature-Erkennung, sowie Machine-und Deep-learning. OpenCV ist in C++ geschrieben und bietet eine modulare, Plattformübergreifende Architektur, die es einfach macht, es in verschiedenen Anwendungen zu integieren. Allerdings ist OpenCV eine sehr umfassende Bibliothek, die viele Funktionen und Abhängigkeiten enthählt, was zu einem Overhead führt, wenn nur ein bruchteil der Funktionen genutzt wird. Zudem ist OpenCV unter der BSD-Lizenz lizenziert. 
+Ähnlich zu OpenCV bietet ImageMagick eine umfassende suite für die Bildbearbeitung, als Kommandozeilen-Tool und als Bibliothek. Es bietet Funktionen wie Formatikonvertierung, Größenänderung, Filterung und Farbkorrektur. Es ist jedoch nicht speziell auf die Verbesserung von gescannten oder fotografierten Bildern ausgerichtet, sondern eher auf allgemeine Bildbearbeitung. Die Vielzahl an Funktionen und Möglichkeiten resultieren in einer vielzahl an Abhängigkeiten, und einer großen Coedbase. Es ist unter der Apache-Lizenz lizenziert.
 
-\begin{comment}
-  Noch etwas für Denoising und andere bildverbesserungsmethoden, wie deskewing, erosion/dilation, despeckle etc.?
-\end{comment}
+\label{sec:ocr-libraries}
+Bei der Dokumenten-Analyse wird häufig die open-source OCR engine Tesseract verwendet. Tesseract wurde von Smith in 2007 beschrieben und hat sich in eine der führenden OCR-Engines entwickelt. Es bietet neben der Texterkennung auch einige Funktionen zur Bildverbesserung, dessen primärer Fokus ist jedoch in der OCR liegt. Die Bildverbesserungsfunktionen sind typischerweise in den OCR-Workflow integriert und stehen nicht als allgemeine Bildverbesserungsfunktionen zur verfügung. Tesseract ist unter der Apache-Lizenz lizenziert.
+Eine ähnliche Bibliothek, die sich auf OCR spezialisiert hat, ist die C basierte Leptonica Bibliothek. Leptonica bietet Funktionen für die Bildverarbeitung, die häufig im backend von OCR-Engines wie Tesseract verwendet werden. Es bietet Funktionen wie Binarisierung, Rauschunterdrückung und Morphologische Operationen, die für die Vorbereitung von Bildern für die OCR-Erkennung wichtig sind. Obwohl Leptonica relativ lightweight im verlgeich zu den anderen Bibliotheken ist, dient sie hauptsächlich als low-level Bibliothek und bietet beispielsweise keine ready-to-use konfigurierbare verarbeitungs Pipelines an. Außerdem ist sie in C geschrieben, was die Integration in C++ Anwendungen erschwert. Leptonica ist unter der BSD-Lizenz lizenziert.
+
+\label{sec:specialized-post-processing}
+Eine mehr spezialisiertes Tool ist unpaper, das sich auf die Nachbearbeitung von gescannten Dokumenten spezialisiert hat. Es bietet Funktionen wie Deskewing, Binarisierung und Rauschunterdrückung, die speziell für die Verbesserung von gescannten Dokumenten entwickelt wurden. Unpaper ist jedoch stark spezialisiert und bietet nicht die Flexibilität, um es in custom C++ Anwendungen zu integireren. Basierend auf der Konfiguration benötigt unpaper viele Abhängigkeiten, was die Nutzung erschwert. Unpaper ist unter der GPL-Lizenz lizenziert, was die kommerzielle Nutzung einschränkt.
 
 \subsection{Our Contribution}
 \label{sec:our-contribution}
 
-To improve scanned and photographed text images, we present a pipeline that combines several image processing methods. It includes steps such as deskewing, contrast enhancement, noise reduction, binarization, despeckle, and morphological operations. The binarized result of the pipeline can also be converted back into a color image.
-
-The pipeline is modular and user-friendly. Users can select the steps they want to apply to customize the pipeline to their specific use cases. Although the method parameters can be customized individually, they are configured with best practice values by default to ensure a high level of user-friendliness.
+Im Kontrast zu den beschriebenen, existierenden Tools und Bibliotheken, ist unser Ansatz darauf ausgelegt, minimalistisch, erweiterbar und einfach zu nutzen zu sein. Anstatt eine umfassende Bildverarbeitungsbibliothek oder eine OCR-Engine zu sein, konzentrieren wir uns auf eine lightweight, modulare Image Enhancement Pipeline, welche ausschließlich in C++ geschrieben ist und nur eine Abhängigkeit (CImg) hat, die selbst leichtgewichtig und portable ist. Durch die Verwendung von multithreading mit OpenMP können wir die Pipeline effizient ausführen und so auch große Bilder schnell verarbeiten. 
+Unsere Arbeit unterscheidet sich von OpenCV und ImageMagick, durch die bewusste Einschränkung auf die Bildverbesserung und durch die kleingehlatene Architektur. Im Gegensatz zu Tesseract und Leptonica, ist unsere Pipeline nicht in einen OCR-Workflow integriert, und ist nicht durch low-level Primitive Funktionen beschränkt, sondern bietet eine konfigurierbare, standalone, ready-to-use Pipeline. Unsere Pipeline ist nicht ausschließlich auf die Nachbearbeitung von gescannten Dokumenten spezialisiert, sondern ist als allgemeine Image Enhancement Pipeline konzipiert, die für eine Vielzahl von Anwendungen genutzt werden kann.
+Zusätzlich sichert unser Lizenzmodell (MIT-0 oder CeCILL-C) die Nutzung in der Forschung sowie in kommerziellen Anwendungen. Durch die kombinierung von minimalistischen Abhängigkeiten, eienr modularen Achrichtektur, portabilität durch C++ und OpenMP, sowie einer kommerziell nutzbaren Lizenz, füllt unsere Pipeline eine Lücke in zwischen large-scale general-purpose Bildverarbeitungsbibliotheken und hochspezialisierten Tools für die Dokumentenverbesserung.
 
 \begin{comment}
   Uns ist die effiziente Verarbeitung in der Pipeline wichtig. Daher vergleichen wir uns mit traditionellen open-source Binarisierungsmethoden und Bildverbesserungsverfahren und lassen bewusst Deep Learning Ansätze, sowie zahlungspflichtige Software außen vor.
@@ -162,126 +156,8 @@ This paper is structured as follows: Section \ref{sec:pipeline} provides a detai
 \section{The Pipeline}
 \label{sec:pipeline}
 
-Many approaches and best practices already exist for improving the quality of scanned images as seen in section \ref{sec:related-work}. We have developed a pipeline that combines several of these methods in order to achieve \textbf{potentially} good results. Users can choose which steps to apply from the pipeline. The individual methods of the pipeline are shown in algorithm \ref{alg:enhance}.
- 
-\begin{algorithm}
-  \caption{Image Text Enhance Pipeline}
-  \label{alg:enhance}
-  \begin{enumerate}
-  \item convert image to grayscale
-  \item Deskew (if requested)
-  \item Contrast enhancement
-  \item Denoising
-  \item Binarization
-  \item Despeckle (if requested)
-  \item Morphological operations (if requested)
-  \item Color passthrough
-\end{enumerate}
-\end{algorithm}
-
-The individual methods of the pipeline are explained in more detail below.
-
-\subsection{Convert image to grayscale}
-\label{subsec:grayscale}
-
-All pipeline methods work on grayscale images. Therefore, the first step is to convert the input image into a grayscale image. This is achieved by applying the weighted sum $Y = 0.299R + 0.587G + 0.114B$, as standardised by the International Telecommunication Union \cite{ITU-R_BT601}, to each pixel. The result is a grayscale image in which the brightness value of each pixel, represented by $Y$, corresponds to that of the original RGB-pixel.
-All steps in the pipeline are performed on the converted grayscale image in-place after the conversion.
-
-\subsection{Deskew}
-\label{subsec:deskew}
-
-To ensure that the text in the image is horizontally aligned, a deskew step is performed at the user's request. Text analysis methods such as OCR benefit in particular from horizontally aligned texts \cite{novel_adaptive_deskewing_algorithm_document_images_bao_2022}. The deskewing algorithm uses the projection profile method, which is similar to the one described in \cite{automated_entry_system_printed_documents_akiyama_hagita_1990}. First the image is binarized using Sauvola's method\footnote{see section \ref{subsec:binarization} or \cite{image_binarization_sauvola_2000}}. In the second step, the angle that maximizes the variance of the horizontal projections is determined. Finally, the image is rotated by this angle to correct the skew.
-The advantages of this method are that it is polarity-safe\footnote{detects light from dark backgrounds}, uses a coarse-to-fine angle search\footnote{tbc} for efficiency, and employs Neumann boundary conditions \footnote{tbc} to avoid black corners.
-
-\subsection{Contrast enhancement}
-\label{subsec:contrast-enhancement}
-
-To correct contrast problems caused by varying lighting conditions while digitizing documents, a contrast enhancement step is performed. This helps with binarization in the further course \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}. A robust, linear contrast stretching algorithm is applied. The lower 1\% and upper 1\% of intensities are truncated to ignore outliers. The remaining range is then stretched to the full range from 0 to 255 (black to white).
-
-\subsection{Denoising}
-\label{subsec:denoising}
-
-\begin{comment}
-  - adaptive Gaussian blur
-      Paper fehlt
-  - adaptive median blur
-      Paper fehlt
-\end{comment}
-
-Digital images are subject to noise due to the way they are captured, compressed, or transmitted, resulting in the loss of image information. The presence of noise limits the effectiveness of image analysis steps, among other things \cite{review_image_denoising_techniques_fan_2019}. Two simple and two adaptive filter methods are available for the user to choose from. 
-\textit{CImg} offers two simple filtering methods, which are also available in the Pipeline: a Gaussian filter with Neumann boundary conditions and a nonlinear median filter \cite{cimg}. The Gaussian filter is a low-pass filter and thus blurs the image. The median filter is a non-linear filter that takes the pixel value that represents the median of the neighboring pixels in the window to contain edges \cite{Image_engineering_zhang_2017}. In addition to the two simple filters, two adaptive filter methods are offered. An adaptive Gaussian filter that uses a variable standard deviation to blur less at edges and blur more in flat regions with high variance. In addition to the simple median filter, an adaptive median filter is provided. This is particularly well suited for removing impulse noise (salt and pepper noise) while preserving edges and fine details. It starts with a $3\times3$ window, which is expanded to a defined maximum window size when impulse noise is detected, while non-impulse pixels remain unchanged. This makes it ideal for removing scan speckle\footnote{tbc} in text images.
-
-\subsection{Binarization}
-\label{subsec:binarization}
-
-Segmenting the foreground and background is a good approach to improve image quality. It also represents the first step in recognition systems such as OCR \cite{review_document_binarization_yang_2024,Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015}. Since binarization methods have been well researched in the literature, several are available in the pipeline for the users to choose from. All methods are thresholding methods that calculate a threshold $T$ for each pixel ($T_g$ for global and $T_w$ for local terms) and compare the pixel value $i(x,y)$ with the threshold. This type of binarization is simple and efficient \cite{comprehensive_review_document_image_binarization_bataineh_2025}. 
-
-The simplest method is the Otsu method \cite{Otsu1979}, which calculates a global threshold while minimizing the intraclass variance. This is shown in equations \eqref{eq:1} and \eqref{eq:2}, where $w1(t)$ and $w2(t)$ are the probabilities of the two classes (foreground and background) and $\sigma^2\_1(t),\sigma^2\_2(t)$ are the variances of the two classes. This makes the method efficient, but also susceptible to overlaps and poor intensity distributions \cite{comprehensive_review_document_image_binarization_bataineh_2025}.
-
-\begin{gather}
-  \sigma^2\_w(t) = w1(t) * \sigma^21(t) + w2(t) * \sigma^2\_2(t) \label{eq:1} \\
-  T_g=\underset{t}{\operatorname{argmin}}\ \sigma^2\_w(t) \label{eq:2}
-\end{gather}
-
-\begin{comment}
-  R = max stddev value (typically 128 for 8-bit images)
-\end{comment}
-
-One adaptive local threshold approach is the Sauvola method \cite{image_binarization_sauvola_2000}. This method calculates a local threshold $T_w$ for each pixel in a window around that pixel. This method is resistant to uneven lighting. The local mean $m_w$ and local standard deviation $\sigma_w$ of the window are used, as well as the parameter $R$, which represents the dynamic range of the standard deviation. The sensitivity of the threshold can be corrected using the parameter $k$. The threshold is represented in equation \eqref{math:sauvola} \cite{review_document_binarization_yang_2024,image_binarization_sauvola_2000}. An optional parameter $delta$ has been added to further fine-tune the threshold.
-\begin{gather}
-  T_w = m_w * \left(1 + k * \left(\frac{\sigma_w}{R} - 1\right)\right) - delta \label{math:sauvola}
-\end{gather}
-
-\begin{comment}
-  ToDo: evtl. noch k in die T Formel einbauen, um die Sensitivität anzupassen
-\end{comment}
-
-Another adaptive method that dynamically adjusts the required window size is the method developed by Bataineh et al. \cite{adaptive_thresholding_methods_bataineh_2011}. This method first calculates a global threshold $T_{con}$ \eqref{math:adapt_win:T_con}, which classifies the pixel values into foreground (black), background (white), and confusion values (red) \eqref{math:adapt_win:I}. Based on the ratio $p$ of foreground to confusion values and the global standard deviation $\sigma_g$, a primary window size $PW_{size}$ is selected \eqref{math:adapt_win:PW}. If the number of confusion values in the window exceeds the number of foreground values, half the window size $SW_{size}$ is used.
-
-\begin{gather}
-  T_{con} = m_g - \frac{m_g^2 * \sigma_g}{(m_g + \sigma_g) * (0.5 max_{level} + \sigma_g)}\label{math:adapt_win:T_con}\\
-  I = \begin{cases}
-    \text{black}, &  i(x,y) \leq T_{con} - \left(\frac{\sigma_g}{2}\right),\\
-    \text{red}, &  T_{con} - \left(\frac{\sigma_g}{2}\right) < i(x,y) < T_{con} + \left(\frac{\sigma_g}{2}\right),\\
-    \text{white}, &  i(x, y) \geq T_{con} + \left(\frac{\sigma_g}{2}\right),\\
-  \end{cases} \label{math:adapt_win:I}\\
-  PW_{size} = \begin{cases}
-    \left(\frac{I_h}{4}, \frac{I_w}{6}\right), &  p \geq 2.5 \ \text{ or } \ (\sigma_g < 0.1 * max_{level}),\\
-    \left(\frac{I_h}{30}, \frac{I_w}{20}\right), &  1 < p < 2-5 \ \text{or} \ (I_h + I_w < 400),\\
-    \left(\frac{I_h}{40}, \frac{I_w}{30}\right), & p \leq 1,
-  \end{cases}\label{math:adapt_win:PW}
-\end{gather}
-
-The local threshold $T_w$ is then calculated for each window \eqref{math:bataineh}. This uses an adaptive standard deviation value $\sigma_{adaptive}$ based on the maximum and minimum values of the standard deviation of all windows \eqref{math:bataineh:adapt} \cite{adaptive_thresholding_methods_bataineh_2011}. Due to the adaptive window size and adaptive threshold value, which are based on the image features, this method is robust against various challenges such as thin pen strokes and low-contrast images. However, excessive background remains unavoidable \cite{review_document_binarization_yang_2024}.
-
-\begin{gather} 
-  T_w = m_w - \frac{m_W^2-\sigma_W}{(m_g+\sigma_W) \times (\sigma_{adaptive}+\sigma_W)}\label{math:bataineh} \\
-  \sigma_{adaptive} = \frac{\sigma_W-\sigma_{min}}{\sigma_{max}-\sigma_{min}} \label{math:bataineh:adapt}
-\end{gather}
-
-\subsection{Despeckle}
-\label{subsec:despeckle}
-
-A despeckle step is offered to remove small spots that arise or remain during binarization. It removes smaller, connected components (speckles) from the binarized image.
-The method $get\_label\text{()}$ from the CImg library \cite{cimg} is used to detect the connected components. It calculates the connected components using the algorithm by Hesselinks et al. \cite{connected_components_hesselink_meijster_bron_2001,cimg}.
-
-\subsection{Morphological operations}
-\label{subsec:morphological-operations}
-
-After segmenting the foreground and background, small holes or islands may appear. These can be removed using opening and closing operations \cite{image_engineering_vl2_zhang_2017}. The pipeline offers the option of applying the morphological operations dilation and erosion. Dilation expands bright (white) areas. In binary images, this can connect broken characters or thicken strokes. Erosion reduces bright areas \footnote{and expands dark areas}. In binary images, this can remove small noise points or make strokes thinner \cite{Digitale_Bildverarbeitung_werner_2020,image_engineering_vl2_zhang_2017}.
-
-\subsection{Color passthrough}
-\label{subsec:color-passthrough}
-
-As the final step in the pipeline, the binarized image can be used to obtain the color values of the original image. To do this, the binarized and enhanced image is used as a mask. All pixels that were classified as foreground (black) in the binarized image are replaced by the color of the underlying pixel in the original image. As shown in equation \eqref{math:color}, $I'(x, y, z)$ describes the result, $I_{original}(x, y, z)$ describes the colored original image, and $i(x, y)$ describes the binarized image.
-
-\begin{gather}
-  I'(x, y, z) =
-  \begin{cases}
-    I_{original}(x, y, z), & \text{if }i(x, y) = \text{black},\\
-    \text{white}, & \text{else} 
-  \end{cases} \label{math:color}
-\end{gather}
+\section{Pipeline Optimizations}
+\label{sec:optimazation}
 
 \section{Experiments}
 \label{sec:experiments}
