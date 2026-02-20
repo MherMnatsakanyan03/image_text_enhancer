@@ -73,42 +73,38 @@
 
 \section{Introduction}
 \label{sec:intro}
-
-Possible Research Questions
-\begin{enumerate}
-  \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
-\end{enumerate}
-
+\begin{comment}
+  Possible Research Questions
+  \begin{enumerate}
+    \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
+    \item Evaluating Performance Gains: How do systematic code optimizations improve the processing speed of a baseline image enhancement tool?
+    \item Scaling Performance in Image Processing: Identifying and mitigating inefficiencies in an initial software implementation for OCR 
+  \end{enumerate}
+\end{comment}
 
 \subsection{Background}
 \label{sec:background}
 
-The execution of performance-critical applications in web browsers has changed with the introduction of WebAssembly (WASM). Although WASM offers near-native execution performance, utilising multi-core architectures with parallel programming is still a relatively new field. While native C++ programs use OpenMP to easily implement parallelism, support for OpenMP in WASM remains uncertain. 
-
-Was ist WASM?
-
-Was machen wir mit unserer Pipeline?
-
-\begin{enumerate}
-  \item easy to use
-  \item out of the box good results
-  \item low dependencies (only CImg (doesnt have other dependencies) and OpenMP )
-  \item only image enhancement, no OCR
-  \item MIT-0 or CeCILL-C license (commercially usable)
-  \item modular (users can choose which steps to apply)
-\end{enumerate}
-
-In this paper, we examine whether and how well OpenMP-based parallelism is compatible with WebAssembly by using a lightweight image enhancement pipeline implemented in C++ with OpenMP. First, we demonstrate that the pipeline can be compiled for WASM, then we evaluate its performance in native execution and in WebAssembly. We then compare the results.
+The digitization of documents, especially images scanned or captured with smartphone cameras, is an important step in making information available. It also forms the basis for further processing steps such as optical character recognition (OCR). Existing tools and libraries for image enhancement and document preprocessing are powerful, but often too complex, too specialized, or have many dependencies. This makes it difficult to integrate them into small, user-defined programs and leads to the bloating of these programs. There is therefore a need for a lightweight, easy-to-use, and efficient solution that focuses on image enhancement while being flexible and modular enough to be used in a variety of applications.
+As modern smartphone cameras capture images with ever-higher resolutions, the computing time required to process them also increases. Efficient implementation that utilizes the advantages of parallelization and other optimization techniques is therefore important for improving processing speed and ensuring user satisfaction.
 
 \subsection{Related Work}
 \label{sec:related-work}
+
 \begin{comment}
-  
 Since the introduction of WASM in 2017 \cite{WASM_Haas_2017}, research has progressed in a variety of ways. For instance, significant investment has gone into the 'internal' WASM runtime, either to add features or to investigate its performance and energy efficiency . Another area of research has investigated the use of WASM in various application \cite{wasm_runtimes_survey_zhang_2025} areas, such as web applications, the Internet of Things, and high-performance computing \cite{wasm_runtimes_survey_zhang_2025}. 
 Of particular mention is the work of Chadha et al., who examine the use of WASM in the HPC domain in \cite{Mpi_Wasm_Chadha_2023}. Since parallelisation is essential for HPC applications, they have developed a WASM embedder that enables the MPI library to be used in WASM applications.  
 \end{comment}
-
 \begin{comment}
+  \begin{enumerate}
+    \item easy to use
+    \item out of the box good results
+    \item low dependencies (only CImg (doesnt have other dependencies) and OpenMP )
+    \item only image enhancement, no OCR
+    \item MIT-0 or CeCILL-C license (commercially usable)
+    \item modular (users can choose which steps to apply)
+  \end{enumerate}
+
   Tools die Document Enhancement bereits können:
   - OpenCV -> viel zu groß und abhöngig von vielen anderen Bibliotheken, BSD Lizenz
   - Tesseract - Open Source OCR Engine, die einige Bildverbesserungsfunktionen bietet, aber hauptsächlich auf OCR ausgerichtet ist, nicht einfach erweiterbar, preprocessing sind nicht als allgemeine Enhnancement Methoden gedacht, Apache lizenz
@@ -117,44 +113,43 @@ Of particular mention is the work of Chadha et al., who examine the use of WASM 
   - Unpaper - spezialisiert auf Nachbearbeitung von Scans von Büchern, viele Abhängigkeiten (ffmpeg etc), nicht so einfach erweiterbar und stark spezialisiert, GPL Lizenz
 \end{comment} 
 
-Image Enhancement und Dokumenten Preprocessing wurden von einer weitreichenden Anzahl an open-source Tools und kommerzieller Software abgedeckt. Sie reichen von umfassenden Bildbearbeitungsbibliotheken, Object Character Recognition OCR Bibliotheken, bis hin zu spezialisierten Tools für die Nachbearbeitung von gescannten Dokumenten. 
-
+Image enhancement and document preprocessing are covered by a wide range of open-source tools and commercial software. The scope ranges from general purpose image processing libraries and OCR (optical character recognition) libraries to specialized tools for post-processing scanned documents.
 
 \label{sec:general-purpose-libraries}
-Eine der weitverbreitesten Bibliothekt für allgemeine Bildverarbeitung ist OpenCV. OpenCV wurde von Bradski entwickelt und bietet eine Vielzahl von Funktionen und Algorithmen für die Bildverarbeitung, beispielsweise Filter, Transformationen, Segmentierunt und Feature-Erkennung, sowie Machine-und Deep-learning. OpenCV ist in C++ geschrieben und bietet eine modulare, Plattformübergreifende Architektur, die es einfach macht, es in verschiedenen Anwendungen zu integieren. Allerdings ist OpenCV eine sehr umfassende Bibliothek, die viele Funktionen und Abhängigkeiten enthählt, was zu einem Overhead führt, wenn nur ein bruchteil der Funktionen genutzt wird. Zudem ist OpenCV unter der BSD-Lizenz lizenziert. 
-Ähnlich zu OpenCV bietet ImageMagick eine umfassende suite für die Bildbearbeitung, als Kommandozeilen-Tool und als Bibliothek. Es bietet Funktionen wie Formatikonvertierung, Größenänderung, Filterung und Farbkorrektur. Es ist jedoch nicht speziell auf die Verbesserung von gescannten oder fotografierten Bildern ausgerichtet, sondern eher auf allgemeine Bildbearbeitung. Die Vielzahl an Funktionen und Möglichkeiten resultieren in einer vielzahl an Abhängigkeiten, und einer großen Coedbase. Es ist unter der Apache-Lizenz lizenziert.
+One of the most widely used libraries for general image processing is OpenCV \cite{opencv}. Described by Bradski in 2000 \cite{opencv_bradski_2000}, OpenCV offers a wide range of functions and algorithms for image processing, such as filters, transformations, segmentation, and feature detection, as well as machine and deep learning. OpenCV is written in C++ and has a modular, cross-platform architecture that allows for easy integration into various applications. However, OpenCV is a very complex library with many functions and dependencies, which leads to overhead when only a fraction of the functions are used. OpenCV is also licensed under the BSD license. 
+Similar to OpenCV, ImageMagick \cite{imagemagick} is a comprehensive suite for image processing that is available as a command line tool and as a library. It offers functions such as format conversion, resizing, filtering, and color correction. However, ImageMagick is not specifically designed to enhance scanned or photographed images, but rather for general image processing. The wide range of functions and possibilities results in a large number of dependencies and a large code base. ImageMagick is licensed under the Apache License.
 
 \label{sec:ocr-libraries}
-Bei der Dokumenten-Analyse wird häufig die open-source OCR engine Tesseract verwendet. Tesseract wurde von Smith in 2007 beschrieben und hat sich in eine der führenden OCR-Engines entwickelt. Es bietet neben der Texterkennung auch einige Funktionen zur Bildverbesserung, dessen primärer Fokus ist jedoch in der OCR liegt. Die Bildverbesserungsfunktionen sind typischerweise in den OCR-Workflow integriert und stehen nicht als allgemeine Bildverbesserungsfunktionen zur verfügung. Tesseract ist unter der Apache-Lizenz lizenziert.
-Eine ähnliche Bibliothek, die sich auf OCR spezialisiert hat, ist die C basierte Leptonica Bibliothek. Leptonica bietet Funktionen für die Bildverarbeitung, die häufig im backend von OCR-Engines wie Tesseract verwendet werden. Es bietet Funktionen wie Binarisierung, Rauschunterdrückung und Morphologische Operationen, die für die Vorbereitung von Bildern für die OCR-Erkennung wichtig sind. Obwohl Leptonica relativ lightweight im verlgeich zu den anderen Bibliotheken ist, dient sie hauptsächlich als low-level Bibliothek und bietet beispielsweise keine ready-to-use konfigurierbare verarbeitungs Pipelines an. Außerdem ist sie in C geschrieben, was die Integration in C++ Anwendungen erschwert. Leptonica ist unter der BSD-Lizenz lizenziert.
+The open source OCR engine Tesseract is often used for document analysis. Tesseract was described by Smith in 2007 \cite{Tesseract_OCR_Smith_2007} and has become one of the leading OCR engines. In addition to text recognition, Tesseract also offers some image enhancement features, but the focus is on OCR. The image enhancement features are typically integrated into the OCR workflow and are not available as general image enhancement features. Tesseract is licensed under the Apache License.
+A similar library specializing in OCR is the C-based Leptonica library \cite{leptonica}. Leptonica offers image processing functions that are widely used in the backend of OCR engines such as Tesseract. It provides functions such as binarization, noise reduction, and morphological operations, which are important for preparing images for OCR recognition. Although Leptonica is relatively lightweight compared to the other libraries, it primarily serves as a low-level library and does not offer ready-to-use, configurable processing pipelines, for example. It is also written in C, which makes integration into C++ applications difficult. Leptonica is licensed under the BSD license.
 
 \label{sec:specialized-post-processing}
-Eine mehr spezialisiertes Tool ist unpaper, das sich auf die Nachbearbeitung von gescannten Dokumenten spezialisiert hat. Es bietet Funktionen wie Deskewing, Binarisierung und Rauschunterdrückung, die speziell für die Verbesserung von gescannten Dokumenten entwickelt wurden. Unpaper ist jedoch stark spezialisiert und bietet nicht die Flexibilität, um es in custom C++ Anwendungen zu integireren. Basierend auf der Konfiguration benötigt unpaper viele Abhängigkeiten, was die Nutzung erschwert. Unpaper ist unter der GPL-Lizenz lizenziert, was die kommerzielle Nutzung einschränkt.
+A more specialized tool is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarization, and noise reduction that have been developed specifically for this purpose. However, Unpaper is highly specialized and cannot be flexibly integrated into custom C++ applications. Due to its configuration, Unpaper has many dependencies, which makes it difficult to use. Unpaper is licensed under the GPL license, which restricts commercial use.
+
+\label{sec:intro-optimization}
+\begin{comment}
+  CoPilots Vorschlag:
+  In addition to the tools and libraries described above, there is a large body of research on code optimization and performance improvement in image processing applications. For example, various techniques have been proposed to optimize the performance of image processing algorithms, such as parallelization, vectorization, and algorithmic improvements. However, these optimizations are often implemented in the context of specific libraries or applications and are not always easily transferable to other contexts. Moreover, the performance gains from these optimizations can vary widely depending on the specific use case and implementation details.
+\end{comment}
 
 \subsection{Our Contribution}
 \label{sec:our-contribution}
 
-Im Kontrast zu den beschriebenen, existierenden Tools und Bibliotheken, ist unser Ansatz darauf ausgelegt, minimalistisch, erweiterbar und einfach zu nutzen zu sein. Anstatt eine umfassende Bildverarbeitungsbibliothek oder eine OCR-Engine zu sein, konzentrieren wir uns auf eine lightweight, modulare Image Enhancement Pipeline, welche ausschließlich in C++ geschrieben ist und nur eine Abhängigkeit (CImg) hat, die selbst leichtgewichtig und portable ist. Durch die Verwendung von multithreading mit OpenMP können wir die Pipeline effizient ausführen und so auch große Bilder schnell verarbeiten. 
-Unsere Arbeit unterscheidet sich von OpenCV und ImageMagick, durch die bewusste Einschränkung auf die Bildverbesserung und durch die kleingehlatene Architektur. Im Gegensatz zu Tesseract und Leptonica, ist unsere Pipeline nicht in einen OCR-Workflow integriert, und ist nicht durch low-level Primitive Funktionen beschränkt, sondern bietet eine konfigurierbare, standalone, ready-to-use Pipeline. Unsere Pipeline ist nicht ausschließlich auf die Nachbearbeitung von gescannten Dokumenten spezialisiert, sondern ist als allgemeine Image Enhancement Pipeline konzipiert, die für eine Vielzahl von Anwendungen genutzt werden kann.
-Zusätzlich sichert unser Lizenzmodell (MIT-0 oder CeCILL-C) die Nutzung in der Forschung sowie in kommerziellen Anwendungen. Durch die kombinierung von minimalistischen Abhängigkeiten, eienr modularen Achrichtektur, portabilität durch C++ und OpenMP, sowie einer kommerziell nutzbaren Lizenz, füllt unsere Pipeline eine Lücke in zwischen large-scale general-purpose Bildverarbeitungsbibliotheken und hochspezialisierten Tools für die Dokumentenverbesserung.
-
-\begin{comment}
-  Uns ist die effiziente Verarbeitung in der Pipeline wichtig. Daher vergleichen wir uns mit traditionellen open-source Binarisierungsmethoden und Bildverbesserungsverfahren und lassen bewusst Deep Learning Ansätze, sowie zahlungspflichtige Software außen vor.
-\end{comment}
-
-The pipeline is provided both as a executable and as a C++ library containing the individual methods. To efficiently process large amounts of image data, the implementation uses parallelization via OpenMP and other optimization methods such as loop blocking. The CImg library \cite{cimg} is used for the basic image processing methods.
+Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline written entirely in C++ with only one dependency (CImg \cite{cimg}), which is itself lightweight and portable. 
+We systematically optimize and improve our intuitive baseline implementation and evaluate the performance gains through various experiments. 
+Compared to OpenCV and ImageMagick, our work is characterized by its deliberate focus on image enhancement and compact architecture. Unlike Tesseract and Leptonica, our pipeline is not integrated into an OCR workflow and limited by low-level primitive functions, but offers a configurable standalone solution that is ready for immediate use. Our pipeline is not exclusively specialized in the post-processing of scanned documents, but is designed as a general image enhancement pipeline that can be used for a variety of applications.
+In addition, our licensing model (MIT-0 or CeCILL-C) ensures its use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable license, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialized tools for document enhancement.
 
 \subsection{Outline}
 \label{sec:outline}
 
-\begin{comment}
-  welche experimente werden wir durchführen?
-\end{comment}
-
-This paper is structured as follows: Section \ref{sec:pipeline} provides a detailed description of the developed pipeline and its methods. Section \ref{sec:experiments} demonstrates the performance of our pipeline using experiments. Finally, Section \ref{sec:conclusions} summarises our results and provides an outlook on possible future work.
+In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimize. In section \ref{sec:optimazation}, we describe the optimization techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work.
 
 \section{The Pipeline}
 \label{sec:pipeline}
+
+
+
 
 \section{Pipeline Optimizations}
 \label{sec:optimazation}
