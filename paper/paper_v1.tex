@@ -143,16 +143,32 @@ In addition, our licensing model (MIT-0 or CeCILL-C) ensures its use in research
 \subsection{Outline}
 \label{sec:outline}
 
-In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimize. In section \ref{sec:optimazation}, we describe the optimization techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work.
+In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimize. In section \ref{sec:optimization}, we describe the optimization techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work.
 
-\section{The Pipeline}
+\section{Pipeline}
 \label{sec:pipeline}
+  
+The pipeline is designed to be flexible and modular, enabling users to activate, deactivate and configure each step as required. Each step is designed to run independently of the others, except for the conversion to grayscale step \ref{pl:grayscale}, which forms the basis for subsequent operations. The steps in the pipeline are as follows:
 
+\begin{enumerate}
+  \item \label{pl:grayscale} Grayscale Conversion: Conversion of the input image into a grayscale image to simplify processing and reduce computing time.
+  \item \label{pl:Deskewing} Deskewing: Correction of skewed images to improve readability and OCR accuracy.
+  \item \label{pl:contrast} Contrast Enhancement: Improvement of the contrast in the image to facilitate the distinction between text and background.
+  \item \label{pl:denoising} Denoising: Removal of noise and artifacts in the image to improve clarity.
+  \item \label{pl:binarization} Binarization: Segmentation of the grayscale image into a binary image consisting of foreground and background.
+  \item \label{pl:morphological} Morphological Operations: Application of operations such as erosion and dilation to improve the structure of the text and remove small errors.
+  \item \label{pl:color} Color preservation: The color information of the original image is preserved at the locations of the foreground (especially relevant for historical documents to preserve their original coloration).
+\end{enumerate}
+Several algorithms are implemented in the steps \ref{pl:denoising}, \ref{pl:binarization} and \ref{pl:morphological}. As these have different effects on the result, users can select the algorithm best suited to their application. For instance, Bataineh's adaptive binarisation method with automatic window adjustment \cite{adaptive_thresholding_methods_bataineh_2011} is helpful when binarising historical, handwritten documents with uneven writing and lighting, whereas Otsu's method \cite{Otsu1979} is a good choice for binarising typewritten documents with uniform font and lighting.
+Standard configurations are provided for each step, enabling the pipeline to be used straight away. These configurations deliver good results for most use cases and are based on recommendations from the authors. This means that the pipeline can be used immediately, without the need for additional information. However, users can also customise the configurations to optimise the pipeline and improve their specific results.
+The pipeline methods \ref{pl:grayscale} - \ref{pl:color} can be used individually by users, as a library in their own program for their specific use case.
 
-
+We provide a command-line application that can be used independently of a program to access the pipeline. This enables the pipeline to be configured and used directly via the command line. 
 
 \section{Pipeline Optimizations}
-\label{sec:optimazation}
+\label{sec:optimization}
+
+
 
 \section{Experiments}
 \label{sec:experiments}
