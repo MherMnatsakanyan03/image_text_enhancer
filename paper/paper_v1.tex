@@ -201,7 +201,7 @@ We provide a command-line application that can be used independently of a progra
   - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
   - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
 \end{comment}
-Um auf multicore-Prozessoren eine bessere Performance zu erziehelen, werden die einzelnen Schritte mit OpenMP parallelisiert. Es werden hauptsaechlich \textit{parallel for collapse(3)} Umgebungen fuer die Pixelverarbeitungsschleifen verwendet. Es werden aber auch andere Parallelisierungsstrategien wie die Reduzierungs clauses \textit{reduction(min)} und \textit{recuction(max)} bei eineigen Binarisierungsalgorithmen verwendet. Es wird darauf geachtet, dass die Parallelisierung so implementiert wird, dass keine Race-Conditions oder False-Sharing auftreten. So werden beispielsweise bei der Kontrastverbesserung thread-lokale Buffer verwendet, um False-Sharing und locking zu vermeiden. Bei der Deskewing-Logik wird die Erkennnung und die Anwendung der Korrektur getrennt. Der Winkel wird einmal erkannt und dann auf das Graustufen- und Farbbild angewendet, um unnötige Berechnungen zu vermeiden. Intuitiv wurde dies dopplet ausgefuehrt.
+To achieve better performance on multicore processors, the individual steps are parallelized using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarization algorithms also use other parallelization strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelization, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations. Intuitively, this was done twice.
 
 \subsection{Memory Management and Allocation}
 \begin{comment}
@@ -211,7 +211,8 @@ Um auf multicore-Prozessoren eine bessere Performance zu erziehelen, werden die 
   - Suavola Binarization: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
   - CORE Utilites: returning pre-allocated buffers instead of heavy objects
 \end{comment}
-
+To prevent increased memory consumption and long runtimes, the image is not copied at each step. Instead, the steps work in-place on the input image. For this purpose, a pointer is passed at each step. This approach is continued in grayscale conversion by replacing the final deep copy task of the image with a pointer swap of the original image pointer with the new one. 
+Memory optimizations were made in further steps. For example, in the adaptive Gaussian blur filter and the adaptive median filter, the buffer allocations are removed from the pixel processing loop to reduce the number of memory allocations. Sauvola's binarization algorithm uses a lightweight fused vector builder instead of the \textit{8-bit CImg<double>} image structure. Similarly, the core utilities return preallocated buffers instead of heavy objects.
 
 \subsection{Algorithmic Complexity Reduction}
 \begin{comment}
