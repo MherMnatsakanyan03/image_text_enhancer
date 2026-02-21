@@ -169,6 +169,70 @@ We provide a command-line application that can be used independently of a progra
 \label{sec:optimization}
 
 
+\begin{comment}
+  - Grayscale: parallel for, for pixel processing loop
+  - Grayscale: pointer swapping instead of copying the image for each step -> no memory tests were conducted
+
+  - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
+  - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
+  - Deskewing: total runtime reduced from ~95ms to ~7ms
+
+  - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
+  - Contrast Enhancement: precalculate the linear strecht formula and save in Lookup-Table. main loop performs O(1) lookup insted of floating point calculations
+  - Contrast Enhancement: replacing if/else branching in pixel loop with std::min clamping, alowing the compiler to auto-vectorize using SIMD -> no assembly checks were done
+
+  - Adaptive Gaussian Blur: removed std::vector allocations inside hot loop and using "ping-pong" strategie where image acted as destination buffer, swapping pointers at the end
+  - Adaptive Median Filter: moving of buffer allocations outside of the pixel loop
+  
+  - CORE Utilites: returning pre-allocated buffers instead of heavy objects
+
+  - Batainhe Binarization: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
+  - Bataineh Binarization: total runtime reduced from ~340ms to ~20ms
+  - Sauvola Binarization: branchless lookup
+  - Suavola Binarization: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
+
+  - Morphological Operations: decomposing the 2d squre kernel operation intwo two 1d kernel operations (horizontal and vertical) -> reducing the complexity from O(K^2) to O(2K)
+  - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
+\end{comment}
+
+\subsection{Parallelization and Concurrency}
+\begin{comment}
+  - Grayscale: parallel for, for pixel processing loop
+  - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
+  - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
+\end{comment}
+Um auf multicore-Prozessoren eine bessere Performance zu erziehelen, werden die einzelnen Schritte mit OpenMP parallelisiert. Es werden hauptsaechlich \textit{parallel for collapse(3)} Umgebungen fuer die Pixelverarbeitungsschleifen verwendet. Es werden aber auch andere Parallelisierungsstrategien wie die Reduzierungs clauses \textit{reduction(min)} und \textit{recuction(max)} bei eineigen Binarisierungsalgorithmen verwendet. Es wird darauf geachtet, dass die Parallelisierung so implementiert wird, dass keine Race-Conditions oder False-Sharing auftreten. So werden beispielsweise bei der Kontrastverbesserung thread-lokale Buffer verwendet, um False-Sharing und locking zu vermeiden. Bei der Deskewing-Logik wird die Erkennnung und die Anwendung der Korrektur getrennt. Der Winkel wird einmal erkannt und dann auf das Graustufen- und Farbbild angewendet, um unnötige Berechnungen zu vermeiden. Intuitiv wurde dies dopplet ausgefuehrt.
+
+\subsection{Memory Management and Allocation}
+\begin{comment}
+  - Grayscale: pointer swapping instead of copying the image for each step -> no memory tests were conducted
+  - Adaptive Gaussian Blur: removed std::vector allocations inside hot loop and using "ping-pong" strategie where image acted as destination buffer, swapping pointers at the end
+  - Adaptive Median Filter: moving of buffer allocations outside of the pixel loop
+  - Suavola Binarization: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
+  - CORE Utilites: returning pre-allocated buffers instead of heavy objects
+\end{comment}
+
+
+\subsection{Algorithmic Complexity Reduction}
+\begin{comment}
+  - Batainhe Binarization: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
+  - Morphological Operations: decomposing the 2d squre kernel operation intwo two 1d kernel operations (horizontal and vertical) -> reducing the complexity from O(K^2) to O(2K)
+  - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
+  - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
+\end{comment}
+
+\subsection{Loop level Optimizations}
+\begin{comment}
+  - Contrast Enhancement: precalculate the linear strecht formula and save in Lookup-Table. main loop performs O(1) lookup insted of floating point calculations
+  - Contrast Enhancement: replacing if/else branching in pixel loop with std::min clamping, alowing the compiler to auto-vectorize using SIMD -> no assembly checks were done
+  - Sauvola Binarization: branchless lookup
+\end{comment}
+
+\subsection{Architectial Refactoring}
+\begin{comment}
+  - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
+  - CORE Utilites: returning pre-allocated buffers instead of heavy objects
+\end{comment}
 
 \section{Experiments}
 \label{sec:experiments}
