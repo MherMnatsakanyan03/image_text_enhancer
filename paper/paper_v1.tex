@@ -241,14 +241,30 @@ In some cases, architectural changes were also made to improve performance. For 
 \section{Experiments}
 \label{sec:experiments}
 
-\begin{comment}
-  In der Literatur wird die Binarisierung durch Benchmark Datasets evaluiert, die ground truth Bilder enthalten. Es ergibt aber keinen Sinn für unserer Pipeline diese zu nutzen, da wir nicht nur binarisieren, sondern auch andere Schritte durchführen.
-\end{comment}
-
+\subsection{Aufbau}
+\label{sec:aufbau}
 \begin{comment}
   Wir werden die performance (Laufzeit) der Pipeline anhand verschiedener Einstellungen testen. Bspw. unterschiediche Anzahl an Threads, verschieden große Bilder, verschiedene Kombinationen von Methoden.
+  OS: WSL on Windows 11 (ist version relevant?)
+  Hardware:
+    i5 14600kf
+    32gb ram
+    affinity so wie im benchmark (0-7)
+    desktop pc, ohne energiespaarmodus, ohne weitere apps im hintergrund
+    auch lüfter an, damit keine temperatur throttles passieren könnten
+hab nicht geschaut ob nur ausschließlich p-cores verwendet wurden, aber das wäre meine vermutung
 \end{comment}
 
+To evaluate the performance of the pipeline with the optimizations, various experiments are conducted and the results are compared with the times of the intuitive implementation. The experiments examine the runtime when processing images of different sizes with and without parallelization.
+The experiments are conducted on a computer with an Intel Core i5-14600kf processor with six performance cores and eight efficiency cores. The computer has 32 GB of RAM. They are run on Windows 11 with the Windows Subsystem for Linux (WSL). Care is taken to ensure that no background applications are running and that power-saving mode is disabled so as not to affect performance. The fans are also activated to prevent temperature throttling. 
+
+Test images are individual images from different OCR datasets. One test image is document text from the FUNSD dataset \cite{FUNSD_Jaume_2019}, which has been scanned and contains a lot of noise. Two additional test images are handwritten documents from the HTR ICFHR 2016 dataset \cite{HTR_Dataset_ICFHR_2016_Toselli}. Both of these images have a resolution of XxY and exhibit bleed-through, whereby text from other pages is visible. For colour documents, a test image from the LRDE Document Binarisation Dataset \cite{Efficient_Multiscale_Sauvola_Binarization_Lazzara_Geraud_2013} is used. This is a scanned excerpt from a French magazine of very good quality containing many small sections of text. It has a resolution of XxY. A test image from the KITA imaging programme Forum is used to demonstrate a combination of historical text, UI elements and colour. All images are provided as JPG files.
+
+To test performance with larger images, the KITA image, which has an initial resolution of XxY, is upscaled to 2k, 4k, 8k and 16k using the ImageUpscaler tool \cite{imageupscaler}. All images are processed using the pipeline and the runtime is measured for each step. Additionally, the images are processed using one and eight threads to evaluate the effects of parallelisation.
+
+\subsection{Results}
+\label{sec:results}
+Ergebnisse
 
 \section{Conclusions}
 \label{sec:conclusions}
