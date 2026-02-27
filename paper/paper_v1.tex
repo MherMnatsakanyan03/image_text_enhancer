@@ -221,6 +221,7 @@ Memory optimizations were made in further steps. For example, in the adaptive Ga
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
   - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
 \end{comment}
+Several different algorithms are implemented in the pipeline. Some of these are optimized through algorithmic improvements to reduce complexity. One example is Bataineh binarization, which reduces the number of operations per pixel from $O(W^2)$ to $O(1)$ by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(K^2)$ to $O(2K)$ by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the “rotate and project” method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
 
 \subsection{Loop level Optimizations}
 \begin{comment}
@@ -228,12 +229,14 @@ Memory optimizations were made in further steps. For example, in the adaptive Ga
   - Contrast Enhancement: replacing if/else branching in pixel loop with std::min clamping, alowing the compiler to auto-vectorize using SIMD -> no assembly checks were done
   - Sauvola Binarization: branchless lookup
 \end{comment}
+To reduce the runtime of pixel processing loops, logical optimizations are made to the main loops that iterate over the pixels. In contrast enhancement, for example, the linear stretching formula is calculated in advance and stored in a lookup table. As a result, the main loop performs an $O(1)$ query per loop iteration instead of floating-point calculations. In addition, the if/else branch in the pixel processing loop is replaced by std::min clamping. This allows the compiler to auto-vectorize the loop with SIMD. In Sauvola binarization, a branchless lookup is also implemented to improve performance.
 
 \subsection{Architectial Refactoring}
 \begin{comment}
   - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
   - CORE Utilites: returning pre-allocated buffers instead of heavy objects
 \end{comment}
+In some cases, architectural changes were also made to improve performance. For example, in the deskewing logic, detection and application of the correction were separated. The angle is first detected and then applied to the grayscale and color images to avoid unnecessary calculations. In the core utilities, pre-built buffers are returned instead of creating heavy objects. This improves performance.
 
 \section{Experiments}
 \label{sec:experiments}
