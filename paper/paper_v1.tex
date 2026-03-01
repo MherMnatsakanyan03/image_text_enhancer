@@ -2,6 +2,11 @@
 \usepackage{booktabs}
 \usepackage{algorithm}
 \usepackage{url}
+\usepackage{pgfplots}
+\usepackage{tabularx}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{multirow}
 
 
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -21,6 +26,8 @@
 
 % that helps you to formulate your sentences
 % https://www.deepl.com/translator
+
+\pgfplotsset{compat=1.18}
 
 \begin{document}
 
@@ -85,7 +92,7 @@
 \subsection{Background}
 \label{sec:background}
 
-The digitization of documents, especially images scanned or captured with smartphone cameras, is an important step in making information available. It also forms the basis for further processing steps such as optical character recognition (OCR). Existing tools and libraries for image enhancement and document preprocessing are powerful, but often too complex, too specialized, or have many dependencies. This makes it difficult to integrate them into small, user-defined programs and leads to the bloating of these programs. There is therefore a need for a lightweight, easy-to-use, and efficient solution that focuses on image enhancement while being flexible and modular enough to be used in a variety of applications.
+The digitization of documents, especially images scanned or captured with smartphone cameras, is an important step in making information available \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015,review_degradation_image_enhancement_zhou_2023}. It also forms the basis for further processing steps such as optical character recognition (OCR). Existing tools and libraries for image enhancement and document preprocessing are powerful, but often too complex, too specialized, or have many dependencies. This makes it difficult to integrate them into small, user-defined programs and leads to the bloating of these programs. There is therefore a need for a lightweight, easy-to-use, and efficient solution that focuses on image enhancement while being flexible and modular enough to be used in a variety of applications.
 As modern smartphone cameras capture images with ever-higher resolutions, the computing time required to process them also increases. Efficient implementation that utilizes the advantages of parallelization and other optimization techniques is therefore important for improving processing speed and ensuring user satisfaction.
 
 \subsection{Related Work}
@@ -241,8 +248,8 @@ In some cases, architectural changes were also made to improve performance. For 
 \section{Experiments}
 \label{sec:experiments}
 
-\subsection{Aufbau}
-\label{sec:aufbau}
+\subsection{Setup}
+\label{sec:experimental-setup}
 \begin{comment}
   Wir werden die performance (Laufzeit) der Pipeline anhand verschiedener Einstellungen testen. Bspw. unterschiediche Anzahl an Threads, verschieden große Bilder, verschiedene Kombinationen von Methoden.
   OS: WSL on Windows 11 (ist version relevant?)
@@ -264,7 +271,156 @@ To test performance with larger images, the KITA image, which has an initial res
 
 \subsection{Results}
 \label{sec:results}
-Ergebnisse
+
+Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show the development of runtime with increasing image resolution for the intuitive and optimized implementations. It can be seen that runtime increases significantly with increasing image size, especially in the intuitive implementation. With the optimized implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the intuitive implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimizations in the deskewing step, as the detection and application of the correction are separated here.
+
+\begin{figure}[htbp]
+\label{fig:opt-vs-notopt-1core}
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    title={scaling with image size (1 Core)},
+    xlabel={Number of pixels (Megapixel)},
+    ylabel={Runtime (ms)},
+    xmin=0, xmax=140,
+    ymin=0,
+    grid=major,
+    legend pos=south east,
+    width=\columnwidth,
+    height=6cm
+]
+
+% Data points for the non-optimized version (1 core)
+\addplot[color=blue, mark=square, thick] coordinates {
+    (0.607, 15799.123)   % 1017x597
+    (2.46, 10092.499)  % 2048x1202 
+    (8.66, 99702.575)  % 3840x2254
+    (34.62, 726737.089) % 7680x4508 
+};
+\addlegendentry{intuitive (1 Core)}
+
+% Data points for the optimized version (1 core)
+\addplot[color=red, mark=x, thick] coordinates {
+    (0.607, 106.839)    % 1017x597
+    (2.46,  536.436)  % 2048x1202
+    (8.66, 2069.340)  % 3840x2254
+    (34.62, 9534.562) % 7680x4508
+    (138.5, 49311.168) % 15360x9017
+};
+\addlegendentry{optimized (1 Core)}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Runtime development with increasing image resolution.}
+\end{figure}
+
+\begin{figure}[htbp]
+\label{fig:opt-vs-notopt-8cores}
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    title={scaling with image size (8 Cores)},
+    xlabel={Number of pixels (Megapixel)},
+    ylabel={Runtime (ms)},
+    xmin=0, xmax=140,
+    ymin=0,
+    grid=major,
+    legend pos=south east,
+    width=\columnwidth,
+    height=6cm
+]
+
+% Data points for the non-optimized version (8 cores)
+\addplot[color=blue, mark=square, thick] coordinates {
+    (0.607, 130.577)   % 1017x597
+    (2.46, 1770.138)  % 2048x1202 
+    (8.66, 16328.084)  % 3840x2254
+    (34.62, 114607.067) % 7680x4508 
+};
+\addlegendentry{intuitive  (8 Cores)}
+
+% Data points for the optimized version (8 cores)
+\addplot[color=red, mark=x, thick] coordinates {
+    (0.607, 42.511)    % 1017x597
+    (2.46, 188.975)  % 2048x1202
+    (8.66, 781.634)  % 3840x2254
+    (34.62, 3015.428) % 7680x4508
+    (138.5, 15181.484) % 15360x9017
+};
+\addlegendentry{optimized (8 Cores)}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Runtime development with increasing image resolution.}
+\end{figure}
+
+The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarization phases when comparing the intuitive and optimized implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimizations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarization in particular. The deskewing phase also benefits from the optimizations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimization of Bataineh binarization, as this phase accounts for the largest share of the total runtime in the intuitive implementation.
+
+% Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
+\begin{table}[htbp]
+\caption{Comparison of total runtimes (8 Cores)}
+\label{tab:total-runtime}
+\footnotesize
+\begin{tabularx}{\columnwidth}{l r r r r}
+\toprule
+\textbf{Testbild} & \textbf{resolution} & \textbf{intuitive (ms)} & \textbf{optimized (ms)} & \textbf{Speedup} \\
+\midrule
+Text Small 1K    & 1017x597 & 130,577  & 42,511 & 3,07$\times$ \\
+Text 2K          & 2048x1202 & 1.770,138 & 188,975  & 9,37$\times$ \\
+Magazine 2K      & 2516x3272 & 16.701,170 & 649,924 & 25,70$\times$ \\
+Text 4K          & 3840x2254 & 16.328,084 & 781,634 & 20,89$\times$ \\
+Text 8K          & 7680x4508 & 114.607,067 & 3.015,428 & 38,01$\times$ \\
+Text 16K         & 15360x9017 & -\textsuperscript{*} & 15.181,484 & -\textsuperscript{*} \\
+\bottomrule
+\multicolumn{4}{l}{\scriptsize \textsuperscript{*}Could not be calculated due to massive runtime}
+\end{tabularx}
+\end{table}
+
+
+\begin{table}[htbp]
+\caption{Comparison of phase runtimes (3840x2254, 8 Cores)}
+\label{tab:pahse-runtime}
+\small
+\centering
+\begin{tabular}{l rr r}
+\toprule
+\textbf{Phase} & \textbf{intuitive (ms)} & \textbf{optimized (ms)} & \textbf{diff (\%)} \\
+\midrule
+Init \& Copy    & 65,458  & 63,672  & -2,728\% \\
+Grayscale       & 30,950  & 17,753  & -42,640\% \\
+\textbf{Deskew} & \textbf{159,405} & \textbf{3,062} & \textbf{-98,079\%} \\
+Filters (Sum)   & 483,312 & 380,467 & -21,279\% \\
+\textbf{Bataineh} & \textbf{15.507,105} & \textbf{217,347} & \textbf{-98,598\%} \\
+Morphological Ops & 66,663 & 93,05 & +39,583\% \\
+Color Preservation & 4,129 & 4,089 & -0,969\% \\
+\textbf{Total} & \textbf{16.328,084} & \textbf{781,634} & \textbf{-95,213\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimizations lead to a significant reduction in runtime in all phases, especially in Bataineh binarization, which accounts for the largest share of the total runtime in the intuitive implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
+
+\begin{table*}[t]
+\caption{Detaillierte Laufzeit der Algorithmus-Phasen in Millisekunden (Auszug)}
+\label{tab:breakdown}
+\small
+\centering
+\begin{tabular}{l c c c c c c}
+\toprule
+\textbf{Phase} & \textbf{1K Small} & \textbf{2K Text} & \textbf{2K Mag.} & \textbf{4K Text} & \textbf{8K Text} \\
+\midrule
+Init \& Copy & 1,29  & 4,20  & 61,83  & 65,46  & 241,93  \\
+Grayscale & 0,60  & 2,95  & 27,68  & 30,95  & 92,45  \\
+Deskew & 24,22  & 59,89  & 28,90  & 159,41  & 518,54  \\
+Binarization & 71,00  & 1.555,57  & 15.999,83  & 15.507,11  & 111.495,99 \\
+Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
+\midrule
+\textbf{TOTAL} & \textbf{130,58} & \textbf{1.770,14} & \textbf{16.701,17} & \textbf{16.328,08} & \textbf{114.607,07} \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 \section{Conclusions}
 \label{sec:conclusions}
