@@ -19,7 +19,7 @@
 %% Was false before, we need to check why its not working as intended
 \renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in 
 
-\acmConference[AEPRO 2026]{AEPRO 2026: Algorithm Engineering Projects}{March 1}{Jena, Germany}
+\acmConference[AEPRO 2026]{AEPRO 2026: Algorithm Engineering Projects}{March 16}{Jena, Germany}
 
 % convert text to title case
 % http://individed.com/code/to-title-case/
@@ -35,7 +35,7 @@
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
 %% TODO: think about good title
-\title{Image Enhancement: A Lightweight, Easy-to-Use, and Efficient C++ Library}
+\title{Image Text Enhancer: A Lightweight, Easy-to-Use, and Efficient C++ Library}
 \subtitle{\large Algorithm Engineering 2026 Project}
 
 %%
@@ -92,8 +92,7 @@
 \subsection{Background}
 \label{sec:background}
 
-The digitization of documents, especially images scanned or captured with smartphone cameras, is an important step in making information available \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015,review_degradation_image_enhancement_zhou_2023}. It also forms the basis for further processing steps such as optical character recognition (OCR). Existing tools and libraries for image enhancement and document preprocessing are powerful, but often too complex, too specialized, or have many dependencies. This makes it difficult to integrate them into small, user-defined programs and leads to the bloating of these programs. There is therefore a need for a lightweight, easy-to-use, and efficient solution that focuses on image enhancement while being flexible and modular enough to be used in a variety of applications.
-As modern smartphone cameras capture images with ever-higher resolutions, the computing time required to process them also increases. Efficient implementation that utilizes the advantages of parallelization and other optimization techniques is therefore important for improving processing speed and ensuring user satisfaction.
+The extraction of textual information from images --- especially from scanned documents or even receipts captured by smartphone cameras --- have become an important part of everyday life \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Such extraction nourish from the liaison of methods from disciplines such as computer vision, algorithm engineering, and natural language processing. Numerous fully-featured pipelines have been proposed, incorporating contrast enhancement, binarization, and optical character recognition (OCR). Although these approaches can achieve strong performance, they are often associated with substantial complexity on the user's end and come with plenty of software dependencies. Furthermore, it limits their use in fields requiring lightweight applications, e.g. mobile platforms. Moreover, the increasing resolution of modern smartphone cameras leads to higher computational demands during image processing. Consequently, efficient and platform-independent implementations that exploit parallelization and other optimization techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
 
 \subsection{Related Work}
 \label{sec:related-work}
@@ -120,18 +119,38 @@ Of particular mention is the work of Chadha et al., who examine the use of WASM 
   - Unpaper - spezialisiert auf Nachbearbeitung von Scans von Büchern, viele Abhängigkeiten (ffmpeg etc), nicht so einfach erweiterbar und stark spezialisiert, GPL Lizenz
 \end{comment} 
 
-Image enhancement and document preprocessing are covered by a wide range of open-source tools and commercial software. The scope ranges from general purpose image processing libraries and OCR (optical character recognition) libraries to specialized tools for post-processing scanned documents.
+Image enhancement and document preprocessing are covered by a wide range of open-source tools and commercial software. The scope ranges from general purpose image processing and OCR libraries to specialized tools for post-processing scanned documents.
 
 \label{sec:general-purpose-libraries}
-One of the most widely used libraries for general image processing is OpenCV \cite{opencv}. Described by Bradski in 2000 \cite{opencv_bradski_2000}, OpenCV offers a wide range of functions and algorithms for image processing, such as filters, transformations, segmentation, and feature detection, as well as machine and deep learning. OpenCV is written in C++ and has a modular, cross-platform architecture that allows for easy integration into various applications. However, OpenCV is a very complex library with many functions and dependencies, which leads to overhead when only a fraction of the functions are used. OpenCV is also licensed under the BSD license. 
-Similar to OpenCV, ImageMagick \cite{imagemagick} is a comprehensive suite for image processing that is available as a command line tool and as a library. It offers functions such as format conversion, resizing, filtering, and color correction. However, ImageMagick is not specifically designed to enhance scanned or photographed images, but rather for general image processing. The wide range of functions and possibilities results in a large number of dependencies and a large code base. ImageMagick is licensed under the Apache License.
+OpenCV is one of the most widely used libraries for general-purpose image processing \cite{opencv}. First described by Bradski in 2000 \cite{opencv_bradski_2000}, it includes a large collection of algorithms for filtering, transformations, segmentation, feature detection, and machine and deep learning. Written in C++, OpenCV features a modular, cross-platform architecture that supports integration into a wide range of applications. However, its breadth of functionality and associated dependencies may introduce unnecessary overhead when only a limited subset of features is required. OpenCV is released under the BSD license.
+
+Similar to OpenCV, ImageMagick \cite{imagemagick} is a comprehensive suite for image processing that is available as a command line tool and as a library. It offers functions such as format conversion, resizing, filtering, and colour correction. However, ImageMagick is not specifically designed to enhance scanned or photographed images, but rather for general image processing. The wide range of functions and possibilities results in a large number of dependencies and a large code base. ImageMagick is licensed under the Apache License.
 
 \label{sec:ocr-libraries}
 The open source OCR engine Tesseract is often used for document analysis. Tesseract was described by Smith in 2007 \cite{Tesseract_OCR_Smith_2007} and has become one of the leading OCR engines. In addition to text recognition, Tesseract also offers some image enhancement features, but the focus is on OCR. The image enhancement features are typically integrated into the OCR workflow and are not available as general image enhancement features. Tesseract is licensed under the Apache License.
-A similar library specializing in OCR is the C-based Leptonica library \cite{leptonica}. Leptonica offers image processing functions that are widely used in the backend of OCR engines such as Tesseract. It provides functions such as binarization, noise reduction, and morphological operations, which are important for preparing images for OCR recognition. Although Leptonica is relatively lightweight compared to the other libraries, it primarily serves as a low-level library and does not offer ready-to-use, configurable processing pipelines, for example. It is also written in C, which makes integration into C++ applications difficult. Leptonica is licensed under the BSD license.
+A similar library specializing in OCR is the C-based Leptonica library \cite{leptonica}. Leptonica offers image processing functions that are widely used in the backend of OCR engines such as Tesseract. It provides functions such as binarization, noise reduction, and morphological operations, which are important for preparing images for OCR recognition. Although Leptonica is relatively lightweight compared to the other libraries, it primarily serves as a low-level library and does not offer ready-to-use, configurable processing pipelines, for example. Leptonica is licensed under the BSD licence.
 
 \label{sec:specialized-post-processing}
-A more specialized tool is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarization, and noise reduction that have been developed specifically for this purpose. However, Unpaper is highly specialized and cannot be flexibly integrated into custom C++ applications. Due to its configuration, Unpaper has many dependencies, which makes it difficult to use. Unpaper is licensed under the GPL license, which restricts commercial use.
+A more specialized tool is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarization, and noise reduction that have been developed specifically for this purpose. However, Unpaper is highly specialized and cannot be flexibly integrated into custom C++ applications. Due to its configuration, Unpaper has many dependencies, which makes it difficult to use. Unpaper is licensed under the GPL licence, which restricts commercial use.
+
+\begin{table}[t]
+  \caption{Comparison of related tools.}
+  \label{tab:tool-comparison-compact}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    \textbf{Tool} & \textbf{Category} & \textbf{Licence} \\
+    \midrule
+    OpenCV      & General imaging   & BSD \\
+    ImageMagick & General imaging   & Apache \\
+    Tesseract   & OCR engine        & Apache \\
+    Leptonica   & General imaging   & BSD \\
+    Unpaper     & Document cleanup  & GPL \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\
 
 \label{sec:intro-optimization}
 \begin{comment}
@@ -142,10 +161,11 @@ A more specialized tool is Unpaper \cite{unpaper}, which focuses on post-process
 \subsection{Our Contribution}
 \label{sec:our-contribution}
 
-Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline written entirely in C++ with only one dependency (CImg \cite{cimg}), which is itself lightweight and portable. 
-We systematically optimize and improve our intuitive baseline implementation and evaluate the performance gains through various experiments. 
+Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three external dependencies: OpenMP, X11, and JPEG. We produce a Linux executable of 1.7 MiB.
+
+We systematically optimize and improve our baseline implementation and evaluate the performance gains through various experiments. 
 Compared to OpenCV and ImageMagick, our work is characterized by its deliberate focus on image enhancement and compact architecture. Unlike Tesseract and Leptonica, our pipeline is not integrated into an OCR workflow and limited by low-level primitive functions, but offers a configurable standalone solution that is ready for immediate use. Our pipeline is not exclusively specialized in the post-processing of scanned documents, but is designed as a general image enhancement pipeline that can be used for a variety of applications.
-In addition, our licensing model (MIT-0 or CeCILL-C) ensures its use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable license, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialized tools for document enhancement.
+In addition, our licensing model (MIT-0 and CeCILL-C) ensures its use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialized tools for document enhancement. In a proof of concept, we show that our approach can be executed on WASM platforms with only minor performance deficits.
 
 \subsection{Outline}
 \label{sec:outline}
@@ -157,15 +177,21 @@ In section \ref{sec:pipeline}, we introduce the pipeline that we will implement 
   
 The pipeline is designed to be flexible and modular, enabling users to activate, deactivate and configure each step as required. Each step is designed to run independently of the others, except for the conversion to grayscale step \ref{pl:grayscale}, which forms the basis for subsequent operations. The steps in the pipeline are as follows:
 
-\begin{enumerate}
-  \item \label{pl:grayscale} Grayscale Conversion: Conversion of the input image into a grayscale image to simplify processing and reduce computing time.
-  \item \label{pl:Deskewing} Deskewing: Correction of skewed images to improve readability and OCR accuracy.
-  \item \label{pl:contrast} Contrast Enhancement: Improvement of the contrast in the image to facilitate the distinction between text and background.
-  \item \label{pl:denoising} Denoising: Removal of noise and artifacts in the image to improve clarity.
-  \item \label{pl:binarization} Binarization: Segmentation of the grayscale image into a binary image consisting of foreground and background.
-  \item \label{pl:morphological} Morphological Operations: Application of operations such as erosion and dilation to improve the structure of the text and remove small errors.
-  \item \label{pl:color} Color preservation: The color information of the original image is preserved at the locations of the foreground (especially relevant for historical documents to preserve their original coloration).
+
+\begin{algorithm}
+  \caption{Image Text Enhancer Pipeline}
+  \label{alg:enhance}
+  \begin{enumerate}
+  \item Grayscale Conversion
+  \item Deskew
+  \item Contrast Enhancement
+  \item Denoise: (Adaptive) Gaussian and Median
+  \item Binarization
+  \item Morphological Operations
+  \item Color preservation
 \end{enumerate}
+\end{algorithm}
+
 Several algorithms are implemented in the steps \ref{pl:denoising}, \ref{pl:binarization} and \ref{pl:morphological}. As these have different effects on the result, users can select the algorithm best suited to their application. For instance, Bataineh's adaptive binarisation method with automatic window adjustment \cite{adaptive_thresholding_methods_bataineh_2011} is helpful when binarising historical, handwritten documents with uneven writing and lighting, whereas Otsu's method \cite{Otsu1979} is a good choice for binarising typewritten documents with uniform font and lighting.
 Standard configurations are provided for each step, enabling the pipeline to be used straight away. These configurations deliver good results for most use cases and are based on recommendations from the authors. This means that the pipeline can be used immediately, without the need for additional information. However, users can also customise the configurations to optimise the pipeline and improve their specific results.
 The pipeline methods \ref{pl:grayscale} - \ref{pl:color} can be used individually by users, as a library in their own program for their specific use case.
@@ -263,7 +289,10 @@ hab nicht geschaut ob nur ausschließlich p-cores verwendet wurden, aber das wä
 \end{comment}
 
 To evaluate the performance of the pipeline with the optimizations, various experiments are conducted and the results are compared with the times of the intuitive implementation. The experiments examine the runtime when processing images of different sizes with and without parallelization.
-The experiments are conducted on a computer with an Intel Core i5-14600kf processor with six performance cores and eight efficiency cores. The computer has 32 GB of RAM. They are run on Windows 11 with the Windows Subsystem for Linux (WSL). Care is taken to ensure that no background applications are running and that power-saving mode is disabled so as not to affect performance. The fans are also activated to prevent temperature throttling. 
+
+The experiments assess three aspects: (1) single-threaded runtime versus image size, (2) eight-threaded runtime versus image size, and (3) strong-scaling behaviour with increasing core count for a large fixed image size.
+
+For our measurements, we use a machine with an AMD Ryzen 9 9950X3D 16-core processor (32 hyperthreads) running Ubuntu 24.04.1 LTS with 64 GB of RAM. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
 Test images are individual images from different OCR datasets. One test image is document text from the FUNSD dataset \cite{FUNSD_Jaume_2019}, which has been scanned and contains a lot of noise. Two additional test images are handwritten documents from the HTR ICFHR 2016 dataset \cite{HTR_Dataset_ICFHR_2016_Toselli}. Both of these images have a resolution of XxY and exhibit bleed-through, whereby text from other pages is visible. For colour documents, a test image from the LRDE Document Binarisation Dataset \cite{Efficient_Multiscale_Sauvola_Binarization_Lazzara_Geraud_2013} is used. This is a scanned excerpt from a French magazine of very good quality containing many small sections of text. It has a resolution of XxY. A test image from the KITA imaging programme Forum is used to demonstrate a combination of historical text, UI elements and colour. All images are provided as JPG files.
 
@@ -424,7 +453,6 @@ Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
 
 \section{Conclusions}
 \label{sec:conclusions}
-
 
 %%
 %% The next two lines define the bibliography style to be used, and
