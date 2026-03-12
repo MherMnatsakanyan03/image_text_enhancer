@@ -100,7 +100,7 @@
 \subsection{Background}
 \label{sec:background}
 
-The extraction of textual information from images --- from scanned books to even receipts captured by smartphone cameras --- have become an important part of everyday life \cite{Investigation_binarization_techniques_unevenly_illuminated_document_images_alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Any such extraction necessarily begins with the pre-processing of recorded images through techniques such as binarization, noise removal, and geometric transformation, a process generally referred to as \textit{document enhancement}. Numerous tools focused on this niche have been proposed. Although these approaches feature broad capabilities, they are often associated with substantial complexity on the user's end and entail considerable software dependencies. These dependencies restrict applicability, particularly in settings where binary size is constrained, such as mobile and web platforms. This limitation assumes added importance in a context where most digital media interactions now take place on smartphones and application development is increasingly oriented toward edge-computing models. Consequently, efficient and platform-independent implementations that exploit parallelization and other optimization techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
+The extraction of textual information from images --- from scanned books to even receipts captured by smartphone cameras --- have become an important part of everyday life \cite{Investigation_binarisation_techniques_unevenly_illuminated_document_images_alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Any such extraction necessarily begins with the pre-processing of recorded images through techniques such as binarisation, noise removal, and geometric transformation, a process generally referred to as \textit{document enhancement}. Numerous tools focused on this niche have been proposed. Although these approaches feature broad capabilities, they are often associated with substantial complexity on the user's end and entail considerable software dependencies. These dependencies restrict applicability, particularly in settings where binary size is constrained, such as mobile and web platforms. This limitation assumes added importance in a context where most digital media interactions now take place on smartphones and application development is increasingly oriented toward edge-computing models. Consequently, efficient and platform-independent implementations that exploit parallelization and other optimization techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
 
 \subsection{Related Work}
 \label{sec:related-work}
@@ -134,7 +134,7 @@ ImageMagick \cite{imagemagick} is a suite for image processing that is available
 The C-based Leptonica library \cite{leptonica} is a general-purpose image processing and image analysis application. It is a dependency to both Tesseract and OpenCV. Although Leptonica is relatively lightweight compared to the other libraries, much like our approach, it primarily serves as a low-level library and does not offer ready-to-use, configurable processing pipelines.
 
 \label{sec:specialized-post-processing}
-A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarization, and noise reduction that have been developed specifically for this purpose. The tool also offers a CLI variant, with which pipeline steps can be configured and disabled. Unpaper requires ffmpeg, which itself consumes >100MiB of space.
+A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarisation, and noise reduction that have been developed specifically for this purpose. The tool also offers a CLI variant, with which pipeline steps can be configured and disabled. Unpaper requires ffmpeg, which itself consumes >100MiB of space.
 
 \begin{table}[t]
   \caption{Comparison of related tools.}
@@ -163,10 +163,10 @@ A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on 
 \label{sec:our-contribution}
 
 % todo
-% - State of the art binarization etc
+% - State of the art binarisation etc
 % - name, which algorithms we use
 
-Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three build dependencies: OpenMP, X11, and JPEG. We produce a Linux executable of 1.7 MiB.
+Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three build dependencies: OpenMP, X11, and JPEG. It can be imported as a library and also as a CLI executable---with 1.7 MiB on Linux.
 
 We systematically optimize and improve our baseline implementation and evaluate the performance gains through various experiments. 
 Compared to OpenCV and ImageMagick, our work is characterized by its deliberate focus on image enhancement and compact architecture. Unlike Tesseract and Leptonica, our pipeline is not integrated into an OCR workflow and limited by low-level primitive functions, but offers a configurable standalone solution that is ready for immediate use. Our pipeline is not exclusively specialized in the post-processing of scanned documents, but is designed as a general image enhancement pipeline that can be used for a variety of applications.
@@ -175,31 +175,29 @@ In addition, our licensing model (MIT-0 and CeCILL-C) ensures its use in researc
 \subsection{Outline}
 \label{sec:outline}
 
-In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimize. In section \ref{sec:optimization}, we describe the optimization techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work.
+In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimize. In section \ref{sec:optimization}, we describe the optimization techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work. 
 
 \section{Pipeline}
 \label{sec:pipeline}
   
-The pipeline is designed to be flexible and modular, enabling users to activate, deactivate and configure each step as required. Each step is designed to run independently of the others, except for the conversion to grayscale step \ref{pl:grayscale}, which forms the basis for subsequent operations. The steps in the pipeline are as follows:
-
+The pipeline is designed to be modular, enabling users to activate, deactivate and configure each stage as required, both through the CLI and the library. Some stages can intentionally not be disabled. These exceptions are marked in algorithm \ref{alg:enhance} with an \textbf{asterisk}. 
 
 \begin{algorithm}
   \caption{Image Text Enhancer Pipeline}
   \label{alg:enhance}
   \begin{enumerate}
-  \item Grayscale Conversion
+  \item Grayscale Conversion\textbf{*}
   \item Deskew
   \item Contrast Enhancement
   \item Denoise: (Adaptive) Gaussian and Median Blur
-  \item Binarization: Otsu, Sauvola, Bataineh
+  \item Binarisation\textbf{*}: Otsu, Sauvola, Bataineh
   \item Morphological Operations
   \item Colour passthrough
 \end{enumerate}
 \end{algorithm}
 
-Several algorithms are implemented in the steps \ref{pl:denoising}, \ref{pl:binarization} and \ref{pl:morphological}. As these have different effects on the result, users can select the algorithm best suited to their application. For instance, Bataineh's adaptive binarisation method with automatic window adjustment \cite{adaptive_thresholding_methods_bataineh_2011} is helpful when binarising historical, handwritten documents with uneven writing and lighting, whereas Otsu's method \cite{Otsu1979} is a good choice for binarising typewritten documents with uniform font and lighting.
-Standard configurations are provided for each step, enabling the pipeline to be used straight away. These configurations deliver good results for most use cases and are based on recommendations from the authors. This means that the pipeline can be used immediately, without the need for additional information. However, users can also customise the configurations to optimise the pipeline and improve their specific results.
-The pipeline methods \ref{pl:grayscale} - \ref{pl:color} can be used individually by users, as a library in their own program for their specific use case.
+The user can choose between different algorithms for certain stages---as these have different effects on the result, users can select the algorithm best suited to their application. For instance, Bataineh's adaptive binarisation method with automatic window adjustment \cite{adaptive_thresholding_methods_bataineh_2011} is helpful when binarising historical, handwritten documents with uneven writing and lighting, whereas Otsu's method \cite{Otsu1979} is a good choice for binarising typewritten documents with uniform font and lighting.
+Standard configurations are provided for each step, enabling the pipeline to be used straight away. These configurations deliver good results for most use cases and are based on fixed recommendations from the authors. This means that the pipeline can be applied immediately. However, users can also customise the configurations to optimise the pipeline and improve their specific results.
 
 We provide a command-line application that can be used independently of a program to access the pipeline. This enables the pipeline to be configured and used directly via the command line. 
 
@@ -224,10 +222,10 @@ We provide a command-line application that can be used independently of a progra
   
   - CORE Utilites: returning pre-allocated buffers instead of heavy objects
 
-  - Batainhe Binarization: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
-  - Bataineh Binarization: total runtime reduced from ~340ms to ~20ms
-  - Sauvola Binarization: branchless lookup
-  - Suavola Binarization: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
+  - Batainhe Binarisation: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
+  - Bataineh Binarisation: total runtime reduced from ~340ms to ~20ms
+  - Sauvola Binarisation: branchless lookup
+  - Suavola Binarisation: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
 
   - Morphological Operations: decomposing the 2d squre kernel operation intwo two 1d kernel operations (horizontal and vertical) -> reducing the complexity from O(K^2) to O(2K)
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
@@ -239,35 +237,35 @@ We provide a command-line application that can be used independently of a progra
   - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
   - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
 \end{comment}
-To achieve better performance on multicore processors, the individual steps are parallelized using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarization algorithms also use other parallelization strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelization, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations. Intuitively, this was done twice.
+To achieve better performance on multicore processors, the individual steps are parallelized using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarisation algorithms also use other parallelization strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelization, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations. Intuitively, this was done twice.
 
 \subsection{Memory Management and Allocation}
 \begin{comment}
   - Grayscale: pointer swapping instead of copying the image for each step -> no memory tests were conducted
   - Adaptive Gaussian Blur: removed std::vector allocations inside hot loop and using "ping-pong" strategie where image acted as destination buffer, swapping pointers at the end
   - Adaptive Median Filter: moving of buffer allocations outside of the pixel loop
-  - Suavola Binarization: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
+  - Suavola Binarisation: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
   - CORE Utilites: returning pre-allocated buffers instead of heavy objects
 \end{comment}
 To prevent increased memory consumption and long runtimes, the image is not copied at each step. Instead, the steps work in-place on the input image. For this purpose, a pointer is passed at each step. This approach is continued in grayscale conversion by replacing the final deep copy task of the image with a pointer swap of the original image pointer with the new one. 
-Memory optimizations were made in further steps. For example, in the adaptive Gaussian blur filter and the adaptive median filter, the buffer allocations are removed from the pixel processing loop to reduce the number of memory allocations. Sauvola's binarization algorithm uses a lightweight fused vector builder instead of the \textit{8-bit CImg<double>} image structure. Similarly, the core utilities return preallocated buffers instead of heavy objects.
+Memory optimizations were made in further steps. For example, in the adaptive Gaussian blur filter and the adaptive median filter, the buffer allocations are removed from the pixel processing loop to reduce the number of memory allocations. Sauvola's binarisation algorithm uses a lightweight fused vector builder instead of the \textit{8-bit CImg<double>} image structure. Similarly, the core utilities return preallocated buffers instead of heavy objects.
 
 \subsection{Algorithmic Complexity Reduction}
 \begin{comment}
-  - Batainhe Binarization: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
+  - Batainhe Binarisation: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
   - Morphological Operations: decomposing the 2d squre kernel operation intwo two 1d kernel operations (horizontal and vertical) -> reducing the complexity from O(K^2) to O(2K)
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
   - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
 \end{comment}
-Several different algorithms are implemented in the pipeline. Some of these are optimized through algorithmic improvements to reduce complexity. One example is Bataineh binarization, which reduces the number of operations per pixel from $O(W^2)$ to $O(1)$ by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(K^2)$ to $O(2K)$ by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the “rotate and project” method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
+Several different algorithms are implemented in the pipeline. Some of these are optimized through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(W^2)$ to $O(1)$ by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(K^2)$ to $O(2K)$ by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the “rotate and project” method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
 
 \subsection{Loop level Optimizations}
 \begin{comment}
   - Contrast Enhancement: precalculate the linear strecht formula and save in Lookup-Table. main loop performs O(1) lookup insted of floating point calculations
   - Contrast Enhancement: replacing if/else branching in pixel loop with std::min clamping, alowing the compiler to auto-vectorize using SIMD -> no assembly checks were done
-  - Sauvola Binarization: branchless lookup
+  - Sauvola Binarisation: branchless lookup
 \end{comment}
-To reduce the runtime of pixel processing loops, logical optimizations are made to the main loops that iterate over the pixels. In contrast enhancement, for example, the linear stretching formula is calculated in advance and stored in a lookup table. As a result, the main loop performs an $O(1)$ query per loop iteration instead of floating-point calculations. In addition, the if/else branch in the pixel processing loop is replaced by std::min clamping. This allows the compiler to auto-vectorize the loop with SIMD. In Sauvola binarization, a branchless lookup is also implemented to improve performance.
+To reduce the runtime of pixel processing loops, logical optimizations are made to the main loops that iterate over the pixels. In contrast enhancement, for example, the linear stretching formula is calculated in advance and stored in a lookup table. As a result, the main loop performs an $O(1)$ query per loop iteration instead of floating-point calculations. In addition, the if/else branch in the pixel processing loop is replaced by std::min clamping. This allows the compiler to auto-vectorize the loop with SIMD. In Sauvola binarisation, a branchless lookup is also implemented to improve performance.
 
 \subsection{Architectial Refactoring}
 \begin{comment}
@@ -299,9 +297,11 @@ The experiments assess three aspects: (1) single-threaded runtime versus image s
 
 For our measurements, we use a machine with an AMD Ryzen 9 9950X3D 16-core processor (32 hyperthreads) running Ubuntu 24.04.1 LTS with 64 GB of RAM. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
-Test images are individual images from different OCR datasets. One test image is document text from the FUNSD dataset \cite{FUNSD_Jaume_2019}, which has been scanned and contains a lot of noise. Two additional test images are handwritten documents from the HTR ICFHR 2016 dataset \cite{HTR_Dataset_ICFHR_2016_Toselli}. Both of these images have a resolution of XxY and exhibit bleed-through, whereby text from other pages is visible. For colour documents, a test image from the LRDE Document Binarisation Dataset \cite{Efficient_Multiscale_Sauvola_Binarization_Lazzara_Geraud_2013} is used. This is a scanned excerpt from a French magazine of very good quality containing many small sections of text. It has a resolution of XxY. A test image from the KITA imaging programme Forum is used to demonstrate a combination of historical text, UI elements and colour. All images are provided as JPG files.
+We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes a small text page (1K), standard text documents at 2K, 4K, and 8K, a magazine-style page at 2K, and an extreme high-resolution text image at 16K. This choice captures common document-enhancement scenarios while also testing scalability to very large inputs. The set therefore reflects both everyday text-processing workloads and stress-test conditions for runtime evaluation.
 
-To test performance with larger images, the KITA image, which has an initial resolution of XxY, is upscaled to 2k, 4k, 8k and 16k using the ImageUpscaler tool \cite{imageupscaler}. All images are processed using the pipeline and the runtime is measured for each step. Additionally, the images are processed using one and eight threads to evaluate the effects of parallelisation.
+% One test image is document text from the FUNSD dataset \cite{FUNSD_Jaume_2019}, which has been scanned and contains a lot of noise. Two additional test images are handwritten documents from the HTR ICFHR 2016 dataset \cite{HTR_Dataset_ICFHR_2016_Toselli}. Both of these images have a resolution of XxY and exhibit bleed-through, whereby text from other pages is visible. For colour documents, a test image from the LRDE Document Binarisation Dataset \cite{Efficient_Multiscale_Sauvola_Binarisation_Lazzara_Geraud_2013} is used. This is a scanned excerpt from a French magazine of very good quality containing many small sections of text. It has a resolution of XxY. A test image from the KITA imaging programme Forum is used to demonstrate a combination of historical text, UI elements and colour. All images are provided as JPG files.
+
+% To test performance with larger images, the KITA image, which has an initial resolution of XxY, is upscaled to 2k, 4k, 8k and 16k using the ImageUpscaler tool \cite{imageupscaler}. All images are processed using the pipeline and the runtime is measured for each step. Additionally, the images are processed using one and eight threads to evaluate the effects of parallelisation.
 
 \subsection{Results}
 \label{sec:results}
@@ -309,88 +309,91 @@ To test performance with larger images, the KITA image, which has an initial res
 Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show the development of runtime with increasing image resolution for the intuitive and optimized implementations. It can be seen that runtime increases significantly with increasing image size, especially in the intuitive implementation. With the optimized implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the intuitive implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimizations in the deskewing step, as the detection and application of the correction are separated here.
 
 \begin{figure}[htbp]
-\label{fig:opt-vs-notopt-1core}
+\centering
 \begin{tikzpicture}
   \begin{axis}[
     xmode=log,
     ymode=log,
-    title={scaling with image size (1 Core)},
+    title={Scaling with image size (8 Cores)},
     xlabel={Number of pixels (Megapixel)},
     ylabel={Runtime (ms)},
-    xmin=0, xmax=140,
-    ymin=0,
+    xmin=0.5, xmax=140,
+    ymin=20,
     grid=major,
     legend pos=south east,
     width=\columnwidth,
-    height=6cm
-]
+    height=6cm,
+    table/col sep=comma,
+  ]
 
-% Data points for the non-optimized version (1 core)
-\addplot[color=blue, mark=square, thick] coordinates {
-    (0.607, 15799.123)   % 1017x597
-    (2.46, 10092.499)  % 2048x1202 
-    (8.66, 99702.575)  % 3840x2254
-    (34.62, 726737.089) % 7680x4508 
-};
-\addlegendentry{intuitive (1 Core)}
+  % Baseline implementation
+  \addplot[
+    color=blue,
+    mark=square,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=south west,
+      xshift=2pt,
+      yshift=2pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_8_main.csv};
+  \addlegendentry{baseline (8 Cores)}
 
-% Data points for the optimized version (1 core)
-\addplot[color=red, mark=x, thick] coordinates {
-    (0.607, 106.839)    % 1017x597
-    (2.46,  536.436)  % 2048x1202
-    (8.66, 2069.340)  % 3840x2254
-    (34.62, 9534.562) % 7680x4508
-    (138.5, 49311.168) % 15360x9017
-};
-\addlegendentry{optimized (1 Core)}
+  % Optimized implementation
+  \addplot[
+    color=red,
+    mark=x,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=north east,
+      xshift=-2pt,
+      yshift=-2pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_8_optimized.csv};
+  \addlegendentry{optimized (8 Cores)}
 
-\end{axis}
+  \end{axis}
 \end{tikzpicture}
-\caption{Runtime development with increasing image resolution.}
-\end{figure}
-
-\begin{figure}[htbp]
+\caption{Runtime as a function of image size for the baseline and optimized implementations on 8 CPU cores. The x-axis shows the total image size in megapixels, and the y-axis shows the measured runtime in milliseconds; both axes use logarithmic scaling. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions; in those cases, the label indicates the corresponding number of samples. For clarity, only one representative from the documents with image size of $\approx 10^1$ Megapixels is plotted, as the results were indistinguishable.}
+\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimized implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimized implementation remains consistently faster across the full range.}
 \label{fig:opt-vs-notopt-8cores}
-\begin{tikzpicture}
-  \begin{axis}[
-    xmode=log,
-    ymode=log,
-    title={scaling with image size (8 Cores)},
-    xlabel={Number of pixels (Megapixel)},
-    ylabel={Runtime (ms)},
-    xmin=0, xmax=140,
-    ymin=0,
-    grid=major,
-    legend pos=south east,
-    width=\columnwidth,
-    height=6cm
-]
-
-% Data points for the non-optimized version (8 cores)
-\addplot[color=blue, mark=square, thick] coordinates {
-    (0.607, 130.577)   % 1017x597
-    (2.46, 1770.138)  % 2048x1202 
-    (8.66, 16328.084)  % 3840x2254
-    (34.62, 114607.067) % 7680x4508 
-};
-\addlegendentry{intuitive  (8 Cores)}
-
-% Data points for the optimized version (8 cores)
-\addplot[color=red, mark=x, thick] coordinates {
-    (0.607, 42.511)    % 1017x597
-    (2.46, 188.975)  % 2048x1202
-    (8.66, 781.634)  % 3840x2254
-    (34.62, 3015.428) % 7680x4508
-    (138.5, 15181.484) % 15360x9017
-};
-\addlegendentry{optimized (8 Cores)}
-
-\end{axis}
-\end{tikzpicture}
-\caption{Runtime development with increasing image resolution.}
 \end{figure}
 
-The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarization phases when comparing the intuitive and optimized implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimizations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarization in particular. The deskewing phase also benefits from the optimizations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimization of Bataineh binarization, as this phase accounts for the largest share of the total runtime in the intuitive implementation.
+The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the intuitive and optimized implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimizations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimizations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimization of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the intuitive implementation.
 
 % Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
 \begin{table}[htbp]
@@ -434,7 +437,7 @@ Color Preservation & 4,129 & 4,089 & -0,969\% \\
 \end{tabular}
 \end{table}
 
-Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimizations lead to a significant reduction in runtime in all phases, especially in Bataineh binarization, which accounts for the largest share of the total runtime in the intuitive implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
+Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimizations lead to a significant reduction in runtime in all phases, especially in Bataineh binarisation, which accounts for the largest share of the total runtime in the intuitive implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
 
 \begin{table*}[t]
 \caption{Detaillierte Laufzeit der Algorithmus-Phasen in Millisekunden (Auszug)}
@@ -448,7 +451,7 @@ Table \ref{tab:breakdown} shows the detailed phase runtime for the different pha
 Init \& Copy & 1,29  & 4,20  & 61,83  & 65,46  & 241,93  \\
 Grayscale & 0,60  & 2,95  & 27,68  & 30,95  & 92,45  \\
 Deskew & 24,22  & 59,89  & 28,90  & 159,41  & 518,54  \\
-Binarization & 71,00  & 1.555,57  & 15.999,83  & 15.507,11  & 111.495,99 \\
+Binarisation & 71,00  & 1.555,57  & 15.999,83  & 15.507,11  & 111.495,99 \\
 Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
 \midrule
 \textbf{TOTAL} & \textbf{130,58} & \textbf{1.770,14} & \textbf{16.701,17} & \textbf{16.328,08} & \textbf{114.607,07} \\
@@ -456,8 +459,13 @@ Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
 \end{tabular}
 \end{table*}
 
-\section{Conclusions}
-\label{sec:conclusions}
+\section{Future Work}
+\label{sec:future-work}
+
+\begin{enumerate}
+  \item Use heuristics for selecting algorithms, e.g. binarisation
+  \item better deskew
+\end{enumerate}
 
 %%
 %% The next two lines define the bibliography style to be used, and
