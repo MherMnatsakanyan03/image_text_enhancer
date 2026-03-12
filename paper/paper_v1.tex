@@ -495,6 +495,130 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
 \label{fig:opt-vs-notopt-1core}
 \end{figure}
 
+\begin{figure}[htbp]
+\centering
+
+\begin{minipage}{0.48\columnwidth}
+\centering
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    log basis x=2,
+    log basis y=2,
+    title={Strong scaling --- baseline / main},
+    xlabel={Number of threads},
+    ylabel={Speedup},
+    xmin=1, xmax=32,
+    ymin=1, ymax=32,
+    xtick={1,2,4,8,16,32},
+    grid=major,
+    legend pos=north west,
+    width=\linewidth,
+    height=6cm,
+    table/col sep=comma,
+  ]
+
+  % 2K image
+  \addplot[
+    color=blue,
+    mark=square,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_optimized_2k.csv};
+  \addlegendentry{2K image}
+
+  % 16K image
+  \addplot[
+    color=red,
+    mark=x,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_optimized_2k.csv};
+  \addlegendentry{16K image}
+
+  % Ideal scaling
+  \addplot[
+    color=black,
+    densely dashed,
+    thick
+  ] coordinates {
+    (1,1) (2,2) (4,4) (6,6) (8,8) (10,10)
+    (12,12) (14,14) (16,16) (32,32)
+  };
+  \addlegendentry{ideal}
+
+  \end{axis}
+\end{tikzpicture}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\columnwidth}
+\centering
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    log basis x=2,
+    log basis y=2,
+    title={Strong scaling --- optimised},
+    xlabel={Number of threads},
+    ylabel={Speedup},
+    xmin=1, xmax=32,
+    ymin=1, ymax=32,
+    xtick={1,2,4,8,16,32},
+    grid=major,
+    legend pos=north west,
+    width=\linewidth,
+    height=6cm,
+    table/col sep=comma,
+  ]
+
+  % 2K image
+  \addplot[
+    color=blue,
+    mark=square,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_optimized_2k.csv};
+  \addlegendentry{2K image}
+
+  % 16K image
+  \addplot[
+    color=red,
+    mark=x,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_optimized_2k.csv};
+  \addlegendentry{16K image}
+
+  % Ideal scaling
+  \addplot[
+    color=black,
+    densely dashed,
+    thick
+  ] coordinates {
+    (1,1) (2,2) (4,4) (6,6) (8,8) (10,10)
+    (12,12) (14,14) (16,16) (32,32)
+  };
+  \addlegendentry{ideal}
+
+  \end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\caption{Strong scaling behaviour of the baseline/main and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 16K). The dashed black line indicates ideal linear scaling.}
+\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline/main implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line.}
+\label{fig:strong-scaling-main-vs-optimised}
+\end{figure}
+
 The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
 
 % Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
@@ -538,6 +662,8 @@ Color Preservation & 4,129 & 4,089 & -0,969\% \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+% todo: why does init and copy take so much time?
 
 Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimisations lead to a significant reduction in runtime in all phases, especially in Bataineh binarisation, which accounts for the largest share of the total runtime in the baseline implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
 
