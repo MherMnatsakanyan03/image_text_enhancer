@@ -513,10 +513,11 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     ymin=1, ymax=32,
     xtick={1,2,4,8,16,32},
     grid=major,
-    legend pos=north west,
     width=\linewidth,
     height=6cm,
     table/col sep=comma,
+    legend to name=strongscalinglegend,
+    legend columns=3,
   ]
 
   % 2K image
@@ -571,7 +572,6 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     ymin=1, ymax=32,
     xtick={1,2,4,8,16,32},
     grid=major,
-    legend pos=north west,
     width=\linewidth,
     height=6cm,
     table/col sep=comma,
@@ -586,7 +586,6 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     x=threads,
     y=speedup
   ] {graphics/bench_strong_optimized_2k.csv};
-  \addlegendentry{2K image}
 
   % 16K image
   \addplot[
@@ -596,8 +595,7 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
   ] table[
     x=threads,
     y=speedup
-  ] {graphics/bench_strong_optimized_2k.csv};
-  \addlegendentry{16K image}
+  ] {graphics/bench_strong_optimized_16k.csv};
 
   % Ideal scaling
   \addplot[
@@ -608,14 +606,16 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     (1,1) (2,2) (4,4) (6,6) (8,8) (10,10)
     (12,12) (14,14) (16,16) (32,32)
   };
-  \addlegendentry{ideal}
 
   \end{axis}
 \end{tikzpicture}
 \end{minipage}
 
+\vspace{0.4em}
+\pgfplotslegendfromname{strongscalinglegend}
+
 \caption{Strong scaling behaviour of the baseline/main and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 16K). The dashed black line indicates ideal linear scaling.}
-\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline/main implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line.}
+\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline/main implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
