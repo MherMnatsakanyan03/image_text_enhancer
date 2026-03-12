@@ -302,7 +302,7 @@ The experiments assess three aspects: (1) single-threaded runtime versus image s
 
 For our measurements, we use a machine with an AMD Ryzen 9 9950X3D 16-core processor (32 hyperthreads) running Ubuntu 24.04.1 LTS with 64 GB of RAM. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
-We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes a small text page (1K), standard text documents at 2K, 4K, and 8K, a magazine-style page at 2K, and an extreme high-resolution text image at 16K. This choice captures common document-enhancement scenarios while also testing scalability to very large inputs. The set therefore reflects both everyday text-processing workloads and stress-test conditions for runtime evaluation.
+We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail (see Table \ref{tab:total-runtime} for details). These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
 
 % One test image is document text from the FUNSD dataset \cite{FUNSD_Jaume_2019}, which has been scanned and contains a lot of noise. Two additional test images are handwritten documents from the HTR ICFHR 2016 dataset \cite{HTR_Dataset_ICFHR_2016_Toselli}. Both of these images have a resolution of XxY and exhibit bleed-through, whereby text from other pages is visible. For colour documents, a test image from the LRDE Document Binarisation Dataset \cite{Efficient_Multiscale_Sauvola_Binarisation_Lazzara_Geraud_2013} is used. This is a scanned excerpt from a French magazine of very good quality containing many small sections of text. It has a resolution of XxY. A test image from the KITA imaging programme Forum is used to demonstrate a combination of historical text, UI elements and colour. All images are provided as JPG files.
 
@@ -400,9 +400,96 @@ With the optimised implementation, the runtime is significantly lower, especiall
 
   \end{axis}
 \end{tikzpicture}
-\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, only one representative from the documents with image size of $\approx 10^1$ Megapixels is plotted, as the results were similar.}
+
+\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, all but one documents with image size of $\approx 10^1$ Megapixels were omitted, as the results were almost identical.}
 \Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range. Notice, that there is no measurement for the 16K image in the baseline implementation.}
 \label{fig:opt-vs-notopt-8cores}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    title={Multithreaded weak scaling (Single core)},
+    xlabel={Number of pixels (Megapixel)},
+    ylabel={Runtime (ms)},
+    xmin=0.5, xmax=140,
+    ymin=20,
+    grid=major,
+    legend pos=south east,
+    width=\columnwidth,
+    height=6cm,
+    table/col sep=comma,
+  ]
+
+  % Baseline implementation
+  \addplot[
+    color=blue,
+    mark=square,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=south west,
+      xshift=2pt,
+      yshift=2pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_1_main.csv};
+  \addlegendentry{baseline (8 Cores)}
+
+  % Optimized implementation
+  \addplot[
+    color=red,
+    mark=x,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=north east,
+      xshift=-2pt,
+      yshift=-2pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_1_optimized.csv};
+  \addlegendentry{optimised (8 Cores)}
+
+  \end{axis}
+\end{tikzpicture}
+
+\caption{}
+\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range. Notice, that there is no measurement for the 16K image in the baseline implementation.}
+\label{fig:opt-vs-notopt-1cores}
 \end{figure}
 
 The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the intuitive and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the intuitive implementation.
