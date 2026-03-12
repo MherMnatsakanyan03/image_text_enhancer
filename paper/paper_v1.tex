@@ -232,7 +232,7 @@ We provide a command-line application that can be used independently of a progra
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
 \end{comment}
 
-Our hypothesis is, that our baseline implementation will not scale linearly with problem size, which would be wishful for image processing tasks, as many operations can be run in parallel. For that reason, we sought for low-hanging fruits in regard to "high-level" or conceptual algorithmic optimisations, i.e. choosing a more efficient algorithm for a task, while adhering to best-practices in regard to compiler optimisations, i.e. auto-vectorisation.
+We hypothesise that the baseline implementation fails to scale linearly with problem size, although such scaling would be desirable for image processing workloads. We therefore concentrated on identifying low-hanging fruits at the level of high-level algorithmic design, for example by selecting more efficient algorithms for specific tasks, while adhering to best practices such as avoiding false sharing and writing code amenable to auto-vectorisation.
 
 \subsection{Parallelisation and Concurrency}
 \begin{comment}
@@ -240,7 +240,7 @@ Our hypothesis is, that our baseline implementation will not scale linearly with
   - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
   - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
 \end{comment}
-To achieve better performance on multicore processors, the individual steps are parallelised using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarisation algorithms also use other parallelisation strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelisation, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations. Intuitively, this was done twice.
+To achieve better performance on multicore processors, the individual steps are parallelised using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarisation algorithms also use other parallelisation strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelisation, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations.
 
 \subsection{Memory Management and Allocation}
 \begin{comment}
@@ -296,11 +296,14 @@ In some cases, architectural changes were also made to improve performance. For 
 hab nicht geschaut ob nur ausschließlich p-cores verwendet wurden, aber das wäre meine vermutung
 \end{comment}
 
-To evaluate the performance of the pipeline with the optimisations, various experiments are conducted and the results are compared with the times of the intuitive implementation. The experiments examine the runtime when processing images of different sizes with and without parallelisation.
+To evaluate the performance of the pipeline with the optimisations, various experiments are conducted and the results are compared with the baseline implementation. The experiments examine the runtime when processing images of different sizes with and without parallelisation.
 
-The experiments assess three aspects: (1) single-threaded runtime versus image size, (2) eight-threaded runtime versus image size, and (3) strong-scaling behaviour with increasing core count for a large fixed image size.
+The experiments assess three aspects: (1) single-threaded runtime versus image size, (2) eight-threaded runtime versus image size, and (3) strong-scaling behaviour with increasing core count for a large fixed image size. 
 
-For our measurements, we use a machine with an AMD Ryzen 9 9950X3D 16-core processor (32 hyperthreads) running Ubuntu 24.04.1 LTS with 64 GB of RAM. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
+All stages of the pipeline are enabled, with Bataineh binarisation and the adaptive Gaussian and adaptive median filters selected.
+% in den alten Benchmarks war adaptive gaussian, adaptive median und simple median an...
+
+For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running Ubuntu 24.04.1 LTS with 64 GB of RAM. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
 We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail (see Table \ref{tab:total-runtime} for details). These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
 
@@ -311,14 +314,14 @@ We selected a small but representative set of document images spanning both docu
 \subsection{Results}
 \label{sec:results}
 
-Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show the development of runtime with increasing image resolution for the intuitive and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$ we observe
+Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show the development of runtime with increasing image resolution for the baseline and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$ we observe
 
 \begin{align*}
   t_{\text{baseline}} &\approx c_1 \cdot s^{1.660217} \\
   t_{\text{optimised}} &\approx c_2 \cdot s^{1.070713}
 \end{align*}
 
-With the optimised implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the intuitive implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimisations in the deskewing step, as the detection and application of the correction are separated here.
+With the optimised implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the baseline implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimisations in the deskewing step, as the detection and application of the correction are separated here.
 
 \begin{figure}[htbp]
 \centering
@@ -412,7 +415,7 @@ With the optimised implementation, the runtime is significantly lower, especiall
   \begin{axis}[
     xmode=log,
     ymode=log,
-    title={Multithreaded weak scaling (Single core)},
+    title={Single-threaded weak scaling},
     xlabel={Number of pixels (Megapixel)},
     ylabel={Runtime (ms)},
     xmin=0.5, xmax=140,
@@ -489,10 +492,10 @@ With the optimised implementation, the runtime is significantly lower, especiall
 
 \caption{}
 \Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range. Notice, that there is no measurement for the 16K image in the baseline implementation.}
-\label{fig:opt-vs-notopt-1cores}
+\label{fig:opt-vs-notopt-1core}
 \end{figure}
 
-The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the intuitive and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the intuitive implementation.
+The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
 
 % Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
 \begin{table}[htbp]
@@ -501,7 +504,7 @@ The results of the individual phases show a significant reduction in runtime in 
 \footnotesize
 \begin{tabularx}{\columnwidth}{l r r r r}
 \toprule
-\textbf{Testbild} & \textbf{resolution} & \textbf{intuitive (ms)} & \textbf{optimised (ms)} & \textbf{Speedup} \\
+\textbf{Testbild} & \textbf{resolution} & \textbf{baseline (ms)} & \textbf{optimised (ms)} & \textbf{Speedup} \\
 \midrule
 Text Small 1K    & 1017x597 & 130,577  & 42,511 & 3,07$\times$ \\
 Text 2K          & 2048x1202 & 1.770,138 & 188,975  & 9,37$\times$ \\
@@ -522,7 +525,7 @@ Text 16K         & 15360x9017 & -\textsuperscript{*} & 15.181,484 & -\textsupers
 \centering
 \begin{tabular}{l rr r}
 \toprule
-\textbf{Phase} & \textbf{intuitive (ms)} & \textbf{optimised (ms)} & \textbf{diff (\%)} \\
+\textbf{Phase} & \textbf{baseline (ms)} & \textbf{optimised (ms)} & \textbf{diff (\%)} \\
 \midrule
 Init \& Copy    & 65,458  & 63,672  & -2,728\% \\
 Grayscale       & 30,950  & 17,753  & -42,640\% \\
@@ -536,7 +539,7 @@ Color Preservation & 4,129 & 4,089 & -0,969\% \\
 \end{tabular}
 \end{table}
 
-Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimisations lead to a significant reduction in runtime in all phases, especially in Bataineh binarisation, which accounts for the largest share of the total runtime in the intuitive implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
+Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimisations lead to a significant reduction in runtime in all phases, especially in Bataineh binarisation, which accounts for the largest share of the total runtime in the baseline implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
 
 \begin{table*}[t]
 \caption{Detaillierte Laufzeit der Algorithmus-Phasen in Millisekunden (Auszug)}
@@ -569,6 +572,8 @@ Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
   \item better deskew
   \item runtime experiments on WASM
   \item try to optimise for WASM (reduce the performance gap)
+  \item What do we do to avoid false sharing?
+  \item Look into blocking code
 \end{enumerate}
 
 %%
