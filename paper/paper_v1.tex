@@ -168,7 +168,7 @@ A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on 
 
 Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three build dependencies: OpenMP, X11, and JPEG. It can be imported as a library and also as a CLI executable---with 1.7 MiB on Linux.
 
-Compared to OpenCV and ImageMagick, our work is characterised by its deliberate focus on document enhancement and compactness. Unlike Leptonica, our pipeline is specialised in the post-processing of scanned documents and unlike Unpaper, our binary including dependencies is $\sim$50$\times$ smaller.
+Compared to OpenCV and ImageMagick, our work is characterised by its deliberate focus on document enhancement and compactness. Unlike Leptonica, our pipeline is specialised in the post-processing of scanned documents and unlike Unpaper, our binary including dependencies is $\approx$50$\times$ smaller.
 In addition, our licensing model (MIT-0 and CeCILL-C) permits use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialised tools for document enhancement.
 
 Furthermore, we systematically optimise and improve our baseline implementation and evaluate the performance gains through various experiments. In a proof of concept, we show that our approach can be executed on WASM platforms, with only minor performance drawbacks.
@@ -231,6 +231,8 @@ We provide a command-line application that can be used independently of a progra
   - Morphological Operations: decomposing the 2d squre kernel operation intwo two 1d kernel operations (horizontal and vertical) -> reducing the complexity from O(K^2) to O(2K)
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
 \end{comment}
+
+Our hypothesis is, that our baseline implementation will not scale linearly with problem size, which would be wishful for image processing tasks, as many operations can be run in parallel. For that reason, we sought for low-hanging fruits in regard to "high-level" or conceptual algorithmic optimisations, i.e. choosing a more efficient algorithm for a task, while adhering to best-practices in regard to compiler optimisations, i.e. auto-vectorisation.
 
 \subsection{Parallelisation and Concurrency}
 \begin{comment}
@@ -309,7 +311,14 @@ We selected a small but representative set of document images spanning both docu
 \subsection{Results}
 \label{sec:results}
 
-Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show the development of runtime with increasing image resolution for the intuitive and optimised implementations. It can be seen that runtime increases significantly with increasing image size, especially in the intuitive implementation. With the optimised implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the intuitive implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimisations in the deskewing step, as the detection and application of the correction are separated here.
+Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show the development of runtime with increasing image resolution for the intuitive and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.6 \cdot 10^{-5}$ we observe
+
+\begin{align*}
+  t_{\text{baseline}} &\approx c_1 \cdot s^{1.660217} \\
+  t_{\text{optimised}} &\approx c_2 \cdot s^{1.070713}
+\end{align*}
+
+With the optimised implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the intuitive implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimisations in the deskewing step, as the detection and application of the correction are separated here.
 
 \begin{figure}[htbp]
 \centering
@@ -391,8 +400,8 @@ Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show th
 
   \end{axis}
 \end{tikzpicture}
-\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, only one representative from the documents with image size of $\approx 10^1$ Megapixels is plotted, as the results were indistinguishable.}
-\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range.}
+\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, only one representative from the documents with image size of $\approx 10^1$ Megapixels is plotted, as the results were similar.}
+\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range. Notice, that there is no measurement for the 16K image in the baseline implementation.}
 \label{fig:opt-vs-notopt-8cores}
 \end{figure}
 
