@@ -67,7 +67,7 @@
 
 %% The abstract is a short summary of the work to be presented in the article.
 \begin{abstract}
-  % RQ Can a lightweight document enhancement pipeline be optimized to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behavior of the baseline implementation?
+  % RQ Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behavior of the baseline implementation?
   TBC
 \end{abstract}
 
@@ -87,20 +87,20 @@
   Possible Research Questions
   \begin{enumerate}
     \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
-    \item Evaluating Performance Gains: How do systematic code optimizations improve the processing speed of a baseline image enhancement tool?
+    \item Evaluating Performance Gains: How do systematic code optimisations improve the processing speed of a baseline image enhancement tool?
     \item Scaling Performance in Image Processing: Identifying and mitigating inefficiencies in an initial software implementation for OCR 
   \end{enumerate}
 \end{comment}
-\textbf{RQ} Can a lightweight document enhancement pipeline be optimized to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behaviour of the baseline implementation? \\
+\textbf{RQ} Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behaviour of the baseline implementation? \\
 
-\textbf{RQ1.} How much faster is the optimized pipeline than the baseline on native CPU execution? \\
-\textbf{RQ2.} How well does the optimized pipeline scale under strong and weak scaling from 1 to 8 cores? \\
+\textbf{RQ1.} How much faster is the optimised pipeline than the baseline on native CPU execution? \\
+\textbf{RQ2.} How well does the optimised pipeline scale under strong and weak scaling from 1 to 8 cores? \\
 \textbf{RQ3.} What runtime overhead does the WebAssembly version introduce compared to native execution, and is that overhead still acceptable for practical use?
 
 \subsection{Background}
 \label{sec:background}
 
-The extraction of textual information from images --- from scanned books to even receipts captured by smartphone cameras --- have become an important part of everyday life \cite{alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Any such extraction necessarily begins with the pre-processing of recorded images through techniques such as binarisation, noise removal, and geometric transformation, a process generally referred to as \textit{document enhancement}. Numerous tools focused on this niche have been proposed. Although these approaches feature broad capabilities, they are often associated with substantial complexity on the user's end and entail considerable software dependencies. These dependencies restrict applicability, particularly in settings where binary size is constrained, such as mobile and web platforms. This limitation assumes added importance in a context where most digital media interactions now take place on smartphones and application development is increasingly oriented toward edge-computing models. Consequently, efficient and platform-independent implementations that exploit parallelization and other optimization techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
+The extraction of textual information from images --- from scanned books to even receipts captured by smartphone cameras --- have become an important part of everyday life \cite{alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Any such extraction necessarily begins with the pre-processing of recorded images through techniques such as binarisation, noise removal, and geometric transformation, a process generally referred to as \textit{document enhancement}. Numerous tools focused on this niche have been proposed. Although these approaches feature broad capabilities, they are often associated with substantial complexity on the user's end and entail considerable software dependencies. These dependencies restrict applicability, particularly in settings where binary size is constrained, such as mobile and web platforms. This limitation assumes added importance in a context where most digital media interactions now take place on smartphones and application development is increasingly oriented toward edge-computing models. Consequently, efficient and platform-independent implementations that exploit parallelisation and other optimisation techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
 
 \subsection{Related Work}
 \label{sec:related-work}
@@ -127,14 +127,14 @@ Of particular mention is the work of Chadha et al., who examine the use of WASM 
   - Unpaper - spezialisiert auf Nachbearbeitung von Scans von Büchern, viele Abhängigkeiten (ffmpeg etc), nicht so einfach erweiterbar und stark spezialisiert, GPL Lizenz
 \end{comment} 
 
-Image enhancement and document preprocessing are covered by a wide range of open-source tools and commercial software. The scope ranges from general purpose image processing and OCR libraries to specialized tools for post-processing scanned documents.
+Image enhancement and document preprocessing are covered by a wide range of open-source tools and commercial software. The scope ranges from general purpose image processing and OCR libraries to specialised tools for post-processing scanned documents.
 
 ImageMagick \cite{imagemagick} is a suite for image processing that is available as a command line tool and as a library. It offers functions such as format conversion, resizing, filtering, and colour correction. However, ImageMagick is not specifically designed to enhance scanned or photographed images. Similar to OpenCV, the diverse features result in a large code base.
 
 The C-based Leptonica library \cite{leptonica} is a general-purpose image processing and image analysis application. It is a dependency to both Tesseract and OpenCV. Although Leptonica is relatively lightweight compared to the other libraries, much like our approach, it primarily serves as a low-level library and does not offer ready-to-use, configurable processing pipelines.
 
-\label{sec:specialized-post-processing}
-A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarisation, and noise reduction that have been developed specifically for this purpose. The tool also offers a CLI variant, with which pipeline steps can be configured and disabled. Unpaper requires ffmpeg, which itself consumes >100MiB of space.
+\label{sec:specialised-post-processing}
+A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarisation, and noise reduction that have been developed specifically for this purpose. The tool also offers a CLI variant, with which pipeline steps can be configured and disabled. Unpaper requires the library ffmpeg, which in the standard configuration consumes >100MiB of space.
 
 \begin{table}[t]
   \caption{Comparison of related tools.}
@@ -153,10 +153,10 @@ A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on 
 
 \
 
-\label{sec:intro-optimization}
+\label{sec:intro-optimisation}
 \begin{comment}
   CoPilots Vorschlag:
-  In addition to the tools and libraries described above, there is a large body of research on code optimization and performance improvement in image processing applications. For example, various techniques have been proposed to optimize the performance of image processing algorithms, such as parallelization, vectorization, and algorithmic improvements. However, these optimizations are often implemented in the context of specific libraries or applications and are not always easily transferable to other contexts. Moreover, the performance gains from these optimizations can vary widely depending on the specific use case and implementation details.
+  In addition to the tools and libraries described above, there is a large body of research on code optimisation and performance improvement in image processing applications. For example, various techniques have been proposed to optimise the performance of image processing algorithms, such as parallelisation, vectorization, and algorithmic improvements. However, these optimisations are often implemented in the context of specific libraries or applications and are not always easily transferable to other contexts. Moreover, the performance gains from these optimisations can vary widely depending on the specific use case and implementation details.
 \end{comment}
 
 \subsection{Our Contribution}
@@ -168,14 +168,15 @@ A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on 
 
 Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three build dependencies: OpenMP, X11, and JPEG. It can be imported as a library and also as a CLI executable---with 1.7 MiB on Linux.
 
-We systematically optimize and improve our baseline implementation and evaluate the performance gains through various experiments. 
-Compared to OpenCV and ImageMagick, our work is characterized by its deliberate focus on image enhancement and compact architecture. Unlike Tesseract and Leptonica, our pipeline is not integrated into an OCR workflow and limited by low-level primitive functions, but offers a configurable standalone solution that is ready for immediate use. Our pipeline is not exclusively specialized in the post-processing of scanned documents, but is designed as a general image enhancement pipeline that can be used for a variety of applications.
-In addition, our licensing model (MIT-0 and CeCILL-C) ensures its use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialized tools for document enhancement. In a proof of concept, we show that our approach can be executed on WASM platforms with only minor performance deficits.
+Compared to OpenCV and ImageMagick, our work is characterised by its deliberate focus on document enhancement and compactness. Unlike Leptonica, our pipeline is specialised in the post-processing of scanned documents and unlike Unpaper, our binary including dependencies is $\sim$50$\times$ smaller.
+In addition, our licensing model (MIT-0 and CeCILL-C) permits use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialised tools for document enhancement.
+
+Furthermore, we systematically optimise and improve our baseline implementation and evaluate the performance gains through various experiments. In a proof of concept, we show that our approach can be executed on WASM platforms, with only minor performance drawbacks.
 
 \subsection{Outline}
 \label{sec:outline}
 
-In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimize. In section \ref{sec:optimization}, we describe the optimization techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work. 
+In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimise. In section \ref{sec:optimisation}, we describe the optimisation techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work \ref{sec:future-work}. 
 
 \section{Pipeline}
 \label{sec:pipeline}
@@ -201,8 +202,8 @@ Standard configurations are provided for each step, enabling the pipeline to be 
 
 We provide a command-line application that can be used independently of a program to access the pipeline. This enables the pipeline to be configured and used directly via the command line. 
 
-\section{Pipeline Optimizations}
-\label{sec:optimization}
+\section{Optimisations}
+\label{sec:optimisation}
 
 
 \begin{comment}
@@ -231,13 +232,13 @@ We provide a command-line application that can be used independently of a progra
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
 \end{comment}
 
-\subsection{Parallelization and Concurrency}
+\subsection{Parallelisation and Concurrency}
 \begin{comment}
   - Grayscale: parallel for, for pixel processing loop
   - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
   - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
 \end{comment}
-To achieve better performance on multicore processors, the individual steps are parallelized using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarisation algorithms also use other parallelization strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelization, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations. Intuitively, this was done twice.
+To achieve better performance on multicore processors, the individual steps are parallelised using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarisation algorithms also use other parallelisation strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelisation, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations. Intuitively, this was done twice.
 
 \subsection{Memory Management and Allocation}
 \begin{comment}
@@ -247,8 +248,10 @@ To achieve better performance on multicore processors, the individual steps are 
   - Suavola Binarisation: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
   - CORE Utilites: returning pre-allocated buffers instead of heavy objects
 \end{comment}
-To prevent increased memory consumption and long runtimes, the image is not copied at each step. Instead, the steps work in-place on the input image. For this purpose, a pointer is passed at each step. This approach is continued in grayscale conversion by replacing the final deep copy task of the image with a pointer swap of the original image pointer with the new one. 
-Memory optimizations were made in further steps. For example, in the adaptive Gaussian blur filter and the adaptive median filter, the buffer allocations are removed from the pixel processing loop to reduce the number of memory allocations. Sauvola's binarisation algorithm uses a lightweight fused vector builder instead of the \textit{8-bit CImg<double>} image structure. Similarly, the core utilities return preallocated buffers instead of heavy objects.
+
+% todo: check these claims, e.g. wth do you mean by "pointer swap"?
+To prevent increased memory consumption and long runtimes, the image is not copied at each step. Instead, the steps work in-place on the input image. For this purpose, a reference is passed through the pipeline. This approach is continued in grayscale conversion by replacing the final deep copy task of the image with a pointer swap of the original image pointer with the new one. 
+Memory optimisations were made in further steps. For example, in the adaptive Gaussian blur filter and the adaptive median filter, the buffer allocations are removed from the pixel processing loop to reduce the number of memory allocations. Sauvola's binarisation algorithm uses a lightweight fused vector builder instead of the \textit{8-bit CImg<double>} image structure. Similarly, the core utilities return preallocated buffers instead of heavy objects.
 
 \subsection{Algorithmic Complexity Reduction}
 \begin{comment}
@@ -257,15 +260,15 @@ Memory optimizations were made in further steps. For example, in the adaptive Ga
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
   - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
 \end{comment}
-Several different algorithms are implemented in the pipeline. Some of these are optimized through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(W^2)$ to $O(1)$ by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(K^2)$ to $O(2K)$ by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the “rotate and project” method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
+Several different algorithms are implemented in the pipeline. Some of these are optimised through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(W^2)$ to $O(1)$ by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(K^2)$ to $O(2K)$ by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the “rotate and project” method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
 
-\subsection{Loop level Optimizations}
+\subsection{Loop level Optimisations}
 \begin{comment}
   - Contrast Enhancement: precalculate the linear strecht formula and save in Lookup-Table. main loop performs O(1) lookup insted of floating point calculations
   - Contrast Enhancement: replacing if/else branching in pixel loop with std::min clamping, alowing the compiler to auto-vectorize using SIMD -> no assembly checks were done
   - Sauvola Binarisation: branchless lookup
 \end{comment}
-To reduce the runtime of pixel processing loops, logical optimizations are made to the main loops that iterate over the pixels. In contrast enhancement, for example, the linear stretching formula is calculated in advance and stored in a lookup table. As a result, the main loop performs an $O(1)$ query per loop iteration instead of floating-point calculations. In addition, the if/else branch in the pixel processing loop is replaced by std::min clamping. This allows the compiler to auto-vectorize the loop with SIMD. In Sauvola binarisation, a branchless lookup is also implemented to improve performance.
+To reduce the runtime of pixel processing loops, logical optimisations are made to the main loops that iterate over the pixels. In contrast enhancement, for example, the linear stretching formula is calculated in advance and stored in a lookup table. As a result, the main loop performs an $O(1)$ query per loop iteration instead of floating-point calculations. In addition, the if/else branch in the pixel processing loop is replaced by std::min clamping. This allows the compiler to auto-vectorize the loop with SIMD. In Sauvola binarisation, a branchless lookup is also implemented to improve performance.
 
 \subsection{Architectial Refactoring}
 \begin{comment}
@@ -291,7 +294,7 @@ In some cases, architectural changes were also made to improve performance. For 
 hab nicht geschaut ob nur ausschließlich p-cores verwendet wurden, aber das wäre meine vermutung
 \end{comment}
 
-To evaluate the performance of the pipeline with the optimizations, various experiments are conducted and the results are compared with the times of the intuitive implementation. The experiments examine the runtime when processing images of different sizes with and without parallelization.
+To evaluate the performance of the pipeline with the optimisations, various experiments are conducted and the results are compared with the times of the intuitive implementation. The experiments examine the runtime when processing images of different sizes with and without parallelisation.
 
 The experiments assess three aspects: (1) single-threaded runtime versus image size, (2) eight-threaded runtime versus image size, and (3) strong-scaling behaviour with increasing core count for a large fixed image size.
 
@@ -306,7 +309,7 @@ We selected a small but representative set of document images spanning both docu
 \subsection{Results}
 \label{sec:results}
 
-Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show the development of runtime with increasing image resolution for the intuitive and optimized implementations. It can be seen that runtime increases significantly with increasing image size, especially in the intuitive implementation. With the optimized implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the intuitive implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimizations in the deskewing step, as the detection and application of the correction are separated here.
+Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show the development of runtime with increasing image resolution for the intuitive and optimised implementations. It can be seen that runtime increases significantly with increasing image size, especially in the intuitive implementation. With the optimised implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the intuitive implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimisations in the deskewing step, as the detection and application of the correction are separated here.
 
 \begin{figure}[htbp]
 \centering
@@ -314,7 +317,7 @@ Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show th
   \begin{axis}[
     xmode=log,
     ymode=log,
-    title={Scaling with image size (8 Cores)},
+    title={Multithreaded weak scaling (8 Cores)},
     xlabel={Number of pixels (Megapixel)},
     ylabel={Runtime (ms)},
     xmin=0.5, xmax=140,
@@ -384,16 +387,16 @@ Figures \ref{fig:opt-vs-notopt-1core} and \ref{fig:opt-vs-notopt-8cores} show th
     y=avg_ms,
     meta=trials
   ] {graphics/bench_8_optimized.csv};
-  \addlegendentry{optimized (8 Cores)}
+  \addlegendentry{optimised (8 Cores)}
 
   \end{axis}
 \end{tikzpicture}
-\caption{Runtime as a function of image size for the baseline and optimized implementations on 8 CPU cores. The x-axis shows the total image size in megapixels, and the y-axis shows the measured runtime in milliseconds; both axes use logarithmic scaling. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions; in those cases, the label indicates the corresponding number of samples. For clarity, only one representative from the documents with image size of $\approx 10^1$ Megapixels is plotted, as the results were indistinguishable.}
-\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimized implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimized implementation remains consistently faster across the full range.}
+\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, only one representative from the documents with image size of $\approx 10^1$ Megapixels is plotted, as the results were indistinguishable.}
+\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range.}
 \label{fig:opt-vs-notopt-8cores}
 \end{figure}
 
-The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the intuitive and optimized implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimizations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimizations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimization of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the intuitive implementation.
+The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the intuitive and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the intuitive implementation.
 
 % Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
 \begin{table}[htbp]
@@ -402,7 +405,7 @@ The results of the individual phases show a significant reduction in runtime in 
 \footnotesize
 \begin{tabularx}{\columnwidth}{l r r r r}
 \toprule
-\textbf{Testbild} & \textbf{resolution} & \textbf{intuitive (ms)} & \textbf{optimized (ms)} & \textbf{Speedup} \\
+\textbf{Testbild} & \textbf{resolution} & \textbf{intuitive (ms)} & \textbf{optimised (ms)} & \textbf{Speedup} \\
 \midrule
 Text Small 1K    & 1017x597 & 130,577  & 42,511 & 3,07$\times$ \\
 Text 2K          & 2048x1202 & 1.770,138 & 188,975  & 9,37$\times$ \\
@@ -423,7 +426,7 @@ Text 16K         & 15360x9017 & -\textsuperscript{*} & 15.181,484 & -\textsupers
 \centering
 \begin{tabular}{l rr r}
 \toprule
-\textbf{Phase} & \textbf{intuitive (ms)} & \textbf{optimized (ms)} & \textbf{diff (\%)} \\
+\textbf{Phase} & \textbf{intuitive (ms)} & \textbf{optimised (ms)} & \textbf{diff (\%)} \\
 \midrule
 Init \& Copy    & 65,458  & 63,672  & -2,728\% \\
 Grayscale       & 30,950  & 17,753  & -42,640\% \\
@@ -437,7 +440,7 @@ Color Preservation & 4,129 & 4,089 & -0,969\% \\
 \end{tabular}
 \end{table}
 
-Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimizations lead to a significant reduction in runtime in all phases, especially in Bataineh binarisation, which accounts for the largest share of the total runtime in the intuitive implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
+Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimisations lead to a significant reduction in runtime in all phases, especially in Bataineh binarisation, which accounts for the largest share of the total runtime in the intuitive implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
 
 \begin{table*}[t]
 \caption{Detaillierte Laufzeit der Algorithmus-Phasen in Millisekunden (Auszug)}
@@ -458,6 +461,9 @@ Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
 \bottomrule
 \end{tabular}
 \end{table*}
+
+\section{Conclusions}
+\label{sec:conclusions}
 
 \section{Future Work}
 \label{sec:future-work}
