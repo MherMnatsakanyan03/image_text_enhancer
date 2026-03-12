@@ -176,7 +176,7 @@ Furthermore, we systematically optimise and improve our baseline implementation 
 \subsection{Outline}
 \label{sec:outline}
 
-In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimise. In section \ref{sec:optimisation}, we describe the optimisation techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we summarize the results in section \ref{sec:conclusions} and provide an outlook on possible future work \ref{sec:future-work}. 
+In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimise. In section \ref{sec:optimisation}, we describe the optimisation techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we provide an outlook on possible future work \ref{sec:future-work}. 
 
 \section{Pipeline}
 \label{sec:pipeline}
@@ -262,7 +262,9 @@ Memory optimisations were made in further steps. For example, in the adaptive Ga
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
   - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
 \end{comment}
-Several different algorithms are implemented in the pipeline. Some of these are optimised through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(W^2)$ to $O(1)$ by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(K^2)$ to $O(2K)$ by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the “rotate and project” method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
+Several different algorithms are implemented in the pipeline. Some of these are optimised through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(w^2)$ to $O(w)$---where $w$ is the window size---by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(n^2)$ to $O(2n)$---where $n$ is the number of pixels---by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the "rotate and project" method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
+
+% todo check the other O(1) claim, this does not sound right.
 
 \subsection{Loop level Optimisations}
 \begin{comment}
@@ -303,7 +305,7 @@ The experiments assess three aspects: (1) single-threaded runtime versus image s
 All stages of the pipeline are enabled, with Bataineh binarisation and the adaptive Gaussian and adaptive median filters selected.
 % in den alten Benchmarks war adaptive gaussian, adaptive median und simple median an...
 
-For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running Ubuntu 24.04.1 LTS with 64 GB of RAM. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
+For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running WSL2 with Ubuntu 24.04.1 LTS with 64 GB of RAM\footnote{It is clear that this comes with a performance penalty, however the results will still be conclusive. See \underline{\href{https://www.phoronix.com/review/windows-11-wsl2-2025/2}{this}} blog post which tested the penalty on very similar hardware.}. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
 We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail (see Table \ref{tab:total-runtime} for details). These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
 
@@ -317,11 +319,9 @@ We selected a small but representative set of document images spanning both docu
 Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show the development of runtime with increasing image resolution for the baseline and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$ we observe
 
 \begin{align*}
-  t_{\text{baseline}} &\approx c_1 \cdot s^{1.660217} \\
-  t_{\text{optimised}} &\approx c_2 \cdot s^{1.070713}
+  t_{\text{baseline}} &\approx c_1 \cdot s^{1.660} \\
+  t_{\text{optimised}} &\approx c_2 \cdot s^{1.071}
 \end{align*}
-
-With the optimised implementation, the runtime is significantly lower, especially for larger images. At 16K resolution, the runtime of the baseline implementation could no longer be calculated because small rounding errors in the deskewing step meant that the recognized angles in the color image and the grayscale image were no longer the same. As a result, the images could no longer be merged and the image could not be calculated. This problem is solved by the optimisations in the deskewing step, as the detection and application of the correction are separated here.
 
 \begin{figure}[htbp]
 \centering
@@ -369,7 +369,7 @@ With the optimised implementation, the runtime is significantly lower, especiall
     y=avg_ms,
     meta=trials
   ] {graphics/bench_8_main.csv};
-  \addlegendentry{baseline (8 Cores)}
+  \addlegendentry{baseline}
 
   % Optimized implementation
   \addplot[
@@ -399,7 +399,7 @@ With the optimised implementation, the runtime is significantly lower, especiall
     y=avg_ms,
     meta=trials
   ] {graphics/bench_8_optimized.csv};
-  \addlegendentry{optimised (8 Cores)}
+  \addlegendentry{optimised}
 
   \end{axis}
 \end{tikzpicture}
@@ -455,7 +455,7 @@ With the optimised implementation, the runtime is significantly lower, especiall
     y=avg_ms,
     meta=trials
   ] {graphics/bench_1_main.csv};
-  \addlegendentry{baseline (8 Cores)}
+  \addlegendentry{baseline}
 
   % Optimized implementation
   \addplot[
@@ -485,7 +485,7 @@ With the optimised implementation, the runtime is significantly lower, especiall
     y=avg_ms,
     meta=trials
   ] {graphics/bench_1_optimized.csv};
-  \addlegendentry{optimised (8 Cores)}
+  \addlegendentry{optimised}
 
   \end{axis}
 \end{tikzpicture}
@@ -542,7 +542,7 @@ Color Preservation & 4,129 & 4,089 & -0,969\% \\
 Table \ref{tab:breakdown} shows the detailed phase runtime for the different phases and images. It can be seen that the optimisations lead to a significant reduction in runtime in all phases, especially in Bataineh binarisation, which accounts for the largest share of the total runtime in the baseline implementation. For larger images such as the 8K text image, it can be seen that the image becomes too large for the system, as there is a sharp increase in the Init \& Copy phase, which indicates a memory limitation. 
 
 \begin{table*}[t]
-\caption{Detaillierte Laufzeit der Algorithmus-Phasen in Millisekunden (Auszug)}
+\caption{Detailed runtimes for certain pipeline stages}
 \label{tab:breakdown}
 \small
 \centering
@@ -560,9 +560,6 @@ Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
 \bottomrule
 \end{tabular}
 \end{table*}
-
-\section{Conclusions}
-\label{sec:conclusions}
 
 \section{Future Work}
 \label{sec:future-work}
