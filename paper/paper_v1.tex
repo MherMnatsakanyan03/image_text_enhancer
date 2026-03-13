@@ -94,7 +94,7 @@
 \textbf{RQ} Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behaviour of the baseline implementation? \\
 
 \textbf{RQ1.} How much faster is the optimised pipeline than the baseline on native CPU execution? \\
-\textbf{RQ2.} How well does the optimised pipeline scale under strong and weak scaling from 1 to 8 cores? \\
+\textbf{RQ2.} How well does the optimised pipeline scale under strong and runtime scaling from 1 to 8 cores? \\
 \textbf{RQ3.} What runtime overhead does the WebAssembly version introduce compared to native execution, and is that overhead still acceptable for practical use?
 
 \subsection{Background}
@@ -232,15 +232,18 @@ We provide a command-line application that can be used independently of a progra
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
 \end{comment}
 
-We hypothesise that the baseline implementation fails to scale linearly with problem size, although such scaling would be desirable for image processing workloads. We therefore concentrated on identifying low-hanging fruits at the level of high-level algorithmic design, for example by selecting more efficient algorithms for specific tasks, while adhering to best practices such as avoiding false sharing and writing code amenable to auto-vectorisation.
+We hypothesise that the baseline implementation fails to scale linearly with problem size, although such scaling would be desirable for image processing workloads. We therefore concentrated on identifying low-hanging fruits at the level of high-level algorithmic design, for example by selecting more efficient algorithms for specific tasks, while aiming to adhere to best practices such as avoiding false sharing and writing code amenable to auto-vectorisation. For the purposes of the paper, we focus on the optimisations that had the biggest impact. The full list of applied optimisations is documented in the project's repository. % todo: add Optimizations.txt to the git repository.
 
-\subsection{Parallelisation and Concurrency}
-\begin{comment}
-  - Grayscale: parallel for, for pixel processing loop
-  - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
-  - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
-\end{comment}
-To achieve better performance on multicore processors, the individual steps are parallelised using OpenMP. \textit{parallel for collapse(3)} environments are mainly used for the pixel processing loops. However, some binarisation algorithms also use other parallelisation strategies such as the reduction clauses \textit{reduction(min)} and \textit{recuction(max)}. When implementing parallelisation, care is taken to ensure that no race conditions or false sharing occur. For example, thread-local buffers are used for contrast enhancement to avoid false sharing and locking. In the deskewing logic, detection and application of the correction are separated. The angle is detected once and then applied to the grayscale and color image to avoid unnecessary calculations.
+\subsection{Deskew}
+Instead of using a "rotate-and-project" approach, which repeatedly rotates the image to find an appropriate angle, we applied the Radon transform, which gives an acceptable rotation after the first application. Also, we removed an overlook, where both the deskew for the  grayscale and colour image were calculated, if the colour passthrough option was enabled.  % todo: explain why Radon transform gives an acceptable solution if I want to
+
+\subsection{Bataineh}
+The main feature and bottleneck of the Bataineh algorithm is the adaptive sliding window, which takes into account the number of pixels from three categories---background, foreground and confusion \cite{adaptive_thresholding_methods_bataineh_2011}. This requires summing over areas of the image with masks reflecting these categories. The baseline approach was to sum using a nested for loop for each window. The optimised variant uses two integral image for background and confusion pixels, yielding a significant complexity reduction. We estimate our baseline implementation with $O(n \cdot w^2)$---where $n$ is the number of pixels and $w$ the window size---while the improved implementation is in $O(n)$.
+
+\subsection{Grayscale}
+% todo: unclear, because grayscale was already parallelised. Fix Optimizations.txt in this regard. Seemingly, only swapping was introduced, which yielded 40% time reduction... wth?
+
+% todo: wieso sind die Filter besser geworden? Das hatte ich eigentlich schon so implementiert, dachte ich, was Mher jetzt schreibt.
 
 \subsection{Memory Management and Allocation}
 \begin{comment}
@@ -262,7 +265,10 @@ Memory optimisations were made in further steps. For example, in the adaptive Ga
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
   - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
 \end{comment}
-Several different algorithms are implemented in the pipeline. Some of these are optimised through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(w^2)$ to $O(w)$---where $w$ is the window size---by using integral images to calculate the number of black and red pixels in the window instead of iterating over the entire window. In morphological operations, the complexity is reduced from $O(n^2)$ to $O(2n)$---where $n$ is the number of pixels---by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the "rotate and project" method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
+Several algorithms are implemented in the pipeline. Some of these are optimised through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(w \cdot n)$ to $O(n)$---where $w$ is the window and $n$ the image size---by using integral images: .
+
+
+In morphological operations, the complexity is reduced from $O(n^2)$ to $O(2n)$---where $n$ is the number of pixels---by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the "rotate and project" method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
 
 % todo check the other O(1) claim, this does not sound right.
 
@@ -304,6 +310,7 @@ The experiments assess three aspects: (1) single-threaded runtime versus image s
 
 All stages of the pipeline are enabled, with Bataineh binarisation and the adaptive Gaussian and adaptive median filters selected.
 % in den alten Benchmarks war adaptive gaussian, adaptive median und simple median an...
+% todo: either redo benches without simple median or add it back here! It makes a lot of differrence in the strong scaling benchmark.
 
 For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running WSL2 with Ubuntu 24.04.1 LTS with 64 GB of RAM\footnote{It is clear that this comes with a performance penalty, however we can expect an even additive penalty across our conducted tests. See \underline{\href{https://www.phoronix.com/review/windows-11-wsl2-2025/2}{this}} blog post which tested the penalty on very similar hardware.}. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
@@ -319,17 +326,19 @@ We selected a small but representative set of document images spanning both docu
 Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show the development of runtime with increasing image resolution for the baseline and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$ we observe
 
 \begin{align*}
-  t_{\text{baseline}} &\approx c_1 \cdot s^{1.660} \\
-  t_{\text{optimised}} &\approx c_2 \cdot s^{1.071}
+  t_{\text{baseline}} &\propto c_1 \cdot s^{1.660} \\
+  t_{\text{optimised}} &\propto c_2 \cdot s^{1.071}
 \end{align*}
 
+
+% multithreaded runtime scaling
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}
   \begin{axis}[
     xmode=log,
     ymode=log,
-    title={Multithreaded weak scaling (8 Cores)},
+    title={Multithreaded runtime scaling (8 Cores)},
     xlabel={Number of pixels (Megapixel)},
     ylabel={Runtime (ms)},
     xmin=0.5, xmax=140,
@@ -409,13 +418,14 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
 \label{fig:opt-vs-notopt-8cores}
 \end{figure}
 
+% single threaded runtime scaling
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}
   \begin{axis}[
     xmode=log,
     ymode=log,
-    title={Single-threaded weak scaling},
+    title={Single-threaded runtime scaling},
     xlabel={Number of pixels (Megapixel)},
     ylabel={Runtime (ms)},
     xmin=0.5, xmax=140,
@@ -495,8 +505,11 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
 \label{fig:opt-vs-notopt-1core}
 \end{figure}
 
+% strong scaling
 \begin{figure}[htbp]
 \centering
+
+Strong scaling
 
 \begin{minipage}{0.48\columnwidth}
 \centering
@@ -506,7 +519,7 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     ymode=log,
     log basis x=2,
     log basis y=2,
-    title={Strong scaling --- baseline / main},
+    title={baseline},
     xlabel={Number of threads},
     ylabel={Speedup},
     xmin=1, xmax=32,
@@ -522,19 +535,19 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
 
   % 2K image
   \addplot[
-    color=blue,
-    mark=square,
+    color=orange,
+    mark=asterisk,
     thick
   ] table[
     x=threads,
     y=speedup
-  ] {graphics/bench_strong_optimized_2k.csv};
+  ] {graphics/bench_strong_main_2k.csv};
   \addlegendentry{2K image}
 
   % 16K image
   \addplot[
-    color=red,
-    mark=x,
+    color=purple,
+    mark=diamond,
     thick
   ] table[
     x=threads,
@@ -565,7 +578,7 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     ymode=log,
     log basis x=2,
     log basis y=2,
-    title={Strong scaling --- optimised},
+    title={optimised},
     xlabel={Number of threads},
     ylabel={Speedup},
     xmin=1, xmax=32,
@@ -579,8 +592,8 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
 
   % 2K image
   \addplot[
-    color=blue,
-    mark=square,
+    color=orange,
+    mark=asterisk,
     thick
   ] table[
     x=threads,
@@ -589,8 +602,8 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
 
   % 16K image
   \addplot[
-    color=red,
-    mark=x,
+    color=purple,
+    mark=diamond,
     thick
   ] table[
     x=threads,
@@ -614,10 +627,13 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
 \vspace{0.4em}
 \pgfplotslegendfromname{strongscalinglegend}
 
-\caption{Strong scaling behaviour of the baseline/main and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 16K). The dashed black line indicates ideal linear scaling.}
-\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline/main implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
+\caption{Strong scaling behaviour of the baseline and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 16K). The dashed black line indicates ideal linear scaling.}
+\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
+
+The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent in the input size.
+
 
 The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
 
