@@ -419,7 +419,7 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
   \end{axis}
 \end{tikzpicture}
 
-\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, all but one documents with image size of $\approx 10^1$ Megapixels were omitted, as the results were almost identical.}
+\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, all but one documents with image size of $\approx 10^1$ Megapixels were omitted, as the results were representative for each other.}
 \Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range. Notice, that there is no measurement for the 16K image in the baseline implementation.}
 \label{fig:opt-vs-notopt-8cores}
 \end{figure}
@@ -638,8 +638,7 @@ Strong scaling
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
-The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size.
-
+The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. In any effort to parallelise a program, there is some overhead involved, in the form of e.g. communication, synchronisation or false sharing. 
 
 The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
 
