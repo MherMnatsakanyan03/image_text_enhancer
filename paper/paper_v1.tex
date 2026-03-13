@@ -232,7 +232,7 @@ We provide a command-line application that can be used independently of a progra
   - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
 \end{comment}
 
-We hypothesise that the baseline implementation fails to scale linearly with problem size, although such scaling would be desirable for image processing workloads. We therefore concentrated on identifying low-hanging fruits at the level of high-level algorithmic design, for example by selecting more efficient algorithms for specific tasks, while aiming to adhere to best practices such as avoiding false sharing and writing code amenable to auto-vectorisation. For the purposes of the paper, we focus on the optimisations that had the biggest impact. The full list of applied optimisations is documented in the project's repository. % todo: add Optimizations.txt to the git repository.
+We hypothesise that the baseline implementation fails to scale linearly with problem size, although such scaling would be desirable for image processing workloads. We therefore concentrated on identifying low-hanging fruits at the level of high-level algorithmic design, for example by selecting more efficient algorithms for specific tasks, while aiming to adhere to best practices such as avoiding false sharing and writing code amenable to auto-vectorisation. For the purposes of the paper, we focus on the stages, whose optimisations had the biggest effect. The full list of applied optimisations is documented in the project's repository. % todo: add Optimizations.txt to the git repository.
 
 \subsection{Deskew}
 Instead of using a "rotate-and-project" approach, which repeatedly rotates the image to find an appropriate angle, we applied the Radon transform, which gives an acceptable rotation after the first application. Also, we removed an overlook, where both the deskew for the  grayscale and colour image were calculated, if the colour passthrough option was enabled.  % todo: explain why Radon transform gives an acceptable solution if I want to
@@ -243,7 +243,13 @@ The main feature and bottleneck of the Bataineh algorithm is the adaptive slidin
 \subsection{Grayscale}
 % todo: unclear, because grayscale was already parallelised. Fix Optimizations.txt in this regard. Seemingly, only swapping was introduced, which yielded 40% time reduction... wth?
 
-% todo: wieso sind die Filter besser geworden? Das hatte ich eigentlich schon so implementiert, dachte ich, was Mher jetzt schreibt.
+% todo: wieso sind die Filter besser geworden? Das hatte ich eigentlich schon so implementiert, was Mher jetzt schreibt, dachte ich.
+
+\subsection{Morphology}
+The pipeline only supports dilation and erosion, which can both be realised by linear filters. The baseline implementation used four nested for-loops\footnote{for colour images it is five, as it is done for each channel, but our approach is only used on binary images} for iterating the image and scanning the neighbourhood. Since the filter is separable, it is divided into a horizontal and vertical pass. Instead of scanning the neighbourhood, a queue is used to compute the min/max of a given 1D window in amortised $O(1)$.
+
+% todo: why is the morphology worse then?
+% todo: isn't the vertical pass really bad in regards to cache line use?
 
 \subsection{Memory Management and Allocation}
 \begin{comment}
@@ -632,7 +638,7 @@ Strong scaling
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
-The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent in the input size.
+The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size.
 
 
 The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
