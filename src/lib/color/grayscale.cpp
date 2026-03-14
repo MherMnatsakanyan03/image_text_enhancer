@@ -14,7 +14,7 @@ namespace ite::color
         // Create a new image with the correct 1-channel dimensions
         CImg<uint> gray_image(input_image.width(), input_image.height(), input_image.depth(), 1);
 
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(3)
         for (int z = 0; z < input_image.depth(); ++z)
         {
             for (int y = 0; y < input_image.height(); ++y)

@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cmath>
 
+using uint = unsigned int;
+
 namespace ite::utils
 {
 

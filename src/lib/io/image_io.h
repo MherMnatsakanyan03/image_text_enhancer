@@ -5,6 +5,7 @@
 
 #include <string>
 #include "CImg.h"
+#include "core/utils.h"
 
 using namespace cimg_library;
 
