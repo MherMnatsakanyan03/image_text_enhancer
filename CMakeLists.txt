@@ -5,8 +5,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 find_package(OpenMP)
-find_package(X11 REQUIRED)
 find_package(JPEG REQUIRED)
+
+if(UNIX AND NOT APPLE)
+    find_package(X11 REQUIRED)
+endif()
 
 # Include CPM for dependency management, if the library uses a cmake-based approach
 file(
@@ -24,13 +27,27 @@ file(DOWNLOAD
 
 include(CTest)
 
-add_compile_options(
-  -Wall # All warnings
-  -Wextra # Extra warnings
-  -Werror # Treat warnings as errors
-)
+if(MSVC)
+    add_compile_options(
+            /W4
+            /WX
+    )
+else()
+    add_compile_options(
+            -Wall
+            -Wextra
+            -Werror
+    )
+endif()
 
 include(FetchContent)
+
+FetchContent_Declare(
+    cxxopts
+    GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
+    GIT_TAG v3.2.1
+)
+FetchContent_MakeAvailable(cxxopts)
 
 add_subdirectory(src)
 add_subdirectory(tests)

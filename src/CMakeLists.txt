@@ -5,18 +5,24 @@ add_executable(ITE_demo main.cpp)
 
 # Copy resource files to the build directory after building the demo executable
 add_custom_command(
-    TARGET ITE_demo POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/resources
-    ${CMAKE_CURRENT_BINARY_DIR}/resources
+        TARGET ITE_demo POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/resources
+        ${CMAKE_CURRENT_BINARY_DIR}/resources
 )
 
 target_link_libraries(ITE_demo PRIVATE ITE_Libs)
 
-target_compile_options(ITE_demo PRIVATE
-    -O3
-    -march=native
-)
+if(MSVC)
+    target_compile_options(ITE_demo PRIVATE
+            /O2
+    )
+else()
+    target_compile_options(ITE_demo PRIVATE
+            -O3
+            -march=native
+    )
+endif()
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(ITE_demo PRIVATE OpenMP::OpenMP_CXX)
@@ -25,12 +31,18 @@ endif()
 # CLI executable (command-line interface for single image processing)
 add_executable(ITE_cli cli.cpp)
 
-target_link_libraries(ITE_cli PRIVATE ITE_Libs)
+target_link_libraries(ITE_cli PRIVATE ITE_Libs cxxopts::cxxopts)
 
-target_compile_options(ITE_cli PRIVATE
-    -O3
-    -march=native
-)
+if(MSVC)
+    target_compile_options(ITE_cli PRIVATE
+            /O2
+    )
+else()
+    target_compile_options(ITE_cli PRIVATE
+            -O3
+            -march=native
+    )
+endif()
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(ITE_cli PRIVATE OpenMP::OpenMP_CXX)

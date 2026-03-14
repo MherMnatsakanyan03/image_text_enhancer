@@ -40,23 +40,37 @@ set(LIB_SRC
 
 add_library(ITE_Libs STATIC ${LIB_SRC})
 
-
 target_link_libraries(ITE_Libs PUBLIC
-        ${X11_LIBRARIES} # For CImg display functions
-        JPEG::JPEG       # For loading .jpg files
+        JPEG::JPEG
 )
+
+if(UNIX AND NOT APPLE)
+    target_link_libraries(ITE_Libs PUBLIC
+            ${X11_LIBRARIES}
+    )
+endif()
+
 # Link OpenMP if found
 if (OpenMP_CXX_FOUND)
     target_link_libraries(ITE_Libs PUBLIC OpenMP::OpenMP_CXX)
 endif ()
 
-target_compile_options(ITE_Libs PRIVATE
-        -O3
-)
+if(MSVC)
+    target_compile_options(ITE_Libs PRIVATE
+            /O2
+    )
+else()
+    target_compile_options(ITE_Libs PRIVATE
+            -O3
+    )
 
-target_compile_options(ITE_Libs PUBLIC
-        -Dcimg_use_jpeg
-        -Wno-error=format-truncation
+    target_compile_options(ITE_Libs PUBLIC
+            -Wno-error=format-truncation
+    )
+endif()
+
+target_compile_definitions(ITE_Libs PUBLIC
+        cimg_use_jpeg
 )
 
 target_include_directories(ITE_Libs PUBLIC

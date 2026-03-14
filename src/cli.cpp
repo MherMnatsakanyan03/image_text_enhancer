@@ -1,13 +1,20 @@
+#include <algorithm>
+#include <cctype>
+#include <cerrno>
+#include <chrono>
 #include <cmath>
+#include <cstdlib>
+#include <cxxopts.hpp>
 #include <filesystem>
-#include <getopt.h>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <omp.h>
 #include <string>
 #include <vector>
+#include "core/utils.h"
 #include "ite.h"
 
 // Define IDs for long-only options to keep the switch statement clean
@@ -189,183 +196,176 @@ int main(int argc, char* argv[])
     bool verbose_log = false;
     int trials = 1;
     int warmup = 0;
-
-    // getopt settings:
-    // - leading ':' => we handle missing arg as ':' return value
-    // - opterr = 0 => we print our own errors
-    opterr = 0;
-    auto shortopts = ":i:o:thv";
-
-    const option longopts[] = {{"input", required_argument, nullptr, 'i'},
-                               {"output", required_argument, nullptr, 'o'},
-                               {"help", no_argument, nullptr, 'h'},
-                               {"time", no_argument, nullptr, 't'},
-                               {"verbose", no_argument, nullptr, 'v'},
-                               {"trials", required_argument, nullptr, OPT_TRIALS},
-                               {"warmup", required_argument, nullptr, OPT_WARMUP},
-                               {"time-limit", required_argument, nullptr, OPT_TIME_LIMIT},
-
-                               // Toggles
-                               {"do-gaussian", no_argument, nullptr, OPT_DO_GAUSSIAN},
-                               {"do-median", no_argument, nullptr, OPT_DO_MEDIAN},
-                               {"do-adaptive-median", no_argument, nullptr, OPT_DO_ADAPTIVE_MEDIAN},
-                               {"do-adaptive-gaussian", no_argument, nullptr, OPT_DO_ADAPTIVE_GAUSSIAN},
-                               {"do-erosion", no_argument, nullptr, OPT_DO_EROSION},
-                               {"do-dilation", no_argument, nullptr, OPT_DO_DILATION},
-                               {"do-despeckle", no_argument, nullptr, OPT_DO_DESPECKLE},
-                               {"do-deskew", no_argument, nullptr, OPT_DO_DESKEW},
-                               {"do-color-pass", no_argument, nullptr, OPT_DO_COLOR_PASS},
-
-                               // Values
-                               {"binarization", required_argument, nullptr, OPT_BINARIZATION_METHOD},
-                               {"sigma", required_argument, nullptr, OPT_SIGMA},
-                               {"sigma-low", required_argument, nullptr, OPT_SIGMA_LOW},
-                               {"sigma-high", required_argument, nullptr, OPT_SIGMA_HIGH},
-                               {"edge-thresh", required_argument, nullptr, OPT_EDGE_THRESH},
-                               {"median-size", required_argument, nullptr, OPT_MEDIAN_SIZE},
-                               {"median-thresh", required_argument, nullptr, OPT_MEDIAN_THRESH},
-                               {"adaptive-median-max", required_argument, nullptr, OPT_ADAPTIVE_MEDIAN_MAX},
-                               {"kernel-size", required_argument, nullptr, OPT_KERNEL_SIZE},
-                               {"despeckle-thresh", required_argument, nullptr, OPT_DESPECKLE_THRESH},
-                               {"sauvola-window", required_argument, nullptr, OPT_SAUVOLA_WINDOW},
-                               {"sauvola-k", required_argument, nullptr, OPT_SAUVOLA_K},
-                               {"sauvola-delta", required_argument, nullptr, OPT_SAUVOLA_DELTA},
-
-                               {nullptr, 0, nullptr, 0}};
-
-    int c = 0;
     int time_limit_min = 0;
-    while ((c = getopt_long(argc, argv, shortopts, longopts, nullptr)) != -1)
+
+    try
     {
-        switch (c)
+        cxxopts::Options options(argv[0], "ITE - Image Text Enhancement CLI");
+        options.allow_unrecognised_options();
+
+        options.add_options()
+            ("i,input", "Path to source image", cxxopts::value<std::string>())
+            ("o,output", "Path to save processed result", cxxopts::value<std::string>())
+            ("h,help", "Show this help")
+            ("t,time", "Enable benchmark timing")
+            ("v,verbose", "Enable per-step timing output during execution")
+            ("trials", "Number of trials for benchmark", cxxopts::value<std::string>())
+            ("warmup", "Number of warmup runs before benchmark", cxxopts::value<std::string>())
+            ("time-limit", "Max duration in minutes per image", cxxopts::value<std::string>())
+            ("do-gaussian", "Apply Gaussian blur")
+            ("do-median", "Apply median filter")
+            ("do-adaptive-median", "Apply adaptive median filter")
+            ("do-adaptive-gaussian", "Apply adaptive blur [overrides --do-gaussian]")
+            ("do-erosion", "Thin/shrink dark features")
+            ("do-dilation", "Thicken/bolden dark features")
+            ("do-despeckle", "Remove small noise specks")
+            ("do-deskew", "Straighten tilted text")
+            ("do-color-pass", "Re-apply original color to binarized mask")
+            ("binarization", "Method: otsu, sauvola, bataineh", cxxopts::value<std::string>())
+            ("sigma", "Gaussian sigma", cxxopts::value<std::string>())
+            ("sigma-low", "Adaptive low sigma", cxxopts::value<std::string>())
+            ("sigma-high", "Adaptive high sigma", cxxopts::value<std::string>())
+            ("edge-thresh", "Adaptive edge sensitivity", cxxopts::value<std::string>())
+            ("median-size", "Median kernel size", cxxopts::value<std::string>())
+            ("median-thresh", "Median threshold", cxxopts::value<std::string>())
+            ("adaptive-median-max", "Maximum adaptive median window", cxxopts::value<std::string>())
+            ("kernel-size", "Size of dilation/erosion square", cxxopts::value<std::string>())
+            ("despeckle-thresh", "Max pixel size of specks to remove", cxxopts::value<std::string>())
+            ("sauvola-window", "Local Sauvola window size", cxxopts::value<std::string>())
+            ("sauvola-k", "Sauvola sensitivity parameter", cxxopts::value<std::string>())
+            ("sauvola-delta", "Sauvola threshold offset", cxxopts::value<std::string>());
+
+        const auto result = options.parse(argc, argv);
+
+        if (result.count("help") > 0)
         {
-        case 'i':
-            input_path = optarg;
-            break;
-        case 'o':
-            output_path = optarg;
-            break;
-        case 'h':
             print_help(argv[0]);
             return 0;
-        case 't':
-            measure_time = true;
-            break;
-        case 'v':
-            verbose_log = true;
-            break;
-        case OPT_TRIALS:
-            trials = (int)parse_uint(optarg, "--trials");
-            require_positive("--trials", trials);
-            break;
-        case OPT_WARMUP:
-            warmup = (int)parse_uint(optarg, "--warmup");
-            break;
-        case OPT_TIME_LIMIT:
-            time_limit_min = (int)parse_uint(optarg, "--time-limit");
-            break;
-        case OPT_DO_GAUSSIAN:
-            opt.do_gaussian_blur = true;
-            break;
-        case OPT_DO_MEDIAN:
-            opt.do_median_blur = true;
-            break;
-        case OPT_DO_ADAPTIVE_MEDIAN:
-            opt.do_adaptive_median = true;
-            break;
-        case OPT_DO_ADAPTIVE_GAUSSIAN:
-            opt.do_adaptive_gaussian_blur = true;
-            break;
-        case OPT_DO_EROSION:
-            opt.do_erosion = true;
-            break;
-        case OPT_DO_DILATION:
-            opt.do_dilation = true;
-            break;
-        case OPT_DO_DESPECKLE:
-            opt.do_despeckle = true;
-            break;
-        case OPT_DO_DESKEW:
-            opt.do_deskew = true;
-            break;
-        case OPT_DO_COLOR_PASS:
-            opt.do_color_pass = true;
-            break;
-        case OPT_BINARIZATION_METHOD:
-            {
-                std::string method = optarg;
-                for (auto &c : method)
-                    c = tolower(c);
+        }
 
-                if (method == "otsu")
-                    opt.binarization_method = ite::BinarizationMethod::Otsu;
-                else if (method == "sauvola")
-                    opt.binarization_method = ite::BinarizationMethod::Sauvola;
-                else if (method == "bataineh")
-                    opt.binarization_method = ite::BinarizationMethod::Bataineh;
-                else
-                    die_usage("Unknown binarization method: " + method + " (allowed: otsu, sauvola, bataineh)");
-                break;
-            }
-        case OPT_SIGMA:
-            opt.sigma = parse_float(optarg, "--sigma");
+        if (result.count("input") > 0)
+            input_path = result["input"].as<std::string>();
+        if (result.count("output") > 0)
+            output_path = result["output"].as<std::string>();
+
+        measure_time = result.count("time") > 0;
+        verbose_log = result.count("verbose") > 0;
+
+        if (result.count("trials") > 0)
+        {
+            trials = static_cast<int>(parse_uint(result["trials"].as<std::string>().c_str(), "--trials"));
+            require_positive("--trials", trials);
+        }
+        if (result.count("warmup") > 0)
+            warmup = static_cast<int>(parse_uint(result["warmup"].as<std::string>().c_str(), "--warmup"));
+        if (result.count("time-limit") > 0)
+            time_limit_min = static_cast<int>(parse_uint(result["time-limit"].as<std::string>().c_str(), "--time-limit"));
+
+        if (result.count("do-gaussian") > 0)
+            opt.do_gaussian_blur = true;
+        if (result.count("do-median") > 0)
+            opt.do_median_blur = true;
+        if (result.count("do-adaptive-median") > 0)
+            opt.do_adaptive_median = true;
+        if (result.count("do-adaptive-gaussian") > 0)
+            opt.do_adaptive_gaussian_blur = true;
+        if (result.count("do-erosion") > 0)
+            opt.do_erosion = true;
+        if (result.count("do-dilation") > 0)
+            opt.do_dilation = true;
+        if (result.count("do-despeckle") > 0)
+            opt.do_despeckle = true;
+        if (result.count("do-deskew") > 0)
+            opt.do_deskew = true;
+        if (result.count("do-color-pass") > 0)
+            opt.do_color_pass = true;
+
+        if (result.count("binarization") > 0)
+        {
+            std::string method = result["binarization"].as<std::string>();
+            for (auto &ch : method)
+                ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+
+            if (method == "otsu")
+                opt.binarization_method = ite::BinarizationMethod::Otsu;
+            else if (method == "sauvola")
+                opt.binarization_method = ite::BinarizationMethod::Sauvola;
+            else if (method == "bataineh")
+                opt.binarization_method = ite::BinarizationMethod::Bataineh;
+            else
+                die_usage("Unknown binarization method: " + method + " (allowed: otsu, sauvola, bataineh)");
+        }
+
+        if (result.count("sigma") > 0)
+        {
+            opt.sigma = parse_float(result["sigma"].as<std::string>().c_str(), "--sigma");
             require_positive_f("--sigma", opt.sigma);
-            break;
-        case OPT_SIGMA_LOW:
-            opt.adaptive_sigma_low = parse_float(optarg, "--sigma-low");
+        }
+
+        if (result.count("sigma-low") > 0)
+        {
+            opt.adaptive_sigma_low = parse_float(result["sigma-low"].as<std::string>().c_str(), "--sigma-low");
             require_positive_f("--sigma-low", opt.adaptive_sigma_low);
-            break;
-        case OPT_SIGMA_HIGH:
-            opt.adaptive_sigma_high = parse_float(optarg, "--sigma-high");
+        }
+
+        if (result.count("sigma-high") > 0)
+        {
+            opt.adaptive_sigma_high = parse_float(result["sigma-high"].as<std::string>().c_str(), "--sigma-high");
             require_positive_f("--sigma-high", opt.adaptive_sigma_high);
-            break;
-        case OPT_EDGE_THRESH:
-            opt.adaptive_edge_thresh = parse_float(optarg, "--edge-thresh");
-            break;
-        case OPT_MEDIAN_SIZE:
-            opt.median_kernel_size = (int)parse_uint(optarg, "--median-size");
+        }
+
+        if (result.count("edge-thresh") > 0)
+            opt.adaptive_edge_thresh = parse_float(result["edge-thresh"].as<std::string>().c_str(), "--edge-thresh");
+
+        if (result.count("median-size") > 0)
+        {
+            opt.median_kernel_size = static_cast<int>(parse_uint(result["median-size"].as<std::string>().c_str(), "--median-size"));
             require_positive("--median-size", opt.median_kernel_size);
-            break;
-        case OPT_MEDIAN_THRESH:
-            opt.median_threshold = (int)parse_uint(optarg, "--median-thresh");
-            break;
-        case OPT_ADAPTIVE_MEDIAN_MAX:
-            opt.adaptive_median_max_window = (int)parse_uint(optarg, "--adaptive-median-max");
+        }
+
+        if (result.count("median-thresh") > 0)
+            opt.median_threshold = static_cast<int>(parse_uint(result["median-thresh"].as<std::string>().c_str(), "--median-thresh"));
+
+        if (result.count("adaptive-median-max") > 0)
+        {
+            opt.adaptive_median_max_window = static_cast<int>(parse_uint(result["adaptive-median-max"].as<std::string>().c_str(), "--adaptive-median-max"));
             require_positive("--adaptive-median-max", opt.adaptive_median_max_window);
             if ((opt.adaptive_median_max_window % 2) == 0)
                 die_usage("--adaptive-median-max must be odd");
             if (opt.adaptive_median_max_window < 3)
                 die_usage("--adaptive-median-max must be >= 3");
-            break;
-        case OPT_KERNEL_SIZE:
-            opt.kernel_size = (int)parse_uint(optarg, "--kernel-size");
-            require_positive("--kernel-size", opt.kernel_size);
-            break;
-        case OPT_DESPECKLE_THRESH:
-            opt.despeckle_threshold = (int)parse_uint(optarg, "--despeckle-thresh");
-            require_non_negative("--despeckle-thresh", opt.despeckle_threshold);
-            break;
-        case OPT_SAUVOLA_WINDOW:
-            opt.sauvola_window_size = (int)parse_uint(optarg, "--sauvola-window");
-            require_positive("--sauvola-window", opt.sauvola_window_size);
-            break;
-        case OPT_SAUVOLA_K:
-            opt.sauvola_k = parse_float(optarg, "--sauvola-k");
-            require_positive_f("--sauvola-k", opt.sauvola_k);
-            break;
-        case OPT_SAUVOLA_DELTA:
-            opt.sauvola_delta = parse_float(optarg, "--sauvola-delta");
-            break;
-
-        case ':':
-            die_usage(std::string("Missing value for option '-") + static_cast<char>(optopt) + "'");
-            break;
-        case '?':
-            die_usage(std::string("Unknown option"));
-            break;
-        default:
-            die_usage("Unknown parsing error");
         }
+
+        if (result.count("kernel-size") > 0)
+        {
+            opt.kernel_size = static_cast<int>(parse_uint(result["kernel-size"].as<std::string>().c_str(), "--kernel-size"));
+            require_positive("--kernel-size", opt.kernel_size);
+        }
+
+        if (result.count("despeckle-thresh") > 0)
+        {
+            opt.despeckle_threshold = static_cast<int>(parse_uint(result["despeckle-thresh"].as<std::string>().c_str(), "--despeckle-thresh"));
+            require_non_negative("--despeckle-thresh", opt.despeckle_threshold);
+        }
+
+        if (result.count("sauvola-window") > 0)
+        {
+            opt.sauvola_window_size = static_cast<int>(parse_uint(result["sauvola-window"].as<std::string>().c_str(), "--sauvola-window"));
+            require_positive("--sauvola-window", opt.sauvola_window_size);
+        }
+
+        if (result.count("sauvola-k") > 0)
+        {
+            opt.sauvola_k = parse_float(result["sauvola-k"].as<std::string>().c_str(), "--sauvola-k");
+            require_positive_f("--sauvola-k", opt.sauvola_k);
+        }
+
+        if (result.count("sauvola-delta") > 0)
+            opt.sauvola_delta = parse_float(result["sauvola-delta"].as<std::string>().c_str(), "--sauvola-delta");
+    }
+    catch (const cxxopts::exceptions::exception &e)
+    {
+        die_usage(e.what());
     }
 
     if (input_path.empty() || output_path.empty())
@@ -461,11 +461,11 @@ int main(int argc, char* argv[])
 
             if (!verbose_log && (i % progress_update_freq == 0 || i == trials - 1))
             {
-                auto now = Clock::now();
-                auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - bench_start_time).count();
+                auto now2 = Clock::now();
+                auto elapsed_ms2 = std::chrono::duration_cast<std::chrono::milliseconds>(now2 - bench_start_time).count();
 
                 int completed = i + 1;
-                double avg_ms = (double)elapsed_ms / completed;
+                double avg_ms = (double)elapsed_ms2 / completed;
                 double remaining_sec_trials = (avg_ms * (trials - completed)) / 1000.0;
                 double remaining_sec = remaining_sec_trials;
 
