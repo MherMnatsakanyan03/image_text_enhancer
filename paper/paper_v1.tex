@@ -3,6 +3,7 @@
 \usepackage{algorithm}
 \usepackage{url}
 \usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
 \usepackage{tabularx}
 \usepackage{subcaption}
 \usepackage{graphicx}
@@ -251,33 +252,6 @@ The pipeline only supports dilation and erosion, which can both be realised by l
 % todo: why is the morphology worse then?
 % todo: isn't the vertical pass really bad in regards to cache line use?
 
-\subsection{Memory Management and Allocation}
-\begin{comment}
-  - Grayscale: pointer swapping instead of copying the image for each step -> no memory tests were conducted
-  - Adaptive Gaussian Blur: removed std::vector allocations inside hot loop and using "ping-pong" strategie where image acted as destination buffer, swapping pointers at the end
-  - Adaptive Median Filter: moving of buffer allocations outside of the pixel loop
-  - Suavola Binarisation: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
-  - CORE Utilites: returning pre-allocated buffers instead of heavy objects
-\end{comment}
-
-% todo: check these claims, e.g. wth do you mean by "pointer swap"?
-To prevent increased memory consumption and long runtimes, the image is not copied at each step. Instead, the steps work in-place on the input image. For this purpose, a reference is passed through the pipeline. This approach is continued in grayscale conversion by replacing the final deep copy task of the image with a pointer swap of the original image pointer with the new one. 
-Memory optimisations were made in further steps. For example, in the adaptive Gaussian blur filter and the adaptive median filter, the buffer allocations are removed from the pixel processing loop to reduce the number of memory allocations. Sauvola's binarisation algorithm uses a lightweight fused vector builder instead of the \textit{8-bit CImg<double>} image structure. Similarly, the core utilities return preallocated buffers instead of heavy objects.
-
-\subsection{Algorithmic Complexity Reduction}
-\begin{comment}
-  - Batainhe Binarisation: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
-  - Morphological Operations: decomposing the 2d squre kernel operation intwo two 1d kernel operations (horizontal and vertical) -> reducing the complexity from O(K^2) to O(2K)
-  - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
-  - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
-\end{comment}
-Several algorithms are implemented in the pipeline. Some of these are optimised through algorithmic improvements to reduce complexity. One example is Bataineh binarisation, which reduces the number of operations per pixel from $O(w \cdot n)$ to $O(n)$---where $w$ is the window and $n$ the image size---by using integral images: .
-
-
-In morphological operations, the complexity is reduced from $O(n^2)$ to $O(2n)$---where $n$ is the number of pixels---by decomposing the 2D kernel operations into two 1D kernel operations for the horizontal and vertical dimensions. In addition, the sliding window min/max algorithm is implemented with a monotonic queue to enable computation for arbitrary window sizes in amortized $O(1)$ time. In the deskewing logic, the "rotate and project" method is replaced by a “Radon transform” method. Instead of moving the pixels, the coordinates of the foreground are extracted and mathematically projected.
-
-% todo check the other O(1) claim, this does not sound right.
-
 \subsection{Loop level Optimisations}
 \begin{comment}
   - Contrast Enhancement: precalculate the linear strecht formula and save in Lookup-Table. main loop performs O(1) lookup insted of floating point calculations
@@ -286,15 +260,12 @@ In morphological operations, the complexity is reduced from $O(n^2)$ to $O(2n)$-
 \end{comment}
 To reduce the runtime of pixel processing loops, logical optimisations are made to the main loops that iterate over the pixels. In contrast enhancement, for example, the linear stretching formula is calculated in advance and stored in a lookup table. As a result, the main loop performs an $O(1)$ query per loop iteration instead of floating-point calculations. In addition, the if/else branch in the pixel processing loop is replaced by std::min clamping. This allows the compiler to auto-vectorize the loop with SIMD. In Sauvola binarisation, a branchless lookup is also implemented to improve performance.
 
-\subsection{Architectial Refactoring}
-\begin{comment}
-  - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
-  - CORE Utilites: returning pre-allocated buffers instead of heavy objects
-\end{comment}
-In some cases, architectural changes were also made to improve performance. For example, in the deskewing logic, detection and application of the correction were separated. The angle is first detected and then applied to the grayscale and color images to avoid unnecessary calculations. In the core utilities, pre-built buffers are returned instead of creating heavy objects. This improves performance.
-
 \section{Experiments}
 \label{sec:experiments}
+
+To evaluate the performance of the pipeline with the optimisations, various experiments are conducted and the results are compared with the baseline implementation. The experiments examine the runtime when processing images of different sizes with and without parallelisation.
+
+The experiments assess three aspects: (1) single-threaded and multi-threaded runtime scaling, (2) strong-scaling behaviour and (3) runtime scaling of the singular steps in the pipeline. 
 
 \subsection{Setup}
 \label{sec:experimental-setup}
@@ -309,10 +280,6 @@ In some cases, architectural changes were also made to improve performance. For 
     auch lüfter an, damit keine temperatur throttles passieren könnten
 hab nicht geschaut ob nur ausschließlich p-cores verwendet wurden, aber das wäre meine vermutung
 \end{comment}
-
-To evaluate the performance of the pipeline with the optimisations, various experiments are conducted and the results are compared with the baseline implementation. The experiments examine the runtime when processing images of different sizes with and without parallelisation.
-
-The experiments assess three aspects: (1) single-threaded runtime versus image size, (2) eight-threaded runtime versus image size, and (3) strong-scaling behaviour with increasing core count for a large fixed image size. 
 
 All stages of the pipeline are enabled, with Bataineh binarisation and the adaptive Gaussian and adaptive median filters selected.
 % in den alten Benchmarks war adaptive gaussian, adaptive median und simple median an...
@@ -329,124 +296,39 @@ We selected a small but representative set of document images spanning both docu
 \subsection{Results}
 \label{sec:results}
 
-Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show the development of runtime with increasing image resolution for the baseline and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$ we observe
+Figure \ref{fig:runtime-scaling-combined} shows the development of runtime with increasing image resolution for the baseline and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$ we observe
 
 \begin{align*}
   t_{\text{baseline}} &\propto c_1 \cdot s^{1.660} \\
   t_{\text{optimised}} &\propto c_2 \cdot s^{1.071}
 \end{align*}
 
-
-% multithreaded runtime scaling
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}
   \begin{axis}[
     xmode=log,
     ymode=log,
-    title={Multithreaded runtime scaling (8 Cores)},
+    title={Runtime scaling: single-threaded vs.\ multithreaded},
     xlabel={Number of pixels (Megapixel)},
     ylabel={Runtime (ms)},
     xmin=0.5, xmax=140,
     ymin=20,
     grid=major,
-    legend pos=south east,
     width=\columnwidth,
-    height=6cm,
+    height=7cm,
     table/col sep=comma,
+    legend to name=runtimelegend,
+    legend columns=2,
+    legend cell align=left,
   ]
 
-  % Baseline implementation
+  % 1 core, baseline
   \addplot[
-    color=blue,
-    mark=square,
-    thick,
-    point meta=explicit,
-    visualization depends on={\thisrow{trials} \as \trialcount},
-    nodes near coords={
-      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
-      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
-    },
-    every node near coord/.append style={
-      font=\scriptsize,
-      text=gray!70,
-      fill=white,
-      fill opacity=0.8,
-      text opacity=1,
-      inner sep=1pt,
-      rounded corners=1pt,
-      anchor=south west,
-      xshift=2pt,
-      yshift=2pt
-    }
-  ] table[
-    x expr=\thisrow{total_pixels}/1000000,
-    y=avg_ms,
-    meta=trials
-  ] {graphics/bench_8_main.csv};
-  \addlegendentry{baseline}
-
-  % Optimized implementation
-  \addplot[
-    color=red,
-    mark=x,
-    thick,
-    point meta=explicit,
-    visualization depends on={\thisrow{trials} \as \trialcount},
-    nodes near coords={
-      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
-      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
-    },
-    every node near coord/.append style={
-      font=\scriptsize,
-      text=gray!70,
-      fill=white,
-      fill opacity=0.8,
-      text opacity=1,
-      inner sep=1pt,
-      rounded corners=1pt,
-      anchor=north east,
-      xshift=-2pt,
-      yshift=-2pt
-    }
-  ] table[
-    x expr=\thisrow{total_pixels}/1000000,
-    y=avg_ms,
-    meta=trials
-  ] {graphics/bench_8_optimized.csv};
-  \addlegendentry{optimised}
-
-  \end{axis}
-\end{tikzpicture}
-
-\caption{Runtime as a function of image size for the baseline and optimised implementations on 8 cores. Each plotted point corresponds to the mean runtime over repeated measurements for the respective input image. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, all but one documents with image size of $\approx 10^1$ Megapixels were omitted, as the results were representative for each other.}
-\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range. Notice, that there is no measurement for the 16K image in the baseline implementation.}
-\label{fig:opt-vs-notopt-8cores}
-\end{figure}
-
-% single threaded runtime scaling
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}
-  \begin{axis}[
-    xmode=log,
-    ymode=log,
-    title={Single-threaded runtime scaling},
-    xlabel={Number of pixels (Megapixel)},
-    ylabel={Runtime (ms)},
-    xmin=0.5, xmax=140,
-    ymin=20,
-    grid=major,
-    legend pos=south east,
-    width=\columnwidth,
-    height=6cm,
-    table/col sep=comma,
-  ]
-
-  % Baseline implementation
-  \addplot[
-    color=blue,
-    mark=square,
+    color=teal!60,
+    mark=asterisk,
+    mark options={solid},
+    dashed,
     thick,
     point meta=explicit,
     visualization depends on={\thisrow{trials} \as \trialcount},
@@ -471,12 +353,12 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     y=avg_ms,
     meta=trials
   ] {graphics/bench_1_main.csv};
-  \addlegendentry{baseline}
+  \addlegendentry{baseline, 1 core}
 
-  % Optimized implementation
+  % 1 core, optimised
   \addplot[
-    color=red,
-    mark=x,
+    color=orange!60,
+    mark=asterisk,
     thick,
     point meta=explicit,
     visualization depends on={\thisrow{trials} \as \trialcount},
@@ -501,14 +383,79 @@ Figures \ref{fig:opt-vs-notopt-8cores} and \ref{fig:opt-vs-notopt-1core} show th
     y=avg_ms,
     meta=trials
   ] {graphics/bench_1_optimized.csv};
-  \addlegendentry{optimised}
+  \addlegendentry{optimised, 1 core}
+
+  % 8 cores, baseline
+  \addplot[
+    color=teal!100,
+    mark=diamond,
+    mark options={solid},
+    dashed,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=west,
+      xshift=2pt,
+      yshift=0pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_8_main.csv};
+  \addlegendentry{baseline, 8 cores}
+
+  % 8 cores, optimised
+  \addplot[
+    color=orange!100,
+    mark=diamond,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=east,
+      xshift=-2pt,
+      yshift=0pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_8_optimized.csv};
+  \addlegendentry{optimised, 8 cores}
 
   \end{axis}
 \end{tikzpicture}
 
-\caption{}
-\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations running on 8 CPU cores. Each point shows the mean runtime for one input image over repeated measurements. Runtime increases with image size for both methods, while the optimised implementation remains consistently faster across the full range. Notice, that there is no measurement for the 16K image in the baseline implementation.}
-\label{fig:opt-vs-notopt-1core}
+\vspace{0.4em}
+\pgfplotslegendfromname{runtimelegend}
+
+\caption{Runtime as a function of image size for the baseline and optimised implementations in single-threaded and 8-core execution. Dashed lines indicate 1-core measurements, solid lines indicate 8-core measurements. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, all but one documents with image size of $\approx 10^1$ Megapixels were omitted, as the results were representative for each other.}
+\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations, each shown for single-threaded and 8-core execution. Blue curves correspond to the baseline implementation and red curves to the optimised implementation. Dashed lines show 1-core results and solid lines show 8-core results. A shared legend is placed below the plot.}
+\label{fig:runtime-scaling-combined}
 \end{figure}
 
 % strong scaling
@@ -550,7 +497,7 @@ Strong scaling
   ] {graphics/bench_strong_main_2k.csv};
   \addlegendentry{2K image}
 
-  % 16K image
+  % 8K image
   \addplot[
     color=purple,
     mark=diamond,
@@ -558,8 +505,8 @@ Strong scaling
   ] table[
     x=threads,
     y=speedup
-  ] {graphics/bench_strong_optimized_2k.csv};
-  \addlegendentry{16K image}
+  ] {graphics/bench_strong_main_8k.csv};
+  \addlegendentry{8K image}
 
   % Ideal scaling
   \addplot[
@@ -606,7 +553,7 @@ Strong scaling
     y=speedup
   ] {graphics/bench_strong_optimized_2k.csv};
 
-  % 16K image
+  % 8K image
   \addplot[
     color=purple,
     mark=diamond,
@@ -614,7 +561,7 @@ Strong scaling
   ] table[
     x=threads,
     y=speedup
-  ] {graphics/bench_strong_optimized_16k.csv};
+  ] {graphics/bench_strong_optimized_8k.csv};
 
   % Ideal scaling
   \addplot[
@@ -633,12 +580,12 @@ Strong scaling
 \vspace{0.4em}
 \pgfplotslegendfromname{strongscalinglegend}
 
-\caption{Strong scaling behaviour of the baseline and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 16K). The dashed black line indicates ideal linear scaling.}
+\caption{Strong scaling behaviour of the baseline and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 16K). The dashed black line indicates ideal linear scaling. Each point in the plot represents the mean of 50 trials.}
 \Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
-The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. In any effort to parallelise a program, there is some overhead involved, in the form of e.g. communication, synchronisation or false sharing. 
+The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. We observe, that our hope of the program having an almost linear with growing problem size was fulfilled, with some overhead involved. In any parallel program, there is some necessary overhead involved, in the form of e.g. I/O, data distribution or synchronisation. However, the runtime scaling benchmark however does not tell us about the use of parallel resources. For this, we use a strong scaling benchmark, which runs a benchmark on a fixed problem size with an increasing number of threads allocated to the program, giving us information about how much faster the program gets with more parallel resources. On our machine, this involved benching in serial, all the way up to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This usually indicates, that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. We can conclude, that the optimised program is algorithmically better, which was the goal of the optimisations, but not well-parallelised.
 
 The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
 
