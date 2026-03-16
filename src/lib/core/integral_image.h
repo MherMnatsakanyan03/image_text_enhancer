@@ -13,17 +13,6 @@ namespace ite::core
 {
 
     /**
-     * @brief Computes the Summed-Area Table (Integral Image).
-     *
-     * The integral image allows constant-time calculation of the sum of
-     * pixel values in any rectangular region.
-     *
-     * @param src Source image
-     * @return Integral image as CImg<double>
-     */
-    CImg<double> calculate_integral_image(const CImg<double> &src);
-
-    /**
      * @brief Computes the sum of a rectangular region from an integral image.
      *
      * Uses the inclusion-exclusion principle for O(1) computation.
