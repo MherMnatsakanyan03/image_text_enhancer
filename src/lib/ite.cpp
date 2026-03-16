@@ -158,7 +158,8 @@ namespace ite
     {
         CImg<uint> result = input_image;
         CImg<uint> working(input_image.width(), input_image.height(), input_image.depth(), 1);
-        morphology::dilation_square(result, working, kernel_size);
+        CImg<uint> scratch(input_image.width(), input_image.height(), input_image.depth(), 1);
+        morphology::dilation_square(result, working, scratch, kernel_size);
         return working;
     }
 
@@ -166,7 +167,8 @@ namespace ite
     {
         CImg<uint> result = input_image;
         CImg<uint> working(input_image.width(), input_image.height(), input_image.depth(), 1);
-        morphology::erosion_square(result, working, kernel_size);
+        CImg<uint> scratch(input_image.width(), input_image.height(), input_image.depth(), 1);
+        morphology::erosion_square(result, working, scratch, kernel_size);
         return working;
     }
 
@@ -270,6 +272,9 @@ namespace ite
             step_start = now;
         }
 
+        // Allocate morphology scratch buffer (for separable filtering in dilation/erosion)
+        CImg<uint> morph_scratch(result.width(), result.height(), result.depth(), 1);
+
         // 4. Contrast — in-place on result (no second buffer needed)
         color::contrast_linear_stretch(result);
         now = Clock::now();
@@ -348,7 +353,7 @@ namespace ite
 
         if (opt.do_dilation)
         {
-            morphology::dilation_square(result, working, opt.kernel_size);
+            morphology::dilation_square(result, working, morph_scratch, opt.kernel_size);
             result.swap(working);
             now = Clock::now();
             record_time(log, "Dilation", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
@@ -357,7 +362,7 @@ namespace ite
 
         if (opt.do_erosion)
         {
-            morphology::erosion_square(result, working, opt.kernel_size);
+            morphology::erosion_square(result, working, morph_scratch, opt.kernel_size);
             result.swap(working);
             now = Clock::now();
             record_time(log, "Erosion", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);

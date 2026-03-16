@@ -92,7 +92,7 @@ namespace ite::morphology
         }
     }
 
-    void dilation_square(const CImg<uint> &input, CImg<uint> &output, int kernel_size)
+    void dilation_square(const CImg<uint> &input, CImg<uint> &output, CImg<uint> &scratch, int kernel_size)
     {
         if (input.spectrum() != 1)
         {
@@ -111,32 +111,31 @@ namespace ite::morphology
         int h = input.height();
         int d = input.depth();
 
-        // Intermediate buffer for the separable 2-pass filter.
-        // Pass 1 writes the horizontal result here; pass 2 reads it.
-        CImg<uint> temp(w, h, d, 1);
+        // Use caller-provided scratch buffer for the separable 2-pass filter.
+        // Pass 1 writes the horizontal result to scratch; pass 2 reads it.
 
         // Pass 1: Horizontal Dilation (Row by Row)
-        // Reads input, writes to temp
+        // Reads input, writes to scratch
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int y = 0; y < h; ++y)
             {
                 const uint* src_row = input.data(0, y, z);
-                uint* dst_row = temp.data(0, y, z);
+                uint* dst_row = scratch.data(0, y, z);
                 // Stride 1: contiguous memory
                 sliding_window_max(src_row, dst_row, w, 1, r);
             }
         }
 
         // Pass 2: Vertical Dilation (Col by Col)
-        // Reads temp, writes to output (caller guarantees output is pre-allocated)
+        // Reads scratch, writes to output (caller guarantees output is pre-allocated)
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int x = 0; x < w; ++x)
             {
-                const uint* src_col = temp.data(x, 0, z);
+                const uint* src_col = scratch.data(x, 0, z);
                 uint* dst_col = output.data(x, 0, z);
                 // Stride w: vertical step
                 sliding_window_max(src_col, dst_col, h, w, r);
@@ -144,7 +143,7 @@ namespace ite::morphology
         }
     }
 
-    void erosion_square(const CImg<uint> &input, CImg<uint> &output, int kernel_size)
+    void erosion_square(const CImg<uint> &input, CImg<uint> &output, CImg<uint> &scratch, int kernel_size)
     {
         if (input.spectrum() != 1)
         {
@@ -163,30 +162,29 @@ namespace ite::morphology
         int h = input.height();
         int d = input.depth();
 
-        // Intermediate buffer for the separable 2-pass filter.
-        CImg<uint> temp(w, h, d, 1);
+        // Use caller-provided scratch buffer for the separable 2-pass filter.
 
         // Pass 1: Horizontal Erosion
-        // Reads input, writes to temp
+        // Reads input, writes to scratch
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int y = 0; y < h; ++y)
             {
                 const uint* src_row = input.data(0, y, z);
-                uint* dst_row = temp.data(0, y, z);
+                uint* dst_row = scratch.data(0, y, z);
                 sliding_window_min(src_row, dst_row, w, 1, r);
             }
         }
 
         // Pass 2: Vertical Erosion
-        // Reads temp, writes to output (caller guarantees output is pre-allocated)
+        // Reads scratch, writes to output (caller guarantees output is pre-allocated)
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int x = 0; x < w; ++x)
             {
-                const uint* src_col = temp.data(x, 0, z);
+                const uint* src_col = scratch.data(x, 0, z);
                 uint* dst_col = output.data(x, 0, z);
                 sliding_window_min(src_col, dst_col, h, w, r);
             }

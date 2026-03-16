@@ -19,6 +19,8 @@ static bool is_image_file(const std::filesystem::path &p)
 
 int main(int argc, char* argv[])
 {
+    cimg::openmp_mode(1);
+
     // Print OpenMP status
     std::cout << "cimg_use_openmp = " << cimg_use_openmp << "\n";
     std::cout << "CImg openmp_mode() = " << cimg::openmp_mode() << "\n";

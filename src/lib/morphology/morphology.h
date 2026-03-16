@@ -19,10 +19,11 @@ namespace ite::morphology
      *
      * @param input The source image to read from.
      * @param output The caller-provided buffer where the dilated result is written.
+     * @param scratch Caller-provided scratch buffer for intermediate results (must be same dimensions as input, 1-channel).
      * @param kernel_size The size of the structuring element (e.g., 3 for 3x3).
      * @throws std::runtime_error if the image is not single-channel.
      */
-    void dilation_square(const CImg<uint> &input, CImg<uint> &output, int kernel_size = 3);
+    void dilation_square(const CImg<uint> &input, CImg<uint> &output, CImg<uint> &scratch, int kernel_size = 3);
 
     /**
      * @brief Performs morphological erosion.
@@ -32,10 +33,11 @@ namespace ite::morphology
      *
      * @param input The source image to read from.
      * @param output The caller-provided buffer where the eroded result is written.
+     * @param scratch Caller-provided scratch buffer for intermediate results (must be same dimensions as input, 1-channel).
      * @param kernel_size The size of the structuring element (e.g., 3 for 3x3).
      * @throws std::runtime_error if the image is not single-channel.
      */
-    void erosion_square(const CImg<uint> &input, CImg<uint> &output, int kernel_size = 3);
+    void erosion_square(const CImg<uint> &input, CImg<uint> &output, CImg<uint> &scratch, int kernel_size = 3);
 
     /**
      * @brief Removes small connected components (speckles) from a binary image in-place.
