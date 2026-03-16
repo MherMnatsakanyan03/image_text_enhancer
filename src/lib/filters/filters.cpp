@@ -15,38 +15,48 @@ namespace ite::filters
     // Idea: compute a low-sigma blur (preserve edges) and a high-sigma blur (smooth flats),
     // then blend per-pixel using an edge strength measure (fast gradient).
     // The border condition is "replicate".
-    // Space/time efficient: 1 extra full image (high blur) + per-thread row-block buffer; 2 separable blurs + 1 blend pass.
-    // Parallel: OpenMP over (channel, depth, row-block).
+    // Space/time efficient: output buffer holds the high-sigma blur during blending,
+    // then is overwritten with the final blended result.
+    // Parallel: OpenMP over (channel, depth, row).
 
-    // In-place adaptive Gaussian blur
-    void adaptive_gaussian_blur(CImg<uint> &img, float sigma_low, float sigma_high, float edge_thresh, int block_h, int boundary_conditions)
+    void adaptive_gaussian_blur(const CImg<uint> &input, CImg<uint> &output, float sigma_low, float sigma_high, float edge_thresh, int block_h,
+                                int boundary_conditions)
     {
-        if (img.is_empty())
+        if (input.is_empty())
+        {
+            output.assign();
             return;
+        }
 
-        // Validation
+        const int w = input.width();
+        const int h = input.height();
+        const int d = input.depth();
+        const int s = input.spectrum();
+
+        // 1. Prepare Buffers
+        // 'low' holds the low-sigma (edge-preserving) blur — computed from a copy of input
+        // 'output' holds the high-sigma (noise-smoothing) blur — computed in-place on output
+        //
+        // Validation: if sigma_high <= sigma_low, just apply low-sigma blur and write to output
         if (!(sigma_high > sigma_low) || sigma_high <= 0.0f)
         {
+            output = input;
             if (sigma_low > 0.0f)
-                simple_gaussian_blur(img, sigma_low, boundary_conditions);
+                simple_gaussian_blur(output, sigma_low, boundary_conditions);
             return;
         }
 
         if (block_h < 8)
             block_h = 8;
-        const int w = img.width();
-        const int h = img.height();
-        const int d = img.depth();
-        const int s = img.spectrum();
 
-        // 1. Prepare Buffers
-        // 'high' will start as the High-Sigma blur
-        // 'img' will become the Low-Sigma blur
-        CImg<uint> high = img;
-        simple_gaussian_blur(high, sigma_high, boundary_conditions);
+        // output = high-sigma blurred copy
+        output = input;
+        simple_gaussian_blur(output, sigma_high, boundary_conditions);
 
+        // low = low-sigma blurred copy (separate, so we can read both during blending)
+        CImg<uint> low = input;
         if (sigma_low > 0.0f)
-            simple_gaussian_blur(img, sigma_low, boundary_conditions);
+            simple_gaussian_blur(low, sigma_low, boundary_conditions);
 
         // 2. Precompute Blending LUT (Integer Math)
         // Max gradient is 255+255 = 510. Size 512 for safety.
@@ -69,8 +79,8 @@ namespace ite::filters
         }
 
         // 3. Parallel Blend
-        // We read from 'img' (Low) and 'high' (High), calculate gradient on 'img',
-        // and write result into 'high' (reusing memory).
+        // We read from 'low' (Low-sigma) and 'output' (High-sigma), calculate gradient on 'low',
+        // and write blended result directly into 'output'.
 #pragma omp parallel for collapse(3)
         for (int c = 0; c < s; ++c)
         {
@@ -79,13 +89,13 @@ namespace ite::filters
                 for (int y = 0; y < h; ++y)
                 {
                     // Pointers for fast access
-                    // Low blur (Source for edges & color)
-                    const uint* row_low = img.data(0, y, z, c);
-                    const uint* row_low_prev = (y > 0) ? img.data(0, y - 1, z, c) : row_low;
-                    const uint* row_low_next = (y < h - 1) ? img.data(0, y + 1, z, c) : row_low;
+                    // Low blur (Source for edges & gradient computation)
+                    const uint* row_low = low.data(0, y, z, c);
+                    const uint* row_low_prev = (y > 0) ? low.data(0, y - 1, z, c) : row_low;
+                    const uint* row_low_next = (y < h - 1) ? low.data(0, y + 1, z, c) : row_low;
 
-                    // High blur (Source for color & Destination for result)
-                    uint* row_dest = high.data(0, y, z, c);
+                    // High blur (Source for high-blur values & Destination for blended result)
+                    uint* row_dest = output.data(0, y, z, c);
 
                     // 3a. Handle Left Edge (x=0)
                     {
@@ -101,7 +111,7 @@ namespace ite::filters
 
                         uint alpha = alpha_lut[grad];
                         uint low_val = row_low[x];
-                        uint high_val = row_dest[x]; // Current value in 'high' image
+                        uint high_val = row_dest[x]; // Current value in high-sigma image
 
                         // Blend: (alpha * Low + (255-alpha) * High) / 255
                         // Fast approx: >> 8
@@ -149,10 +159,7 @@ namespace ite::filters
                 }
             }
         }
-
-        // 4. Output Swap
-        // The result is currently in 'high'. We want it in 'img'.
-        img.swap(high);
+        // Result is now in 'output' — no swap needed.
     }
 
     // ===================== Noise / edge estimators (parallel + histogram based) =====================

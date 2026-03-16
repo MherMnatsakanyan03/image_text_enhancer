@@ -4,33 +4,32 @@
 namespace ite::color
 {
 
-    void to_grayscale_rec601(CImg<uint> &input_image)
+    void to_grayscale_rec601(const CImg<uint> &input, CImg<uint> &output)
     {
-        if (input_image.spectrum() == 1)
+        if (input.spectrum() == 1)
         {
-            return; // Already grayscale
+            // Already grayscale — copy input directly to output
+            output = input;
+            return;
         }
 
-        // Create a new image with the correct 1-channel dimensions
-        CImg<uint> gray_image(input_image.width(), input_image.height(), input_image.depth(), 1);
+        // Resize output to the correct 1-channel dimensions
+        output.assign(input.width(), input.height(), input.depth(), 1);
 
 #pragma omp parallel for collapse(2)
-        for (int z = 0; z < input_image.depth(); ++z)
+        for (int z = 0; z < input.depth(); ++z)
         {
-            for (int y = 0; y < input_image.height(); ++y)
+            for (int y = 0; y < input.height(); ++y)
             {
-                for (int x = 0; x < input_image.width(); ++x)
+                for (int x = 0; x < input.width(); ++x)
                 {
-                    uint r = input_image(x, y, z, 0);
-                    uint g = input_image(x, y, z, 1);
-                    uint b = input_image(x, y, z, 2);
-                    gray_image(x, y, z, 0) = static_cast<uint>(std::round(WEIGHT_R * r + WEIGHT_G * g + WEIGHT_B * b));
+                    uint r = input(x, y, z, 0);
+                    uint g = input(x, y, z, 1);
+                    uint b = input(x, y, z, 2);
+                    output(x, y, z, 0) = static_cast<uint>(std::round(WEIGHT_R * r + WEIGHT_G * g + WEIGHT_B * b));
                 }
             }
         }
-
-        // OPTIMIZATION: Swap pointers instead of deep copying data
-        input_image.swap(gray_image);
     }
 
 } // namespace ite::color

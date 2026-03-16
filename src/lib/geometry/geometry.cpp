@@ -118,12 +118,17 @@ namespace ite::geometry
         int new_h = std::max(1, static_cast<int>(std::lround(inH * scale)));
 
         CImg<uint> small = input_image.get_resize(new_w, new_h, 1, input_image.spectrum());
-        ite::color::to_grayscale_rec601(small);
+        CImg<uint> small_work;
+
+        // Convert to grayscale using caller-provided output buffer
+        ite::color::to_grayscale_rec601(small, small_work);
+        small.swap(small_work);
 
         // We use Sauvola here because it handles shading better than Otsu,
         // ensuring we actually get text lines even in shadowed corners.
         // Parameters: window=15, k=0.2, delta=10 (Standard robust defaults)
-        binarization::binarize_sauvola(small, window_size, k, delta);
+        binarization::binarize_sauvola(small, small_work, window_size, k, delta);
+        small.swap(small_work);
 
         // Extract Foreground Points
         // Sauvola outputs 0 (black/text) and 255 (white/background).

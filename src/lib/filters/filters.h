@@ -24,20 +24,33 @@ namespace ite::filters
 
 
     /**
-     * @brief Applies an adaptive Gaussian blur to an image in-place using OpenMP.
+     * @brief Applies an adaptive Gaussian blur to an image, writing the result into output.
      *
-     * This function applies a Gaussian blur with a variable standard deviation.
+     * This function applies a Gaussian blur with a
+     * variable standard deviation.
      * It blurs less around edges (high variance) and more in flat regions (low variance)
-     * to preserve sharpness while reducing noise. The image is processed in parallel
-     * in horizontal blocks.
+     * to preserve sharpness while
+     * reducing noise.
      *
-     * @param img The image to blur (modified in-place).
-     * @param sigma_low The standard deviation of the kernel for edge regions.
-     * @param sigma_high The standard deviation of the kernel for flat regions.
-     * @param edge_thresh The variance threshold to differentiate between edge and flat regions.
-     * @param block_h Height of the blocks for parallel processing (default: 64).
+     * The caller provides two buffers: `input` (read-only source) and `output`
+     * (destination for the blended result). The
+     * function uses `output` internally as
+     * a scratch buffer for the high-sigma blur during the blending pass.
+     *
+     * @param input             The
+     * source image (read-only).
+     * @param output            The destination image (overwritten with the blended result).
+     * @param sigma_low The
+     * standard deviation of the kernel for edge regions.
+     * @param sigma_high        The standard deviation of the kernel for flat regions.
+     * @param
+     * edge_thresh       The variance threshold to differentiate between edge and flat regions.
+     * @param block_h           Height of the blocks for
+     * parallel processing (default: 64).
+     * @param boundary_conditions Boundary condition for CImg blur (default: 1 = Neumann).
      */
-    void adaptive_gaussian_blur(CImg<uint> &img, float sigma_low, float sigma_high, float edge_thresh, int block_h = 64, int boundary_conditions = 1);
+    void adaptive_gaussian_blur(const CImg<uint> &input, CImg<uint> &output, float sigma_low, float sigma_high, float edge_thresh, int block_h = 64,
+                                int boundary_conditions = 1);
 
     /**
      * @brief Applies median denoising to an image in-place.
@@ -68,9 +81,9 @@ namespace ite::filters
      */
     struct AdaptiveGaussianParams
     {
-        float sigma_low;    ///< Standard deviation for edge regions (preserves details)
-        float sigma_high;   ///< Standard deviation for flat regions (smooths noise)
-        float edge_thresh;  ///< Gradient threshold for edge detection
+        float sigma_low; ///< Standard deviation for edge regions (preserves details)
+        float sigma_high; ///< Standard deviation for flat regions (smooths noise)
+        float edge_thresh; ///< Gradient threshold for edge detection
     };
 
     /**

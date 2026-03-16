@@ -10,7 +10,7 @@
 
 #include "binarization/binarization.h"
 #include "color/color.h"
-#include "color/contrast.h"
+
 #include "color/grayscale.h"
 #include "filters/filters.h"
 #include "geometry/geometry.h"
@@ -19,6 +19,8 @@
 
 #include <chrono> // Added for high-resolution timing
 #include <iostream> // Added for logging output
+
+#include "color/contrast.h"
 
 namespace ite
 {
@@ -53,8 +55,9 @@ namespace ite
     CImg<uint> to_grayscale(const CImg<uint> &input_image)
     {
         CImg<uint> result = input_image;
-        color::to_grayscale_rec601(result);
-        return result;
+        CImg<uint> working;
+        color::to_grayscale_rec601(result, working);
+        return working;
     }
 
     CImg<uint> contrast_enhancement(const CImg<uint> &input_image)
@@ -78,37 +81,43 @@ namespace ite
     CImg<uint> binarize_sauvola(const CImg<uint> &input_image, int window_size, float k, float delta)
     {
         CImg<uint> result = input_image;
+        CImg<uint> working;
         // Ensure grayscale first
         if (result.spectrum() != 1)
         {
-            color::to_grayscale_rec601(result);
+            color::to_grayscale_rec601(result, working);
+            result.swap(working);
         }
-        binarization::binarize_sauvola(result, window_size, k, delta);
-        return result;
+        binarization::binarize_sauvola(result, working, window_size, k, delta);
+        return working;
     }
 
     CImg<uint> binarize_otsu(const CImg<uint> &input_image)
     {
         CImg<uint> result = input_image;
+        CImg<uint> working;
         // Ensure grayscale first
         if (result.spectrum() != 1)
         {
-            color::to_grayscale_rec601(result);
+            color::to_grayscale_rec601(result, working);
+            result.swap(working);
         }
-        binarization::binarize_otsu(result);
-        return result;
+        binarization::binarize_otsu(result, working);
+        return working;
     }
 
     CImg<uint> binarize_bataineh(const CImg<uint> &input_image)
     {
         CImg<uint> result = input_image;
+        CImg<uint> working;
         // Ensure grayscale first
         if (result.spectrum() != 1)
         {
-            color::to_grayscale_rec601(result);
+            color::to_grayscale_rec601(result, working);
+            result.swap(working);
         }
-        binarization::binarize_bataineh(result);
-        return result;
+        binarization::binarize_bataineh(result, working);
+        return working;
     }
 
     // ============================================================================
@@ -158,11 +167,12 @@ namespace ite
         return result;
     }
 
-    CImg<uint> adaptive_gaussian_blur(const CImg<uint> &input_image, float sigma_low, float sigma_high, float edge_thresh, int truncate, int block_h)
+    CImg<uint> adaptive_gaussian_blur(const CImg<uint> &input_image, float sigma_low, float sigma_high, float edge_thresh, int /*truncate*/, int block_h)
     {
         CImg<uint> result = input_image;
-        filters::adaptive_gaussian_blur(result, sigma_low, sigma_high, edge_thresh, truncate, block_h);
-        return result;
+        CImg<uint> working;
+        filters::adaptive_gaussian_blur(result, working, sigma_low, sigma_high, edge_thresh, block_h);
+        return working;
     }
 
     CImg<uint> simple_median_filter(const CImg<uint> &input_image, int kernel_size, unsigned int threshold)
@@ -191,57 +201,58 @@ namespace ite
         auto total_start = Clock::now();
         auto step_start = total_start;
 
+        // Three image copies are always maintained throughout the pipeline:
+        //   result      — the primary working image (grayscale, processed in stages)
+        //   working     — scratch buffer for functions that need a separate output image
+        //   color_image — color copy of the input, always initialized for the color pass step
         CImg<uint> result = input_image;
-        CImg<uint> color_image;
-
-        // Preserve color image if color pass is requested
-        if (opt.do_color_pass)
-        {
-            color_image = input_image;
-        }
+        CImg<uint> working = input_image;
+        CImg<uint> color_image = input_image;
 
         auto now = Clock::now();
         record_time(log, "Init & Copy", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
         step_start = now;
 
-        // 2. Grayscale
-        color::to_grayscale_rec601(result);
+        // 2. Grayscale — reads result, writes into working; swap so result holds grayscale
+        color::to_grayscale_rec601(result, working);
+        result.swap(working);
         now = Clock::now();
         record_time(log, "Grayscale", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
         step_start = now;
 
-        // 3. Deskew
+        // 3. Deskew — apply_deskew is in-place (rotation); color_image is always deskewed too
         if (opt.do_deskew)
         {
             double angle = geometry::detect_skew_angle(result);
             if (std::abs(angle) > 0.05)
             {
                 geometry::apply_deskew(result, angle, opt.boundary_conditions);
-                if (opt.do_color_pass)
-                    geometry::apply_deskew(color_image, angle, opt.boundary_conditions);
+                geometry::apply_deskew(color_image, angle, opt.boundary_conditions);
             }
             now = Clock::now();
             record_time(log, "Deskew", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             step_start = now;
         }
 
-        // 4. Contrast
+        // 4. Contrast — in-place on result (no second buffer needed)
         color::contrast_linear_stretch(result);
         now = Clock::now();
         record_time(log, "Contrast", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
         step_start = now;
 
-        // 5. Denoising
+        // 5. Denoising — adaptive blur reads result, writes into working; swap so result is updated
         if (opt.do_adaptive_gaussian_blur)
         {
-            filters::adaptive_gaussian_blur(result, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, block_h,
+            filters::adaptive_gaussian_blur(result, working, opt.adaptive_sigma_low, opt.adaptive_sigma_high, opt.adaptive_edge_thresh, block_h,
                                             opt.boundary_conditions);
+            result.swap(working);
             now = Clock::now();
             record_time(log, "Adaptive Gaussian", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             step_start = now;
         }
         else if (opt.do_gaussian_blur)
         {
+            // simple_gaussian_blur is in-place — no second buffer needed
             filters::simple_gaussian_blur(result, opt.sigma, opt.boundary_conditions);
             now = Clock::now();
             record_time(log, "Gaussian Blur", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
@@ -250,6 +261,7 @@ namespace ite
 
         if (opt.do_median_blur)
         {
+            // simple_median_blur is in-place — no second buffer needed
             filters::simple_median_blur(result, opt.median_kernel_size, opt.median_threshold);
             now = Clock::now();
             record_time(log, "Median Blur", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
@@ -258,34 +270,38 @@ namespace ite
 
         if (opt.do_adaptive_median)
         {
+            // adaptive_median_filter is in-place — no second buffer needed
             filters::adaptive_median_filter(result, opt.adaptive_median_max_window, block_h);
             now = Clock::now();
             record_time(log, "Adaptive Median", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             step_start = now;
         }
 
-        // 6. Binarization
+        // 6. Binarization — reads result, writes into working; swap so result holds binary image
         switch (opt.binarization_method)
         {
         case BinarizationMethod::Otsu:
-            binarization::binarize_otsu(result);
+            binarization::binarize_otsu(result, working);
+            result.swap(working);
             now = Clock::now();
             record_time(log, "Binarization (Otsu)", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             break;
         case BinarizationMethod::Sauvola:
-            binarization::binarize_sauvola(result, opt.sauvola_window_size, opt.sauvola_k, opt.sauvola_delta);
+            binarization::binarize_sauvola(result, working, opt.sauvola_window_size, opt.sauvola_k, opt.sauvola_delta);
+            result.swap(working);
             now = Clock::now();
             record_time(log, "Binarization (Sauvola)", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             break;
         case BinarizationMethod::Bataineh:
-            binarization::binarize_bataineh(result);
+            binarization::binarize_bataineh(result, working);
+            result.swap(working);
             now = Clock::now();
             record_time(log, "Binarization (Bataineh)", std::chrono::duration_cast<Us>(now - step_start).count(), verbose);
             break;
         }
         step_start = now;
 
-        // 7. Morphology
+        // 7. Morphology — all in-place on result (no second buffer needed)
         if (opt.do_despeckle)
         {
             morphology::despeckle_ccl(result, static_cast<uint>(opt.despeckle_threshold), opt.diagonal_connections);
@@ -310,7 +326,7 @@ namespace ite
             step_start = now;
         }
 
-        // 8. Color Pass
+        // 8. Color Pass — apply binary result as mask onto color_image
         if (opt.do_color_pass)
         {
             color::color_pass_inplace(color_image, result);

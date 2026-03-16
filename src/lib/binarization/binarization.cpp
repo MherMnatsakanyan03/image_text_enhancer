@@ -9,16 +9,16 @@
 
 namespace ite::binarization
 {
-    void binarize_sauvola(CImg<uint> &input_image, const int window_size, const float k, const float delta)
+    void binarize_sauvola(const CImg<uint> &input, CImg<uint> &output, const int window_size, const float k, const float delta)
     {
-        if (input_image.spectrum() != 1)
+        if (input.spectrum() != 1)
         {
             throw std::runtime_error("Sauvola requires a grayscale image.");
         }
 
-        const int w = input_image.width();
-        const int h = input_image.height();
-        const int d = input_image.depth();
+        const int w = input.width();
+        const int h = input.height();
+        const int d = input.depth();
 
         const float R = 128.0f;
         const int w_half = window_size / 2;
@@ -29,13 +29,14 @@ namespace ite::binarization
         std::vector<double> integral_img;
         std::vector<double> integral_img_sqr;
 
-        CImg<uint> output_image(w, h, d, 1);
+        // Resize output to match input dimensions (single channel binary result)
+        output.assign(w, h, d, 1);
 
         // Process each depth slice independently
         for (int z = 0; z < d; ++z)
         {
             // 1. Build Integral Images (Fused & Parallel)
-            core::compute_fused_integrals(input_image, z, integral_img, integral_img_sqr);
+            core::compute_fused_integrals(input, z, integral_img, integral_img_sqr);
 
             // 2. Apply Sauvola (Parallel)
 #pragma omp parallel for collapse(2)
@@ -75,12 +76,10 @@ namespace ite::binarization
 
                     const double threshold = mean * (1.0 + k * ((std_dev / R) - 1.0)) - delta;
 
-                    output_image(x, y, z) = (input_image(x, y, z) > threshold) ? 255 : 0;
+                    output(x, y, z) = (input(x, y, z) > threshold) ? 255 : 0;
                 }
             }
         }
-
-        input_image.swap(output_image);
     }
 
     int compute_otsu_threshold(const CImg<unsigned char> &g)
@@ -170,54 +169,54 @@ namespace ite::binarization
         return cnt ? static_cast<double>(sum) / static_cast<double>(cnt) : 0.0;
     }
 
-    void binarize_otsu(CImg<uint> &input_image)
+    void binarize_otsu(const CImg<uint> &input, CImg<uint> &output)
     {
-        if (input_image.spectrum() != 1)
+        if (input.spectrum() != 1)
         {
             throw std::runtime_error("Otsu binarization requires a grayscale image.");
         }
 
         // Compute Otsu's threshold and border mean
-        const int threshold = compute_otsu_threshold(input_image);
-        const double border_mean = compute_border_mean(input_image);
+        const int threshold = compute_otsu_threshold(input);
+        const double border_mean = compute_border_mean(input);
 
         // Determine if background is light (border mean > threshold) or dark
         const bool light_background = border_mean > static_cast<double>(threshold);
 
-        // Binarize in-place
+        // Write binarized values directly to output
 #pragma omp parallel for collapse(3)
-        for (int z = 0; z < input_image.depth(); ++z)
+        for (int z = 0; z < input.depth(); ++z)
         {
-            for (int y = 0; y < input_image.height(); ++y)
+            for (int y = 0; y < input.height(); ++y)
             {
-                for (int x = 0; x < input_image.width(); ++x)
+                for (int x = 0; x < input.width(); ++x)
                 {
-                    const unsigned char pixel = input_image(x, y, z);
+                    const unsigned char pixel = input(x, y, z);
                     // For light background: dark pixels (<=threshold) become black (0)
                     // For dark background: light pixels (>threshold) become white (255)
                     const bool is_foreground = light_background ? (pixel <= threshold) : (pixel > threshold);
-                    input_image(x, y, z) = is_foreground ? 0 : 255;
+                    output(x, y, z) = is_foreground ? 0 : 255;
                 }
             }
         }
     }
 
     /**
-     * @brief (Internal) Converts a grayscale image to a binary (black and white)
-     * image, in-place. Uses simple Bataine's adaptive thresholding.
+     * @brief Converts a grayscale image to binary using Bataineh's adaptive thresholding,
+     * writing the result (0 or 255 per pixel) into the caller-provided output buffer.
      */
-    void binarize_bataineh(CImg<uint> &input_image)
+    void binarize_bataineh(const CImg<uint> &input, CImg<uint> &output)
     {
-        if (input_image.spectrum() != 1)
+        if (input.spectrum() != 1)
             throw std::runtime_error("Adaptive Binarization requires a grayscale image.");
 
-        const int w = input_image.width();
-        const int h = input_image.height();
+        const int w = input.width();
+        const int h = input.height();
 
-        // 1. Build Standard Integral Images using
+        // 1. Build Standard Integral Images
         std::vector<double> integral_img;
         std::vector<double> integral_img_sqr;
-        core::compute_fused_integrals(input_image, 0, integral_img, integral_img_sqr);
+        core::compute_fused_integrals(input, 0, integral_img, integral_img_sqr);
 
         // Calculate global stats (using integral image for the whole area 0,0 to w-1,h-1)
         double total_sum = core::get_sum_padded(integral_img, w, 0, 0, w - 1, h - 1);
@@ -231,10 +230,10 @@ namespace ite::binarization
         // Find max intensity
         uint max_val_int = 0;
 #pragma omp parallel for reduction(max : max_val_int)
-        for (size_t i = 0; i < input_image.size(); ++i)
+        for (size_t i = 0; i < input.size(); ++i)
         {
-            if (input_image[i] > max_val_int)
-                max_val_int = input_image[i];
+            if (input[i] > max_val_int)
+                max_val_int = input[i];
         }
         const double max_intensity = (double)max_val_int;
 
@@ -254,7 +253,7 @@ namespace ite::binarization
 #pragma omp parallel for reduction(+ : n_black_total, n_red_total)
         for (int i = 0; i < w * h; ++i)
         {
-            double val = (double)input_image[i];
+            double val = (double)input[i];
             if (val <= T_con - offset)
             {
                 mask_black[i] = 1.0;
@@ -330,7 +329,6 @@ namespace ite::binarization
         }
 
         const double std_dev_range = (max_std_dev - min_std_dev) > 1e-5 ? (max_std_dev - min_std_dev) : 1e-5;
-        CImg<uint> output_image(w, h, 1, 1);
 
 // 6. Final Binarization Pass
 #pragma omp parallel for collapse(2)
@@ -379,11 +377,9 @@ namespace ite::binarization
 
                 double threshold = mean_w - k * term;
 
-                output_image(x, y) = (input_image(x, y) > threshold) ? 255 : 0;
+                output(x, y) = (input(x, y) > threshold) ? 255 : 0;
             }
         }
-
-        input_image.swap(output_image);
     }
 
 } // namespace ite::binarization
