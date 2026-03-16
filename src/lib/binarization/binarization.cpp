@@ -244,31 +244,37 @@ namespace ite::binarization
 
         // 3. Classify Pixels & Build Count Integral Images
         // Create masks: 1.0 where condition is true, 0.0 otherwise
-        CImg<double> mask_black(w, h, 1, 1, 0);
-        CImg<double> mask_red(w, h, 1, 1, 0);
+        CImg<double> integral_img_black(w, h, 1, 1, 0.0);
+        CImg<double> integral_img_red(w, h, 1, 1, 0.0);
 
         long n_black_total = 0;
         long n_red_total = 0;
 
-#pragma omp parallel for reduction(+ : n_black_total, n_red_total)
-        for (int i = 0; i < w * h; ++i)
+        for (int y = 0; y < h; ++y)
         {
-            double val = (double)input[i];
-            if (val <= T_con - offset)
+            double row_sum_black = 0.0;
+            double row_sum_red = 0.0;
+
+            for (int x = 0; x < w; ++x)
             {
-                mask_black[i] = 1.0;
-                n_black_total++;
-            }
-            else if (val < T_con + offset)
-            {
-                mask_red[i] = 1.0;
-                n_red_total++;
+                const auto val = static_cast<double>(input(x, y));
+
+                const double is_black = (val <= T_con - offset) ? 1.0 : 0.0;
+                const double is_red   = (!is_black && val < T_con + offset) ? 1.0 : 0.0;
+
+                row_sum_black += is_black;
+                row_sum_red   += is_red;
+
+                n_black_total += static_cast<long>(is_black);
+                n_red_total   += static_cast<long>(is_red);
+
+                integral_img_black(x, y) =
+                    row_sum_black + (y > 0 ? integral_img_black(x, y - 1) : 0.0);
+
+                integral_img_red(x, y) =
+                    row_sum_red + (y > 0 ? integral_img_red(x, y - 1) : 0.0);
             }
         }
-
-        // Create Integral Images for the Counts
-        CImg<double> integral_img_black = core::calculate_integral_image(mask_black);
-        CImg<double> integral_img_red = core::calculate_integral_image(mask_red);
 
         // 4. Determine Primary Window Size (pw_size)
         double p = (n_red_total == 0) ? 10.0 : (double)n_black_total / n_red_total;
