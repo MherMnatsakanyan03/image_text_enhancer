@@ -22,9 +22,10 @@ namespace ite::filters
     void adaptive_gaussian_blur(const CImg<uint> &input, CImg<uint> &output, float sigma_low, float sigma_high, float edge_thresh, int block_h,
                                 int boundary_conditions)
     {
+        // Caller guarantees output is pre-allocated with correct dimensions
+        // For empty input, this is a no-op (output should already be empty or will be unused)
         if (input.is_empty())
         {
-            output.assign();
             return;
         }
 

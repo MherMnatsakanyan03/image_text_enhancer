@@ -29,8 +29,7 @@ namespace ite::binarization
         std::vector<double> integral_img;
         std::vector<double> integral_img_sqr;
 
-        // Resize output to match input dimensions (single channel binary result)
-        output.assign(w, h, d, 1);
+        // Caller guarantees output is pre-allocated with correct dimensions (w, h, d, 1)
 
         // Process each depth slice independently
         for (int z = 0; z < d; ++z)
@@ -183,6 +182,8 @@ namespace ite::binarization
         // Determine if background is light (border mean > threshold) or dark
         const bool light_background = border_mean > static_cast<double>(threshold);
 
+        // Caller guarantees output is pre-allocated with correct dimensions (w, h, d, 1)
+
         // Write binarized values directly to output
 #pragma omp parallel for collapse(3)
         for (int z = 0; z < input.depth(); ++z)
@@ -260,19 +261,17 @@ namespace ite::binarization
                 const auto val = static_cast<double>(input(x, y));
 
                 const double is_black = (val <= T_con - offset) ? 1.0 : 0.0;
-                const double is_red   = (!is_black && val < T_con + offset) ? 1.0 : 0.0;
+                const double is_red = (!is_black && val < T_con + offset) ? 1.0 : 0.0;
 
                 row_sum_black += is_black;
-                row_sum_red   += is_red;
+                row_sum_red += is_red;
 
                 n_black_total += static_cast<long>(is_black);
-                n_red_total   += static_cast<long>(is_red);
+                n_red_total += static_cast<long>(is_red);
 
-                integral_img_black(x, y) =
-                    row_sum_black + (y > 0 ? integral_img_black(x, y - 1) : 0.0);
+                integral_img_black(x, y) = row_sum_black + (y > 0 ? integral_img_black(x, y - 1) : 0.0);
 
-                integral_img_red(x, y) =
-                    row_sum_red + (y > 0 ? integral_img_red(x, y - 1) : 0.0);
+                integral_img_red(x, y) = row_sum_red + (y > 0 ? integral_img_red(x, y - 1) : 0.0);
             }
         }
 
@@ -335,6 +334,8 @@ namespace ite::binarization
         }
 
         const double std_dev_range = (max_std_dev - min_std_dev) > 1e-5 ? (max_std_dev - min_std_dev) : 1e-5;
+
+        // Caller guarantees output is pre-allocated with correct dimensions (w, h, 1, 1)
 
 // 6. Final Binarization Pass
 #pragma omp parallel for collapse(2)

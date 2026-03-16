@@ -92,34 +92,37 @@ namespace ite::morphology
         }
     }
 
-    void dilation_square(CImg<uint> &input_image, int kernel_size)
+    void dilation_square(const CImg<uint> &input, CImg<uint> &output, int kernel_size)
     {
-        if (input_image.spectrum() != 1)
+        if (input.spectrum() != 1)
         {
             throw std::runtime_error("Dilation requires a single-channel image.");
         }
 
         if (kernel_size <= 1)
         {
+            // Caller guarantees output is pre-allocated; just copy input to output
+            output = input;
             return;
         }
 
         int r = kernel_size / 2;
-        int w = input_image.width();
-        int h = input_image.height();
-        int d = input_image.depth();
+        int w = input.width();
+        int h = input.height();
+        int d = input.depth();
 
-        // Temporary buffer is required for separable filters
-        CImg<uint> temp = input_image;
+        // Intermediate buffer for the separable 2-pass filter.
+        // Pass 1 writes the horizontal result here; pass 2 reads it.
+        CImg<uint> temp(w, h, d, 1);
 
         // Pass 1: Horizontal Dilation (Row by Row)
-        // Reads input_image, Writes to temp
+        // Reads input, writes to temp
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int y = 0; y < h; ++y)
             {
-                const uint* src_row = input_image.data(0, y, z);
+                const uint* src_row = input.data(0, y, z);
                 uint* dst_row = temp.data(0, y, z);
                 // Stride 1: contiguous memory
                 sliding_window_max(src_row, dst_row, w, 1, r);
@@ -127,59 +130,64 @@ namespace ite::morphology
         }
 
         // Pass 2: Vertical Dilation (Col by Col)
-        // Reads temp, Writes to input_image
+        // Reads temp, writes to output (caller guarantees output is pre-allocated)
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int x = 0; x < w; ++x)
             {
                 const uint* src_col = temp.data(x, 0, z);
-                uint* dst_col = input_image.data(x, 0, z);
+                uint* dst_col = output.data(x, 0, z);
                 // Stride w: vertical step
                 sliding_window_max(src_col, dst_col, h, w, r);
             }
         }
     }
 
-    void erosion_square(CImg<uint> &input_image, int kernel_size)
+    void erosion_square(const CImg<uint> &input, CImg<uint> &output, int kernel_size)
     {
-        if (input_image.spectrum() != 1)
+        if (input.spectrum() != 1)
         {
             throw std::runtime_error("Erosion requires a single-channel image.");
         }
 
         if (kernel_size <= 1)
         {
+            // Caller guarantees output is pre-allocated; just copy input to output
+            output = input;
             return;
         }
 
         int r = kernel_size / 2;
-        int w = input_image.width();
-        int h = input_image.height();
-        int d = input_image.depth();
+        int w = input.width();
+        int h = input.height();
+        int d = input.depth();
 
-        CImg<uint> temp = input_image;
+        // Intermediate buffer for the separable 2-pass filter.
+        CImg<uint> temp(w, h, d, 1);
 
         // Pass 1: Horizontal Erosion
+        // Reads input, writes to temp
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int y = 0; y < h; ++y)
             {
-                const uint* src_row = input_image.data(0, y, z);
+                const uint* src_row = input.data(0, y, z);
                 uint* dst_row = temp.data(0, y, z);
                 sliding_window_min(src_row, dst_row, w, 1, r);
             }
         }
 
         // Pass 2: Vertical Erosion
+        // Reads temp, writes to output (caller guarantees output is pre-allocated)
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < d; ++z)
         {
             for (int x = 0; x < w; ++x)
             {
                 const uint* src_col = temp.data(x, 0, z);
-                uint* dst_col = input_image.data(x, 0, z);
+                uint* dst_col = output.data(x, 0, z);
                 sliding_window_min(src_col, dst_col, h, w, r);
             }
         }

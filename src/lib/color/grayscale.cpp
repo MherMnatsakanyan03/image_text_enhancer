@@ -13,8 +13,7 @@ namespace ite::color
             return;
         }
 
-        // Resize output to the correct 1-channel dimensions
-        output.assign(input.width(), input.height(), input.depth(), 1);
+        // Caller guarantees output is pre-allocated with correct dimensions (w, h, d, 1)
 
 #pragma omp parallel for collapse(2)
         for (int z = 0; z < input.depth(); ++z)
