@@ -585,29 +585,47 @@ Strong scaling
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
-The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. We observe, that our hope of the program having an almost linear with growing problem size was fulfilled, with some overhead involved. In any parallel program, there is some necessary overhead involved, in the form of e.g. I/O, data distribution or synchronisation. However, the runtime scaling benchmark however does not tell us about the use of parallel resources. For this, we use a strong scaling benchmark, which runs a benchmark on a fixed problem size with an increasing number of threads allocated to the program, giving us information about how much faster the program gets with more parallel resources. On our machine, this involved benching in serial, all the way up to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This usually indicates, that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. We can conclude, that the optimised program is algorithmically better, which was the goal of the optimisations, but not well-parallelised.
+The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. We observe, that our hope of the program having an almost linear with growing problem size was fulfilled, with some overhead involved. In any parallel program, there is some necessary overhead involved, in the form of e.g. I/O, data distribution or synchronisation. However, the runtime scaling benchmark however does not tell us about the use of parallel resources. For this, we use a strong scaling benchmark, which runs a benchmark on a fixed problem size with an increasing number of threads allocated to the program, giving us information about how much faster the program gets with more parallel resources. On our machine, this involved benching in serial, all the way up to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This usually indicates, that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. However, from this information alone, we cannot conclude a meaningful cause, but a profiling of the baseline and optimised program and the runtimes of the individual stages would be more conclusive. Table \ref{tab:pahse-runtime} shows two main time improvements, namely, \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $98\%$ faster. From the profiling of the baseline implementation we see (todo: insert appropriate figure somewhere) that the Bataineh algorithm makes good use of parallel resources, i.e. the summing of the area is highly parallelised. The binarisation also dominates the baseline program runtime, with about $95\%$. This explains the good strong scaling performance and also why the optimised variant is so much quicker. 
+
+The new bottleneck now becomes memory intialisation. When looking for hotspots in the program we noticed, that there were plenty of serial regions in the program. After further investigation and looking at the assembly code, we realised that most of the serial time is being spent on memory operations, which include loading and writing the image and the allocation of stage-local scratch buffers, e.g. for erosion and dilation or even an output image for the binarisation functions. Roughly $6$ seconds of the total pipeline time was spent on such memory operations, hugely limiting the impact any parallelisation effort can have.
+
+% calculate actual number instead of "6"
+
+% roughly 
+% 1.3
+% 1.2
+% .6
+% .5
+% 3.7
+
+% 1.283 load image
+% 1.371 - 1.549 start memmove
+% 1.573 - 1684 vanvliet
+% 1.764 - 1953 memmove avx512
+% 1.987 - 2.1 vanvliet
+% 
 
 The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
 
 % Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
-\begin{table}[htbp]
-\caption{Comparison of total runtimes (8 Cores)}
-\label{tab:total-runtime}
-\footnotesize
-\begin{tabularx}{\columnwidth}{l r r r r}
-\toprule
-\textbf{Testbild} & \textbf{resolution} & \textbf{baseline (ms)} & \textbf{optimised (ms)} & \textbf{Speedup} \\
-\midrule
-Text Small 1K    & 1017x597 & 130,577  & 42,511 & 3,07$\times$ \\
-Text 2K          & 2048x1202 & 1.770,138 & 188,975  & 9,37$\times$ \\
-Magazine 2K      & 2516x3272 & 16.701,170 & 649,924 & 25,70$\times$ \\
-Text 4K          & 3840x2254 & 16.328,084 & 781,634 & 20,89$\times$ \\
-Text 8K          & 7680x4508 & 114.607,067 & 3.015,428 & 38,01$\times$ \\
-Text 16K         & 15360x9017 & -\textsuperscript{*} & 15.181,484 & -\textsuperscript{*} \\
-\bottomrule
-\multicolumn{4}{l}{\scriptsize \textsuperscript{*}Could not be calculated due to massive runtime}
-\end{tabularx}
-\end{table}
+% \begin{table}[htbp]
+% \caption{Comparison of total runtimes (8 Cores)}
+% \label{tab:total-runtime}
+% \footnotesize
+% \begin{tabularx}{\columnwidth}{l r r r r}
+% \toprule
+% \textbf{Testbild} & \textbf{resolution} & \textbf{baseline (ms)} & \textbf{optimised (ms)} & \textbf{Speedup} \\
+% \midrule
+% Text Small 1K    & 1017x597 & 130,577  & 42,511 & 3,07$\times$ \\
+% Text 2K          & 2048x1202 & 1.770,138 & 188,975  & 9,37$\times$ \\
+% Magazine 2K      & 2516x3272 & 16.701,170 & 649,924 & 25,70$\times$ \\
+% Text 4K          & 3840x2254 & 16.328,084 & 781,634 & 20,89$\times$ \\
+% Text 8K          & 7680x4508 & 114.607,067 & 3.015,428 & 38,01$\times$ \\
+% Text 16K         & 15360x9017 & -\textsuperscript{*} & 15.181,484 & -\textsuperscript{*} \\
+% \bottomrule
+% \multicolumn{4}{l}{\scriptsize \textsuperscript{*}Could not be calculated due to massive runtime}
+% \end{tabularx}
+% \end{table}
 
 
 \begin{table}[htbp]
@@ -630,6 +648,8 @@ Color Preservation & 4,129 & 4,089 & -0,969\% \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+% todo: update table with AMD 9950X3D phase runtimes
 
 % todo: why does init and copy take so much time?
 
