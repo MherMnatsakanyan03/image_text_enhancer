@@ -5,6 +5,7 @@
 \usepackage{pgfplots}
 \usepgfplotslibrary{groupplots}
 \usepackage{tabularx}
+\usepackage{csvsimple}
 \usepackage{subcaption}
 \usepackage{graphicx}
 \usepackage{multirow}
@@ -92,11 +93,10 @@
     \item Scaling Performance in Image Processing: Identifying and mitigating inefficiencies in an initial software implementation for OCR 
   \end{enumerate}
 \end{comment}
-\textbf{RQ} Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behaviour of the baseline implementation? \\
+\textbf{RQ} Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance? \\
 
 \textbf{RQ1.} How much faster is the optimised pipeline than the baseline on native CPU execution? \\
 \textbf{RQ2.} How well does the optimised pipeline scale under strong and runtime scaling from 1 to 8 cores? \\
-\textbf{RQ3.} What runtime overhead does the WebAssembly version introduce compared to native execution, and is that overhead still acceptable for practical use?
 
 \subsection{Background}
 \label{sec:background}
@@ -236,29 +236,26 @@ We provide a command-line application that can be used independently of a progra
 We hypothesise that the baseline implementation fails to scale linearly with problem size, although such scaling would be desirable for image processing workloads. We therefore concentrated on identifying low-hanging fruits at the level of high-level algorithmic design, for example by selecting more efficient algorithms for specific tasks, while aiming to adhere to best practices such as avoiding false sharing and writing code amenable to auto-vectorisation. For the purposes of the paper, we focus on the stages, whose optimisations had the biggest effect. The full list of applied optimisations is documented in the project's repository. % todo: add Optimizations.txt to the git repository.
 
 \subsection{Deskew}
-Instead of using a "rotate-and-project" approach, which repeatedly rotates the image to find an appropriate angle, we applied the Radon transform, which gives an acceptable rotation after the first application. Also, we removed an overlook, where both the deskew for the  grayscale and colour image were calculated, if the colour passthrough option was enabled.  % todo: explain why Radon transform gives an acceptable solution if I want to
+Instead of using a "rotate-and-project" approach, which repeatedly rotates the image to find an appropriate angle, we applied the Radon transform, which gives an acceptable rotation after the first application. Also, we removed an overlook, where the deskew operation was applied to the grayscale and colour image, if the colour passthrough option was enabled.  % todo: explain why Radon transform gives an acceptable solution if I want to
 
 \subsection{Bataineh}
 The main feature and bottleneck of the Bataineh algorithm is the adaptive sliding window, which takes into account the number of pixels from three categories---background, foreground and confusion \cite{adaptive_thresholding_methods_bataineh_2011}. This requires summing over areas of the image with masks reflecting these categories. The baseline approach was to sum using a nested for loop for each window. The optimised variant uses two integral image for background and confusion pixels, yielding a significant complexity reduction. We estimate our baseline implementation with $O(n \cdot w^2)$---where $n$ is the number of pixels and $w$ the window size---while the improved implementation is in $O(n)$.
 
-\subsection{Grayscale}
-% todo: unclear, because grayscale was already parallelised. Fix Optimizations.txt in this regard. Seemingly, only swapping was introduced, which yielded 40% time reduction... wth?
+%\subsection{Grayscale}
+% Grayscale was already parallelised. Fix Optimizations.txt in this regard. Seemingly, only swapping was introduced, which yielded 40% time reduction... wth?
+% todo: decide if I want to leave this in.
 
 % todo: wieso sind die Filter besser geworden? Das hatte ich eigentlich schon so implementiert, was Mher jetzt schreibt, dachte ich.
+
+\subsection{Contrast Enhancement}
+
+The contrast enhancement stage simply linearises the histogram. The baseline implementation was not parallelised, which was the first optimisation. Also, the lookup-table is pre-computed, which allows for auto-vectorisation in the application of the lookup-table to the image. Similarly, the Sauvola binarisation method, uses a branchless lookup in the optimised variant.
 
 \subsection{Morphology}
 The pipeline only supports dilation and erosion, which can both be realised by linear filters. The baseline implementation used four nested for-loops\footnote{for colour images it is five, as it is done for each channel, but our approach is only used on binary images} for iterating the image and scanning the neighbourhood. Since the filter is separable, it is divided into a horizontal and vertical pass. Instead of scanning the neighbourhood, a queue is used to compute the min/max of a given 1D window in amortised $O(1)$.
 
 % todo: why is the morphology worse then?
 % todo: isn't the vertical pass really bad in regards to cache line use?
-
-\subsection{Loop level Optimisations}
-\begin{comment}
-  - Contrast Enhancement: precalculate the linear strecht formula and save in Lookup-Table. main loop performs O(1) lookup insted of floating point calculations
-  - Contrast Enhancement: replacing if/else branching in pixel loop with std::min clamping, alowing the compiler to auto-vectorize using SIMD -> no assembly checks were done
-  - Sauvola Binarisation: branchless lookup
-\end{comment}
-To reduce the runtime of pixel processing loops, logical optimisations are made to the main loops that iterate over the pixels. In contrast enhancement, for example, the linear stretching formula is calculated in advance and stored in a lookup table. As a result, the main loop performs an $O(1)$ query per loop iteration instead of floating-point calculations. In addition, the if/else branch in the pixel processing loop is replaced by std::min clamping. This allows the compiler to auto-vectorize the loop with SIMD. In Sauvola binarisation, a branchless lookup is also implemented to improve performance.
 
 \section{Experiments}
 \label{sec:experiments}
@@ -285,9 +282,9 @@ All stages of the pipeline are enabled, with Bataineh binarisation and the adapt
 % in den alten Benchmarks war adaptive gaussian, adaptive median und simple median an...
 % todo: either redo benches without simple median or add it back here! It makes a lot of differrence in the strong scaling benchmark.
 
-For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running WSL2 with Ubuntu 24.04.1 LTS with 64 GB of RAM\footnote{It is clear that this comes with a performance penalty, however we can expect an even additive penalty across our conducted tests. See \underline{\href{https://www.phoronix.com/review/windows-11-wsl2-2025/2}{this}} blog post which tested the penalty on very similar hardware.}. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
+For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running WSL2 with Ubuntu 24.04.1 LTS with 64 GB of RAM\footnote{It is clear that this comes with a performance penalty, however we can expect an even additive penalty across our conducted tests. See \underline{\href{https://www.phoronix.com/review/windows-11-wsl2-2025/2}{this}} blog post which tested the penalty on very similar hardware.}. The profiling benchmarks were conducted on native Ubuntu 24.04.1 LTS. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
-We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail (see Table \ref{tab:total-runtime} for details). These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
+We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail. We will refer to the images in terms of their width in pixels, i.e. 1K or 16K (see Table \ref{tab:optimised-runtime-8cores} for details). These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
 
 % One test image is document text from the FUNSD dataset \cite{FUNSD_Jaume_2019}, which has been scanned and contains a lot of noise. Two additional test images are handwritten documents from the HTR ICFHR 2016 dataset \cite{HTR_Dataset_ICFHR_2016_Toselli}. Both of these images have a resolution of XxY and exhibit bleed-through, whereby text from other pages is visible. For colour documents, a test image from the LRDE Document Binarisation Dataset \cite{Efficient_Multiscale_Sauvola_Binarisation_Lazzara_Geraud_2013} is used. This is a scanned excerpt from a French magazine of very good quality containing many small sections of text. It has a resolution of XxY. A test image from the KITA imaging programme Forum is used to demonstrate a combination of historical text, UI elements and colour. All images are provided as JPG files.
 
@@ -580,14 +577,17 @@ Strong scaling
 \vspace{0.4em}
 \pgfplotslegendfromname{strongscalinglegend}
 
-\caption{Strong scaling behaviour of the baseline and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 16K). The dashed black line indicates ideal linear scaling. Each point in the plot represents the mean of 50 trials.}
+\caption{Strong scaling behaviour of the baseline and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 8K). The dashed black line indicates ideal linear scaling. Each point in the plot represents the mean of 50 trials.}
 \Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
-The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. We observe, that our hope of the program having an almost linear with growing problem size was fulfilled, with some overhead involved. In any parallel program, there is some necessary overhead involved, in the form of e.g. I/O, data distribution or synchronisation. However, the runtime scaling benchmark however does not tell us about the use of parallel resources. For this, we use a strong scaling benchmark, which runs a benchmark on a fixed problem size with an increasing number of threads allocated to the program, giving us information about how much faster the program gets with more parallel resources. On our machine, this involved benching in serial, all the way up to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This usually indicates, that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. However, from this information alone, we cannot conclude a meaningful cause, but a profiling of the baseline and optimised program and the runtimes of the individual stages would be more conclusive. Table \ref{tab:pahse-runtime} shows two main time improvements, namely, \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $98\%$ faster. From the profiling of the baseline implementation we see (todo: insert appropriate figure somewhere) that the Bataineh algorithm makes good use of parallel resources, i.e. the summing of the area is highly parallelised. The binarisation also dominates the baseline program runtime, with about $95\%$. This explains the good strong scaling performance and also why the optimised variant is so much quicker. 
+The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. We observe, that our hope of the program having an almost linear with growing problem size was fulfilled, with some overhead involved. In any parallel program, there is some necessary overhead involved, in the form of e.g. I/O, data distribution or synchronisation. However, the runtime scaling benchmark however does not tell us about the use of parallel resources. For this, we use a strong scaling benchmark, which runs a benchmark on a fixed problem size with an increasing number of threads allocated to the program, giving us information about how much faster the program gets with more parallel resources. On our machine, this involved benching in serial, all the way up to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This usually indicates, that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. However, from this information alone, we cannot conclude a meaningful cause, but a profiling of the baseline and optimised program and the runtimes of the individual stages would be more conclusive. Table \ref{tab:phase-runtime} shows two main time improvements, namely, \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $98\%$ faster. For more information on the bottlenecks, we created a profile using AMDuProf over an 8K image (find detailed profiling reports in the repository). % todo: add them to the repository
+From the profiling of the baseline implementation we see (todo: insert appropriate figure somewhere) that the Bataineh algorithm makes good use of parallel resources, i.e. the summing of the area is highly parallelised. The binarisation also dominates the baseline program runtime, with about $95\%$ of total runtime attributed to it. This explains the good strong scaling performance and also why the optimised variant is so much quicker.
+The optimised profile tells a different story---very few truly parallel regions can be spotted. The pipeline is dominated by $\approx 30\%$ I/O, as well as large serial regions and memory allocations inside of pipeline stages, i.e. allocation of stage-local scratch buffers, for erosion and dilation or even an output image for the binarisation functions. Roughly $10\%$ of the total pipeline time (on an 8K image) was spent on such memory operations, hugely limiting the impact any parallelisation effort can have. Another overlook were the CImg library functions---both the gaussian and median filter do not parallelise, even after forcing CImg to use OpenMP. The single largest impact is the median filter, with about $15\%$ serial execution on an 8K image. 
 
-The new bottleneck now becomes memory intialisation. When looking for hotspots in the program we noticed, that there were plenty of serial regions in the program. After further investigation and looking at the assembly code, we realised that most of the serial time is being spent on memory operations, which include loading and writing the image and the allocation of stage-local scratch buffers, e.g. for erosion and dilation or even an output image for the binarisation functions. Roughly $6$ seconds of the total pipeline time was spent on such memory operations, hugely limiting the impact any parallelisation effort can have.
+%2.954 - 1.922 = 1.032
+% approx 15%
 
 % calculate actual number instead of "6"
 
@@ -605,46 +605,50 @@ The new bottleneck now becomes memory intialisation. When looking for hotspots i
 % 1.987 - 2.1 vanvliet
 % 
 
-The results of the individual phases show a significant reduction in runtime in the deskewing and Bataineh binarisation phases when comparing the baseline and optimised implementations. Table \ref{tab:pahse-runtime} shows the runtime of the individual phases for the KITA test image with a resolution of 3840x2254 on 8 cores. It can be seen that the optimisations lead to a massive reduction in phase runtime of over 98\% for Bataineh binarisation in particular. The deskewing phase also benefits from the optimisations and shows a reduction in phase runtime of over 98\%. In other phases, such as grayscale and the filter, a significant reduction in phase runtime can also be observed, while in the morphological ops phase, a slight increase in phase runtime can be seen. WHY?????. Overall, this leads to a reduction in the total runtime of over 95\%. In absolute terms, the runtime improvement is mainly due to the optimisation of Bataineh binarisation, as this phase accounts for the largest share of the total runtime in the baseline implementation.
-
 % Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
-% \begin{table}[htbp]
-% \caption{Comparison of total runtimes (8 Cores)}
-% \label{tab:total-runtime}
-% \footnotesize
-% \begin{tabularx}{\columnwidth}{l r r r r}
-% \toprule
-% \textbf{Testbild} & \textbf{resolution} & \textbf{baseline (ms)} & \textbf{optimised (ms)} & \textbf{Speedup} \\
-% \midrule
-% Text Small 1K    & 1017x597 & 130,577  & 42,511 & 3,07$\times$ \\
-% Text 2K          & 2048x1202 & 1.770,138 & 188,975  & 9,37$\times$ \\
-% Magazine 2K      & 2516x3272 & 16.701,170 & 649,924 & 25,70$\times$ \\
-% Text 4K          & 3840x2254 & 16.328,084 & 781,634 & 20,89$\times$ \\
-% Text 8K          & 7680x4508 & 114.607,067 & 3.015,428 & 38,01$\times$ \\
-% Text 16K         & 15360x9017 & -\textsuperscript{*} & 15.181,484 & -\textsuperscript{*} \\
-% \bottomrule
-% \multicolumn{4}{l}{\scriptsize \textsuperscript{*}Could not be calculated due to massive runtime}
-% \end{tabularx}
-% \end{table}
-
+\begin{table}[htbp]
+\caption{Runtime of the optimised implementation on 8 cores}
+\label{tab:optimised-runtime-8cores}
+\footnotesize
+\begin{tabularx}{\columnwidth}{l r r r r r}
+\toprule
+\textbf{Test Image} & \textbf{Resolution} & \textbf{Avg.\ (ms)} & \textbf{Min.\ (ms)} & \textbf{Max.\ (ms)} \\
+\midrule
+Text Small 1K          & 1017x597   & 27.335   & 25.893   & 29.935   \\
+Noisy Document 1K      & 1000x767   & 28.962   & 26.844   & 33.553   \\
+Text 2K                & 2048x1202  & 117.292  & 110.540  & 126.753  \\
+Historic Document 2K A & 2290x3511  & 382.879  & 370.715  & 417.984  \\
+Magazine 2K            & 2516x3272  & 401.063  & 385.085  & 418.153  \\
+Text 4K                & 3840x2254  & 451.757  & 438.138  & 474.118  \\
+Historic Document 2K B & 2480x3511  & 541.679  & 515.349  & 579.027  \\
+Text 8K                & 7680x4508  & 1840.552 & 1771.410 & 1975.609 \\
+Text 16K               & 15360x9017 & 9368.822 & 9125.795 & 9946.973 \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \begin{table}[htbp]
-\caption{Comparison of phase runtimes (3840x2254, 8 Cores)}
-\label{tab:pahse-runtime}
+\caption{Comparison of phase runtimes (8K, 8 Cores)}
+\label{tab:phase-runtime}
 \small
 \centering
 \begin{tabular}{l rr r}
 \toprule
 \textbf{Phase} & \textbf{baseline (ms)} & \textbf{optimised (ms)} & \textbf{diff (\%)} \\
 \midrule
-Init \& Copy    & 65,458  & 63,672  & -2,728\% \\
-Grayscale       & 30,950  & 17,753  & -42,640\% \\
-\textbf{Deskew} & \textbf{159,405} & \textbf{3,062} & \textbf{-98,079\%} \\
-Filters (Sum)   & 483,312 & 380,467 & -21,279\% \\
-\textbf{Bataineh} & \textbf{15.507,105} & \textbf{217,347} & \textbf{-98,598\%} \\
-Morphological Ops & 66,663 & 93,05 & +39,583\% \\
-Color Preservation & 4,129 & 4,089 & -0,969\% \\
-\textbf{Total} & \textbf{16.328,084} & \textbf{781,634} & \textbf{-95,213\%} \\
+Init \& Copy              & 144.139    & 139.457   & -3.248\% \\
+Grayscale                 & 52.586     & 22.590    & -57.042\% \\
+\textbf{Deskew}           & \textbf{308.601} & \textbf{2.200}   & \textbf{-99.287\%} \\
+Contrast                  & 30.768     & 6.174     & -79.934\% \\
+Adaptive Gaussian         & 250.973    & 262.134   & +4.447\% \\
+Median Blur               & 287.138    & 277.698   & -3.288\% \\
+Adaptive Median           & 883.230    & 499.437   & -43.453\% \\
+\textbf{Binarization} & \textbf{81,352.114} & \textbf{503.254} & \textbf{-99.381\%} \\
+Despeckle                 & 0.002      & 0.002     & 0.000\% \\
+Dilation                  & 46.541     & 58.108    & +24.853\% \\
+Erosion                   & 103.450    & 56.895    & -45.002\% \\
+Color Pass                & 12.556     & 12.598    & +0.335\% \\
+\textbf{Total}            & \textbf{83,472.104} & \textbf{1,840.552} & \textbf{-97.795\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -664,13 +668,13 @@ Table \ref{tab:breakdown} shows the detailed phase runtime for the different pha
 \toprule
 \textbf{Phase} & \textbf{1K Small} & \textbf{2K Text} & \textbf{2K Mag.} & \textbf{4K Text} & \textbf{8K Text} \\
 \midrule
-Init \& Copy & 1,29  & 4,20  & 61,83  & 65,46  & 241,93  \\
-Grayscale & 0,60  & 2,95  & 27,68  & 30,95  & 92,45  \\
-Deskew & 24,22  & 59,89  & 28,90  & 159,41  & 518,54  \\
-Binarisation & 71,00  & 1.555,57  & 15.999,83  & 15.507,11  & 111.495,99 \\
-Filter (Sum) & 28,74 & 125,14 & 520,73 & 483,31 & 1.968,43 \\
+Init \& Copy & 1.29  & 4.20  & 61.83  & 65.46  & 241.93  \\
+Grayscale & 0.60  & 2.95  & 27.68  & 30.95  & 92.45  \\
+Deskew & 24.22  & 59.89  & 28.90  & 159.41  & 518.54  \\
+Binarisation & 71.00  & 1.555.57  & 15.999.83  & 15.507.11  & 111,495.99 \\
+Filter (Sum) & 28.74 & 125.14 & 520.73 & 483.31 & 1.968.43 \\
 \midrule
-\textbf{TOTAL} & \textbf{130,58} & \textbf{1.770,14} & \textbf{16.701,17} & \textbf{16.328,08} & \textbf{114.607,07} \\
+\textbf{TOTAL} & \textbf{130.58} & \textbf{1,770.14} & \textbf{16,701.17} & \textbf{16,328.08} & \textbf{114,607.07} \\
 \bottomrule
 \end{tabular}
 \end{table*}
