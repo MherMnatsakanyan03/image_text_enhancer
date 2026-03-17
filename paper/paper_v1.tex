@@ -70,7 +70,7 @@
 %% The abstract is a short summary of the work to be presented in the article.
 \begin{abstract}
   % RQ Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behavior of the baseline implementation?
-  TBC
+  Document enhancement plays a central role in document scanning and document analysis tasks, which are central elements of any document-dependent workflow and can be found in various applications, yet many available solutions are either not focused on document enhancement, difficult to integrate into lightweight, especially mobile, workflows or not permitted for commercial use. In this paper, we present Image Text Enhancer (ITE), a modular C++ pipeline for enhancing printed and handwritten document images. Our goal is to provide a compact and efficient solution that supports practical deployment both as a command-line tool and as a reusable library in upstream applications.
 \end{abstract}
 
 %%
@@ -93,10 +93,6 @@
     \item Scaling Performance in Image Processing: Identifying and mitigating inefficiencies in an initial software implementation for OCR 
   \end{enumerate}
 \end{comment}
-\textbf{RQ} Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance? \\
-
-\textbf{RQ1.} How much faster is the optimised pipeline than the baseline on native CPU execution? \\
-\textbf{RQ2.} How well does the optimised pipeline scale under strong and runtime scaling from 1 to 8 cores? \\
 
 \subsection{Background}
 \label{sec:background}
@@ -172,12 +168,12 @@ Unlike the existing tools and libraries described, our approach is designed to b
 Compared to OpenCV and ImageMagick, our work is characterised by its deliberate focus on document enhancement and compactness. Unlike Leptonica, our pipeline is specialised in the post-processing of scanned documents and unlike Unpaper, our binary including dependencies is $\approx$50$\times$ smaller.
 In addition, our licensing model (MIT-0 and CeCILL-C) permits use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialised tools for document enhancement.
 
-Furthermore, we systematically optimise and improve our baseline implementation and evaluate the performance gains through various experiments. In a proof of concept, we show that our approach can be compiled for WASM and integrated into a web application. % todo: decide whether to remove the WASM PoC
+This work foremost addresses the question: \textit{What are challenges in optimising a document enhancement pipeline, even when aiming to adhere to best-practices in algorithm engineering?} We systematically optimise and improve our baseline implementation and evaluate the performance gains through various experiments. In a separate proof of concept, we show that our approach can be compiled for WASM and integrated into a web application. % todo: decide whether to remove the WASM PoC
 
 \subsection{Outline}
 \label{sec:outline}
 
-In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimise. In section \ref{sec:optimisation}, we describe the optimisation techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we provide an outlook on possible future work \ref{sec:future-work}. 
+In section \ref{sec:pipeline}, we introduce the pipeline that we will implement and optimise. In section \ref{sec:optimisation}, we describe the optimisation techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we provide an outlook on possible future work in section \ref{sec:future-work}. 
 
 \section{Pipeline}
 \label{sec:pipeline}
@@ -284,7 +280,8 @@ All stages of the pipeline are enabled, with Bataineh binarisation and the adapt
 
 For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running WSL2 with Ubuntu 24.04.1 LTS with 64 GB of RAM\footnote{It is clear that this comes with a performance penalty, however we can expect an even additive penalty across our conducted tests. See \underline{\href{https://www.phoronix.com/review/windows-11-wsl2-2025/2}{this}} blog post which tested the penalty on very similar hardware.}. The profiling benchmarks were conducted on native Ubuntu 24.04.1 LTS. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
-We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail. We will refer to the images in terms of their width in pixels, i.e. 1K or 16K (see Table \ref{tab:optimised-runtime-8cores} for details). These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
+We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail. We will refer to the images in terms of their width in pixels, i.e. 1K or 16K (for details, see \href{https://github.com/MherMnatsakanyan03/image_text_enhancer/tree/main/resources/test_images}{the repository}). %(see Table \ref{tab:optimised-runtime-8cores} for details). 
+These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
 
 The pipeline was configured to apply the following operations: deskew, adaptive gaussian, simple median filter, adaptive median filter, Bataineh binarisation, despeckle, dilation, erosion and color pass. All these stages were also timed individually. The benchmarks do not report the time necessary for loading and writing the image to and from disk.
 
@@ -295,7 +292,7 @@ The pipeline was configured to apply the following operations: deskew, adaptive 
 \subsection{Results}
 \label{sec:results}
 
-Figure \ref{fig:runtime-scaling-combined} shows the development of runtime with increasing image resolution for the baseline and optimised implementations. Unsurprisingly, the runtime $t$ increases with the problem size $s$. We found, that the optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$ we observe
+Figure \ref{fig:runtime-scaling-combined} shows runtime versus image resolution for the baseline and optimised implementations. The optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$
 
 \begin{align*}
   t_{\text{baseline}} &\propto c_1 \cdot s^{1.660} \\
@@ -584,14 +581,14 @@ Strong scaling
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
-The results for runtime scaling are seemingly good. We observe, that the optimisations lead to a significant improvement of the runtime, which is consistent with growing input size. We observe, that our hope of the program having an almost linear with growing problem size was fulfilled, with some overhead involved. In any parallel program, there is some necessary overhead involved, in the form of e.g. data distribution and synchronisation. However, the runtime scaling benchmark does not tell us about the use of parallel resources. For this, we use a strong scaling benchmark, which runs a benchmark on a fixed problem size with an increasing number of threads allocated to the program, giving us information about how much faster the program gets with more parallel resources. On our machine, this involved benching in serial, all the way up to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This usually indicates, that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is slightly better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. % todo: the benchmarks do not report the I/O time. Find an explanation, why the benchmark behaves better on larger images. 
-Still, from this information alone, we cannot conclude a meaningful cause, but a profiling of the baseline and optimised program and the runtimes of the individual stages would be more conclusive. Table \ref{tab:phase-runtime} shows two main time improvements, namely, \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $99\%$ faster. For more information on the bottlenecks, we created a profile using AMDuProf over an 8K image (find detailed profiling reports in the repository). % todo: add them to the repository
+The optimisations significantly reduce runtime, especially for larger inputs. The optimised implementation scales nearly linearly, with some overhead, i.e. serial regions. Table \ref{tab:phase-runtime} points at two main improvements: \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $99\%$ faster. 
+However, the runtime scaling benchmark does not tell us about the use of parallel resources. We therefore use a strong-scaling benchmark on a fixed problem size. We tested 1 to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This suggests that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is slightly better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. % todo: the benchmarks do not include the I/O time. Find an explanation, why the benchmark behaves better on larger images. 
 
+For more information on the bottlenecks, we created a profile using AMDuProf over an 8K image (find detailed profiling reports in the repository). % todo: add them to the repository
 Figure \ref{fig:uprof_baseline} shows the profile plot of the \textbf{baseline implementation}. The plot is dominated by the Bataineh algorithm, meaning it makes good use of parallel resources, i.e. the summing of the area is highly parallelised. This is also reflected in Table \ref{tab:phase-runtime}, where the Bataineh binarisation has $95\%$ of total runtime attributed to it. This explains the good strong scaling performance and also why the optimised variant is so much quicker.
 
-The \textbf{optimised profile} tells a different story---very few truly parallel regions can be spotted. The plot is shows $\approx 27\%$ I/O, which however do not play a role in the other benchmarks, as well as large serial regions and memory allocations inside of pipeline stages, which can be attributed to e.g. allocation of stage-local scratch buffers for the morphological functions, masks for the Bataineh algorithm and even the output image for the binarisation functions. Roughly $15\%$ of the total pipeline time (on an 8K image) was spent on such memory operations, hugely limiting the impact any parallelisation effort can have (see future work). % todo: add this part in future work
-Another caveat are the CImg library functions---both the gaussian and median filter appear serial, even when forcing CImg to use OpenMP. The single largest impact in this benchmark scenario is the median filter, with $\approx 15.1\%$ serial execution on an 8K image. The theoretical speedup $S_\text{max}$ is limited by the serial regions of the program. Our observed speedup is however $4.76$, implying, that these regions might partially be parallel. % todo: nochmal single-threaded profile prüfen.
-
+The \textbf{optimised profile} shows a different pattern---very few truly parallel regions can be spotted. The plot is shows $\approx 27\%$ I/O, which are excluded in the other benchmarks, as well as large serial regions and memory allocations inside of pipeline stages, which can be attributed to e.g. allocation of stage-local scratch buffers for the morphological functions, masks for the Bataineh algorithm and even the output image for the binarisation functions. From the profiling and associated Assembly, we estimate that $15\%$ of the total pipeline time (on an 8K image in a single serial profiling run) was spent on such memory operations.
+Another caveat are the CImg library functions---both the gaussian and median filter appear serial, even when forcing CImg to use OpenMP. The single largest impact in this benchmark scenario is the median filter, with $\approx 15.1\%$ serial execution on an 8K image. The theoretical speedup $S_\text{max}$ is limited by the serial regions of the program. Our observed speedup is however $4.76$ (see Figure \ref{fig:strong-scaling-main-vs-optimised}), implying, that these regions are not fully serial.
 \begin{align*}
   S_\text{max} \approx \frac{1}{0.301} \approx 3.32 <  4.76 \approx \frac{1}{0.21} \approx S_\text{observed}
 \end{align*}
@@ -609,6 +606,10 @@ Another caveat are the CImg library functions---both the gaussian and median fil
   \Description{The AMDuProf Plot shows the time on the x-axis and the number of threads being run on the CPU on the y-axis. The plot shows, that large regions of the program are not parallel, apart from relatively long I/O phases. In between there are large consecutive serial regions.}
   \label{fig:uprof_baseline}
 \end{figure}
+
+\subsection{Conclusions}
+
+We identified many important optimisations in the baseline implementation and tackled them. Now, however, the optimised implementation has another bottleneck, local memory allocations.
 
 
 %2.954 - 1.922 = 1.032
@@ -631,6 +632,7 @@ Another caveat are the CImg library functions---both the gaussian and median fil
 % 
 
 % Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
+\begin{comment}  
 \begin{table}[htbp]
 \caption{Runtime of the optimised implementation on 8 cores}
 \label{tab:optimised-runtime-8cores}
@@ -651,6 +653,7 @@ Text 16K               & 15360x9017 & 9368.822 & 9125.795 & 9946.973 \\
 \bottomrule
 \end{tabularx}
 \end{table}
+\end{comment}
 
 \begin{table}[htbp]
 \caption{Comparison of phase runtimes (8K, 8 Cores)}
@@ -680,26 +683,25 @@ Color Pass                & 12.556     & 12.598    & +0.335\% \\
 
 % todo: why does init and copy take so much time?
 
-\begin{table*}[t]
-\caption{Detailed runtimes for certain pipeline stages}
-\label{tab:breakdown}
-\small
-\centering
-\begin{tabular}{l c c c c c c}
-\toprule
-\textbf{Phase} & \textbf{1K Small} & \textbf{2K Text} & \textbf{2K Mag.} & \textbf{4K Text} & \textbf{8K Text} \\
-\midrule
-Init \& Copy & 1.29  & 4.20  & 61.83  & 65.46  & 241.93  \\
-Grayscale & 0.60  & 2.95  & 27.68  & 30.95  & 92.45  \\
-Deskew & 24.22  & 59.89  & 28.90  & 159.41  & 518.54  \\
-Binarisation & 71.00  & 1.555.57  & 15.999.83  & 15.507.11  & 111,495.99 \\
-Filter (Sum) & 28.74 & 125.14 & 520.73 & 483.31 & 1.968.43 \\
-\midrule
-\textbf{TOTAL} & \textbf{130.58} & \textbf{1,770.14} & \textbf{16,701.17} & \textbf{16,328.08} & \textbf{114,607.07} \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
+%\begin{table*}[t]
+%\caption{Detailed runtimes for certain pipeline stages}
+%\label{tab:breakdown}
+%\small
+%\centering
+%\begin{tabular}{l c c c c c c}
+%\toprule
+%\textbf{Phase} & \textbf{1K Small} & \textbf{2K Text} & \textbf{2K Mag.} & \textbf{4K Text} & \textbf{8K Text} \\
+%\midrule
+%Init \& Copy & 1.29  & 4.20  & 61.83  & 65.46  & 241.93  \\
+%Grayscale & 0.60  & 2.95  & 27.68  & 30.95  & 92.45  \\
+%Deskew & 24.22  & 59.89  & 28.90  & 159.41  & 518.54  \\
+%Binarisation & 71.00  & 1.555.57  & 15.999.83  & 15.507.11  & 111,495.99 \\
+%Filter (Sum) & 28.74 & 125.14 & 520.73 & 483.31 & 1.968.43 \\
+%\midrule
+%\textbf{TOTAL} & \textbf{130.58} & \textbf{1,770.14} & \textbf{16,701.17} & \textbf{16,328.08} & \textbf{114,607.07} \\
+%\bottomrule
+%\end{tabular}
+%\end{table*}
 % todo: update detailed runtimes with 9950x3d runtimes
 
 \section{Future Work}
@@ -709,9 +711,6 @@ Filter (Sum) & 28.74 & 125.14 & 520.73 & 483.31 & 1.968.43 \\
   \item Use heuristics for selecting algorithms, e.g. binarisation
   \item better deskew
   \item runtime experiments on WASM
-  \item try to optimise for WASM (reduce the performance gap)
-  \item What do we do to avoid false sharing?
-  \item Look into blocking code
 \end{enumerate}
 
 %%
