@@ -70,7 +70,7 @@
 %% The abstract is a short summary of the work to be presented in the article.
 \begin{abstract}
   % RQ Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behavior of the baseline implementation?
-  Document enhancement plays a central role in document scanning and document analysis tasks, which are central elements of any document-dependent workflow and can be found in various applications, yet many available solutions are either not focused on document enhancement, difficult to integrate into lightweight, especially mobile, workflows or not permitted for commercial use. In this paper, we present Image Text Enhancer (ITE), a modular C++ pipeline for enhancing printed and handwritten document images. Our goal is to provide a compact and efficient solution that supports practical deployment both as a command-line tool and as a reusable library in upstream applications.
+  Document enhancement plays a central role in document scanning and document analysis tasks, which are part of any document-dependent workflow and can be found in various applications. Yet many available solutions are either not focused on document enhancement, difficult to integrate into lightweight, especially mobile, workflows or not permitted for commercial use. In this paper, we present Image Text Enhancer (ITE), a modular C++ pipeline for enhancing printed and handwritten document images. Our goal is to provide a compact and efficient solution that supports practical deployment both as a command-line tool and as a reusable library in upstream applications.
 \end{abstract}
 
 %%
@@ -97,7 +97,7 @@
 \subsection{Background}
 \label{sec:background}
 
-The extraction of textual information from images --- from scanned books to even receipts captured by smartphone cameras --- have become an important part of everyday life \cite{alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Any such extraction necessarily begins with the pre-processing of recorded images through techniques such as binarisation, noise removal, and geometric transformation, a process generally referred to as \textit{document enhancement}. Numerous tools focused on this niche have been proposed. Although these approaches feature broad capabilities, they are often associated with substantial complexity on the user's end and entail considerable software dependencies. These dependencies restrict applicability, particularly in settings where binary size is constrained, such as mobile and web platforms. This limitation assumes added importance in a context where most digital media interactions now take place on smartphones and application development is increasingly oriented toward edge-computing models. Consequently, efficient and platform-independent implementations that exploit parallelisation and other optimisation techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
+The extraction of textual information from images of scanned books to even receipts, has become an important part of everyday life \cite{alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Any such extraction necessarily begins with the pre-processing of recorded images through techniques such as binarisation, noise removal, and geometric transformation, a process generally referred to as \textit{document enhancement}. Numerous tools focused on this niche have been proposed. Although these approaches feature broad capabilities, they are often associated with substantial complexity on the user's end and entail considerable software dependencies. These dependencies restrict applicability, particularly in settings where binary size is constrained, such as mobile and web platforms. This limitation assumes added importance in a context where most digital media interactions now take place on smartphones and application development is increasingly oriented toward edge-computing models. Consequently, efficient and platform-independent implementations that exploit parallelisation and other optimisation techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
 
 \subsection{Related Work}
 \label{sec:related-work}
@@ -137,7 +137,7 @@ A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on 
   \caption{Comparison of related tools.}
   \label{tab:tool-comparison-compact}
   \centering
-  \begin{tabular}{lclc}
+  \begin{tabular}{lclcc}
     \toprule
     \textbf{Tool} & \textbf{Lightweight} & \textbf{Licence} & \textbf{Commercial} \\
     \midrule
@@ -163,12 +163,12 @@ A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on 
 % - State of the art binarisation etc
 % - name, which algorithms we use
 
-Unlike the existing tools and libraries described, our approach is designed to be minimalistic, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three build dependencies: OpenMP, X11, and JPEG. It can be imported as a library and also as a CLI executable---with 1.7 MiB on Linux.
+Unlike the existing tools and libraries described, our approach is designed to be lightweight, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight and has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three build dependencies: OpenMP, X11, and JPEG. It can be imported as a library and also as a CLI executable---with 1.7 MiB on Linux.
 
 Compared to OpenCV and ImageMagick, our work is characterised by its deliberate focus on document enhancement and compactness. Unlike Leptonica, our pipeline is specialised in the post-processing of scanned documents and unlike Unpaper, our binary including dependencies is $\approx$50$\times$ smaller.
-In addition, our licensing model (MIT-0 and CeCILL-C) permits use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap between large-scale, general-purpose image processing libraries and highly specialised tools for document enhancement.
+In addition, our licensing model (MIT-0 and CeCILL-C) permits use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap in the current landscape.
 
-We address the question: \textit{What are challenges in optimising a document enhancement pipeline, even when aiming to adhere to best-practices in algorithm engineering?} We systematically optimise and improve our baseline implementation and evaluate the performance gains through various experiments. In a separate proof of concept, we show that our approach can be compiled for WASM and integrated into a \underline{\href{https://ite.daniel-motz.de}{web application}}. % todo: decide whether to remove the WASM PoC
+We present our library, describe optimsiation choices for our pipeline and address the question and address challenges in the optimisation of a document enhancement pipeline. We then evaluate the performance gains through various experiments. In a separate proof of concept, we show that our approach can be compiled for WASM and integrated into a \underline{\href{https://ite.daniel-motz.de}{web application}}. % todo: decide whether to remove the WASM PoC
 
 \subsection{Outline}
 \label{sec:outline}
@@ -195,7 +195,11 @@ The pipeline is designed to be modular, enabling users to activate, deactivate a
 \end{algorithm}
 
 The user can choose between different algorithms for certain stages---as these have different effects on the result, users can select the algorithm best suited to their application. For instance, Bataineh's adaptive binarisation method with automatic window adjustment \cite{adaptive_thresholding_methods_bataineh_2011} is helpful when binarising historical, handwritten documents with uneven writing and lighting, whereas Otsu's method \cite{Otsu1979} is a good choice for binarising typewritten documents with uniform font and lighting.
-The pipeline options and standard configuration of the pipeline are documented in the help print of the CLI application---the user only adds the input and output file. The standard configuration delivers good results for most use cases and are based on fixed recommendations from the authors. This means that the pipeline can be applied immediately. However, users can also customise the configurations to optimise the pipeline and improve their specific results.
+The pipeline options and standard configuration of the pipeline are documented in the help print of the CLI application---the user only adds the input and output file.
+\begin{verbatim}
+      ./ite -i music-sheet.jpg -o enhanced.jpg
+\end{verbatim}
+The standard configuration delivers good results for most use cases and is based on recommendations by the authors. This means that the pipeline can be applied immediately. However, users can also customise the configurations to optimise the pipeline and improve their specific results.
 
 We provide a command-line application that can be used independently of a program to access the pipeline. This enables the pipeline to be configured and used directly via the command line. 
 
@@ -235,7 +239,7 @@ We hypothesise that the baseline implementation fails to scale linearly with pro
 Instead of using a "rotate-and-project" approach, which repeatedly rotates the image to find an appropriate angle, we applied the Radon transform, which gives an acceptable rotation after the first application. Also, we removed an overlook, where the deskew operation was applied to the grayscale and colour image, if the colour passthrough option was enabled.  % todo: explain why Radon transform gives an acceptable solution if I want to
 
 \subsection{Bataineh}
-The main feature and bottleneck of the Bataineh algorithm is the adaptive sliding window, which takes into account the number of pixels from three categories---background, foreground and confusion \cite{adaptive_thresholding_methods_bataineh_2011}. This requires summing over areas of the image with masks reflecting these categories. The baseline approach was to sum using a nested for loop for each window. The optimised variant uses two integral image for background and confusion pixels, yielding a significant complexity reduction. We estimate our baseline implementation with $O(n \cdot w^2)$---where $n$ is the number of pixels and $w$ the window size---while the improved implementation is in $O(n)$.
+The main feature and bottleneck of the Bataineh algorithm is the adaptive sliding window, which takes into account the number of pixels from three categories---background, foreground and confusion \cite{adaptive_thresholding_methods_bataineh_2011}. This requires summing over areas of the image with masks reflecting these categories. The baseline approach was to sum using a nested for loop for each window. The optimised variant uses two integral images for background and confusion pixels, yielding a significant complexity reduction. We estimate our baseline implementation with $O(n \cdot w^2)$---where $n$ is the number of pixels and $w$ the window size---while the improved implementation is in $O(n)$.
 
 %\subsection{Grayscale}
 % Grayscale was already parallelised. Fix Optimizations.txt in this regard. Seemingly, only swapping was introduced, which yielded 40% time reduction... wth?
@@ -280,7 +284,7 @@ All stages of the pipeline are enabled, with Bataineh binarisation and the adapt
 
 For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running WSL2 with Ubuntu 24.04.1 LTS with 64 GB of RAM\footnote{It is clear that this comes with a performance penalty, however we can expect an even additive penalty across our conducted tests. See \underline{\href{https://www.phoronix.com/review/windows-11-wsl2-2025/2}{this}} blog post which tested the penalty on very similar hardware.}. The profiling benchmarks were conducted on native Ubuntu 24.04.1 LTS. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
 
-We selected a small but representative set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail. We will refer to the images in terms of their width in pixels, i.e. 1K or 16K (for details, see \href{https://github.com/MherMnatsakanyan03/image_text_enhancer/tree/main/resources/test_images}{the repository}). %(see Table \ref{tab:optimised-runtime-8cores} for details). 
+We selected a small but plausible set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail. We will refer to the images in terms of their width in pixels, i.e. 1K or 16K (for details, see \href{https://github.com/MherMnatsakanyan03/image_text_enhancer/tree/main/resources/test_images}{the repository}). %(see Table \ref{tab:optimised-runtime-8cores} for details). 
 These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
 
 The pipeline was configured to apply the following operations: deskew, adaptive gaussian, simple median filter, adaptive median filter, Bataineh binarisation, despeckle, dilation, erosion and color pass. All these stages were also timed individually. The benchmarks do not report the time necessary for loading and writing the image to and from disk.
@@ -596,17 +600,17 @@ Strong scaling
 \pgfplotslegendfromname{strongscalinglegend}
 
 \caption{Strong scaling behaviour of the baseline and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 8K). The dashed black line indicates ideal linear scaling. Each point in the plot represents the mean of 50 trials.}
-\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and a 16K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
+\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and an 8K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
 \label{fig:strong-scaling-main-vs-optimised}
 \end{figure}
 
-The optimisations significantly reduce runtime, especially for larger inputs. The optimised implementation scales nearly linearly, with some overhead, i.e. serial regions. Table \ref{tab:phase-runtime} points at two main improvements: \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $99\%$ faster. 
+The optimisations significantly reduce runtime, especially for larger inputs. The optimised implementation scales nearly linearly, with some overhead, i.e. serial regions. Table \ref{tab:phase-runtime} points to two main improvements: \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $99\%$ faster. 
 However, the runtime scaling benchmark does not tell us about the use of parallel resources. We therefore use a strong-scaling benchmark on a fixed problem size. We tested 1 to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This suggests that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is slightly better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. % todo: the benchmarks do not include the I/O time. Find an explanation, why the benchmark behaves better on larger images. 
 
 For more information on the bottlenecks, we created a profile using AMDuProf over an 8K image (find detailed profiling reports in the repository). % todo: add them to the repository
 Figure \ref{fig:uprof_baseline} shows the profile plot of the \textbf{baseline implementation}. The plot is dominated by the Bataineh algorithm (the large plateau in the middle), meaning it makes good use of parallel resources---most time is spent on the summing of the area, which is indeed highly parallelised. This is also reflected in Table \ref{tab:phase-runtime}, where the Bataineh binarisation has $95\%$ of total runtime attributed to it. This explains the good strong scaling performance and also why the optimised variant is so much quicker.
 
-The \textbf{optimised profile} shows a different pattern---very few truly parallel regions can be spotted. The plot shows $\approx 27\%$ I/O, which are excluded in the benchmarks, as well as large serial regions and memory allocations inside of pipeline stages, which can be attributed to e.g. allocation of stage-local scratch buffers for the morphological functions, masks for the Bataineh algorithm and even the output image for the binarisation functions. From the profiling and associated Assembly, we estimate that $15\%$ of the total pipeline time (on an 8K image in a single serial profiling run) was spent on such memory operations.
+The \textbf{optimised profile} shows a different pattern---very few truly parallel regions can be spotted. The plot shows $\approx 27\%$ I/O, which however are not further discussed, as it is excluded in the benchmark, as well as large serial regions and memory allocations inside of pipeline stages, which can be attributed to e.g. allocation of stage-local scratch buffers for the morphological functions, masks for the Bataineh algorithm and even the output image for the binarisation functions. From the profiling and associated Assembly, we estimate that $15\%$ of the total pipeline time (on an 8K image in a single serial profiling run) was spent on such memory operations.
 Another caveat are the CImg library functions---both the gaussian and median filter appear serial, even when forcing CImg to use OpenMP. The single largest impact in this benchmark scenario is the median filter, with $\approx 15.1\%$ serial execution on an 8K image. The theoretical speedup $S_\text{max}$ is limited by the serial regions of the program. Our observed speedup is however $4.76$ (see Figure \ref{fig:strong-scaling-main-vs-optimised}), implying, that these regions are not fully serial.
 \begin{align*}
   S_\text{max} \approx \frac{1}{0.301} \approx 3.32 <  4.76 \approx \frac{1}{0.21} \approx S_\text{observed}
@@ -617,7 +621,7 @@ With this hypothesis, we introduced another optimised variant, where the caller 
 \begin{figure}
   \includegraphics[width=\linewidth]{graphics/uprof_baseline_16k.png}
   \includegraphics[width=\linewidth]{graphics/uprof_optimized_16k.png}
-  \caption{AMDuProf profiles of baseline (up) optimised (down) variant---number of threads over time. Profiling conducted with a 16K image and 32 cores on native Ubuntu.}
+  \caption{AMDuProf profiles of baseline (up) optimised (down) variant---number of threads over time. Profiling conducted with an 8K image and 32 cores on native Ubuntu.}
   \Description{The AMDuProf Plot shows the time on the x-axis and the number of threads being run on the CPU on the y-axis. The plot shows, that large regions of the optimised variant are not parallel, apart from relatively long I/O phases. In between there are large consecutive serial regions, whereas the baseline variant is almost fully paralle, with a huge plateau in the middle.}
   \label{fig:uprof_baseline}
   \label{fig:uprof_optimized}
@@ -722,7 +726,7 @@ Color Pass                & 12.556     & 12.598    & +0.335\% \\
 \section{Future Work}
 \label{sec:future-work}
 
-The future work is settled into three categories: visual performance improvements, implementation improvements and benchmarking. For one, the visual performance of the library was not systematically evaluated in this paper, as this was not the focus of this lecture. Also, the benchmark was limited to only the Bataineh binarisation algorithm, leaving out the also implemented Otsu and Sauvola, which have very different behaviour. In future work the WASM runtime performance could be evaluated, while also aiming to improve the performance by using intrinsics or rewriting the code further.
+Possible future work is grouped into three dimensions: visual (result) performance improvements, implementation improvements and benchmarking. For one, the visual performance of the library was not systematically evaluated in this paper, as this was not the focus of this lecture. Also, the benchmark was limited to only the Bataineh binarisation algorithm, leaving out the also implemented Otsu and Sauvola, which have very different behaviour. In future work the WASM runtime performance could be evaluated, while also aiming to improve the performance by using intrinsics or rewriting the code further.
 
 %\begin{enumerate}
 %  \item Benchmark the other binarisation algorithms
