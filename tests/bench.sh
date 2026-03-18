@@ -1,11 +1,28 @@
 #!/bin/bash
 
-# 1. Environment Setup
+# 1. Build
+echo "=========================================================="
+echo " Building ite (Release)"
+echo "=========================================================="
+
+cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake-build-release --target ITE_cli -- -j"$(nproc)"
+
+if [ $? -ne 0 ]; then
+    echo "Error: Build failed."
+    exit 1
+fi
+
+# 2. Environment Setup
+# Capture current git branch
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH="${GIT_BRANCH##*/}"
+
 # Set the number of threads
 export OMP_NUM_THREADS=1
 
 # Configuration
-PROG="./ite"
+PROG="./cmake-build-release/src/ite"
 TEST_DIR="resources/test_images"
 LOG_DIR="bench_logs"
 OUTPUT_DIR="output"
@@ -17,7 +34,7 @@ TIME_LIMIT=30 # Minutes
 # -t : Enable benchmark table
 FLAGS="-t --time-limit $TIME_LIMIT --do-deskew --do-adaptive-gaussian --do-median --do-adaptive-median --binarization bataineh --do-despeckle --do-dilation --do-erosion --do-color-pass"
 
-# 2. Validation
+# 3. Validation
 if [ ! -f "$PROG" ]; then
     echo "Error: Binary '$PROG' not found."
     exit 1
@@ -35,6 +52,7 @@ mkdir -p "$OUTPUT_DIR"
 # 3. Execution Loop
 echo "=========================================================="
 echo " Starting Bulk Benchmark"
+echo " Branch:      $GIT_BRANCH"
 echo " Binary:      $PROG"
 echo " Threads:     $OMP_NUM_THREADS"
 echo " Trials:      $TRIALS"
@@ -55,8 +73,8 @@ for INPUT_IMG in "$TEST_DIR"/*; do
     BASENAME=$(basename "$INPUT_IMG")
     
     # Define specific output paths
-    # Log format: bench_logs/bench_photo.jpg_8cores.txt
-    LOG_FILE="$LOG_DIR/bench_${BASENAME}_${OMP_NUM_THREADS}cores.txt"
+    # Log format: bench_logs.bak5.bak4/bench_photo.jpg_8cores_main.txt
+    LOG_FILE="$LOG_DIR/bench_${BASENAME}_${OMP_NUM_THREADS}cores_${GIT_BRANCH}.txt"
     OUTPUT_IMG="$OUTPUT_DIR/out_${BASENAME}"
 
     echo "Processing: $BASENAME -> $LOG_FILE"
