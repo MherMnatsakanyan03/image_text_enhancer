@@ -1,0 +1,748 @@
+\documentclass[sigconf]{acmart}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{url}
+\usepackage{pgfplots}
+\usepgfplotslibrary{groupplots}
+\usepackage{tabularx}
+\usepackage{csvsimple}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{pifont}
+
+%LTeX: language=en-GB
+
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
+%% These commands are for a PROCEEDINGS abstract or paper.
+\settopmatter{printacmref=true} % Removes citation information below abstract
+%% Was false before, we need to check why its not working as intended
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in 
+
+\acmConference[AEPRO 2026]{AEPRO 2026: Algorithm Engineering Projects}{March 16}{Jena, Germany}
+
+% convert text to title case
+% http://individed.com/code/to-title-case/
+
+% that helps you to formulate your sentences
+% https://www.deepl.com/translator
+
+\pgfplotsset{compat=1.18}
+
+\begin{document}
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+%% TODO: think about good title
+\title{Image Text Enhancer: A Lightweight, Easy-to-Use, and Efficient C++ Library}
+\subtitle{\large Algorithm Engineering 2026 Project}
+
+%%
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+
+\author{Daniel Motz}
+\affiliation{%
+  \institution{Friedrich Schiller University}
+  \city{Jena}
+  \country{Germany}}
+\email{daniel.motz@uni-jena.de}
+
+\author{Leonard Teschner}
+\affiliation{%
+  \institution{Friedrich Schiller University}
+  \city{Jena}
+  \country{Germany}}
+\email{leonard.teschner@uni-jena.de}
+
+\author{Mher Mnatsakanyan}
+\affiliation{%
+  \institution{Friedrich Schiller University}
+  \city{Jena}
+  \country{Germany}}
+\email{mher.mnatsakanyan@uni-jena.de}
+
+%% The abstract is a short summary of the work to be presented in the article.
+\begin{abstract}
+  % RQ Can a lightweight document enhancement pipeline be optimised to achieve strong multicore performance and practical WebAssembly deployment while preserving the enhancement behavior of the baseline implementation?
+  Document enhancement plays a central role in document scanning and document analysis tasks, which are part of any document-dependent workflow and can be found in various applications. Yet many available solutions are either not focused on document enhancement, difficult to integrate into lightweight, especially mobile, workflows or not permitted for commercial use. In this paper, we present Image Text Enhancer (ITE), a modular C++ pipeline for enhancing printed and handwritten document images. Our goal is to provide a compact and efficient solution that supports practical deployment both as a command-line tool and as a reusable library in upstream applications.
+\end{abstract}
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+\keywords{task parallelism, WebAssembly, OpenMP, image processing, C++}
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+\begin{comment}
+  Possible Research Questions
+  \begin{enumerate}
+    \item Easily extensible Open Source Pipeline, ready to use out of the box with default options giving a perfectly good image, completely written in C++ and licensed under MIT-0 and CeCILL-C, which are both commercially available (compared to e.g. unpaper) and has no big dependencies (unlike unpaper, which uses ffmpeg) and only uses CImg, which is portable (uses OpenMP), simple, self-contained, and lightweight.
+    \item Evaluating Performance Gains: How do systematic code optimisations improve the processing speed of a baseline image enhancement tool?
+    \item Scaling Performance in Image Processing: Identifying and mitigating inefficiencies in an initial software implementation for OCR 
+  \end{enumerate}
+\end{comment}
+
+\subsection{Background}
+\label{sec:background}
+
+The extraction of textual information from images of scanned books to even receipts, has become an important part of everyday life \cite{alqudah_2015,review_degradation_image_enhancement_zhou_2023}. Any such extraction necessarily begins with the pre-processing of recorded images through techniques such as binarisation, noise removal, and geometric transformation, a process generally referred to as \textit{document enhancement}. Numerous tools focused on this niche have been proposed. Although these approaches feature broad capabilities, they are often associated with substantial complexity on the user's end and entail considerable software dependencies. These dependencies restrict applicability, particularly in settings where binary size is constrained, such as mobile and web platforms. This limitation assumes added importance in a context where most digital media interactions now take place on smartphones and application development is increasingly oriented toward edge-computing models. Consequently, efficient and platform-independent implementations that exploit parallelisation and other optimisation techniques are of considerable importance for reducing processing time and enhancing user satisfaction.
+
+\subsection{Related Work}
+\label{sec:related-work}
+
+\begin{comment}
+Since the introduction of WASM in 2017 \cite{WASM_Haas_2017}, research has progressed in a variety of ways. For instance, significant investment has gone into the 'internal' WASM runtime, either to add features or to investigate its performance and energy efficiency . Another area of research has investigated the use of WASM in various application \cite{wasm_runtimes_survey_zhang_2025} areas, such as web applications, the Internet of Things, and high-performance computing \cite{wasm_runtimes_survey_zhang_2025}. 
+Of particular mention is the work of Chadha et al., who examine the use of WASM in the HPC domain in \cite{Mpi_Wasm_Chadha_2023}. Since parallelisation is essential for HPC applications, they have developed a WASM embedder that enables the MPI library to be used in WASM applications.  
+\end{comment}
+\begin{comment}
+  \begin{enumerate}
+    \item easy to use
+    \item out of the box good results
+    \item low dependencies (only CImg (doesnt have other dependencies) and OpenMP )
+    \item only image enhancement, no OCR
+    \item MIT-0 or CeCILL-C license (commercially usable)
+    \item modular (users can choose which steps to apply)
+  \end{enumerate}
+
+  Tools die Document Enhancement bereits können:
+  - OpenCV -> viel zu groß und abhöngig von vielen anderen Bibliotheken, BSD Lizenz
+  - Tesseract - Open Source OCR Engine, die einige Bildverbesserungsfunktionen bietet, aber hauptsächlich auf OCR ausgerichtet ist, nicht einfach erweiterbar, preprocessing sind nicht als allgemeine Enhnancement Methoden gedacht, Apache lizenz
+  - Leptonica - C-Bibliothek für Bildverarbeitung, hauptsächlich auf OCR ausgerichtet, BCD Lizenz
+  - ImageMagick - Umfassende Kommandozeilen-Tool und Bibliothek für Bildbearbeitung, aber nicht speziell auf die Verbesserung von gescannten oder fotografierten Textbildern ausgerichtet, viele Abhängigkeiten, nicht so einfach erweiterbar, Apache Lizenz
+  - Unpaper - spezialisiert auf Nachbearbeitung von Scans von Büchern, viele Abhängigkeiten (ffmpeg etc), nicht so einfach erweiterbar und stark spezialisiert, GPL Lizenz
+\end{comment} 
+
+Image enhancement and document preprocessing are covered by a wide range of open-source tools and commercial software. The scope ranges from general purpose image processing and OCR libraries to specialised tools for post-processing scanned documents.
+
+ImageMagick \cite{imagemagick} is a suite for image processing that is available as a command line tool and as a library. It offers functions such as format conversion, resizing, filtering, and colour correction. However, ImageMagick is not specifically designed to enhance scanned or photographed images. Similar to OpenCV, the diverse features result in a large code base.
+
+The C-based Leptonica library \cite{leptonica} is a general-purpose image processing and image analysis application. It is a dependency to both Tesseract and OpenCV. Although Leptonica is relatively lightweight compared to the other libraries, much like our approach, it primarily serves as a low-level library and does not offer ready-to-use, configurable processing pipelines.
+
+\label{sec:specialised-post-processing}
+A very similar tool to our approach is Unpaper \cite{unpaper}, which focuses on post-processing scanned documents. It offers features such as deskewing, binarisation, and noise reduction that have been developed specifically for this purpose. The tool also offers a CLI variant, with which pipeline steps can be configured and disabled. Unpaper requires the library ffmpeg, which in the standard configuration consumes >100MiB of space.
+
+\begin{table}[t]
+  \caption{Comparison of related tools.}
+  \label{tab:tool-comparison-compact}
+  \centering
+  \begin{tabular}{lclcc}
+    \toprule
+    \textbf{Tool} & \textbf{Lightweight} & \textbf{Licence} & \textbf{Commercial} \\
+    \midrule
+    ImageMagick & \ding{55}   & Own     & \ding{51} \\
+    Leptonica   & \ding{51}   & Own     & \ding{51} \\
+    Unpaper     & \ding{55}   & Mixed   & \ding{55} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\
+
+\label{sec:intro-optimisation}
+\begin{comment}
+  CoPilots Vorschlag:
+  In addition to the tools and libraries described above, there is a large body of research on code optimisation and performance improvement in image processing applications. For example, various techniques have been proposed to optimise the performance of image processing algorithms, such as parallelisation, vectorization, and algorithmic improvements. However, these optimisations are often implemented in the context of specific libraries or applications and are not always easily transferable to other contexts. Moreover, the performance gains from these optimisations can vary widely depending on the specific use case and implementation details.
+\end{comment}
+
+\subsection{Our Contribution}
+\label{sec:our-contribution}
+
+% todo
+% - State of the art binarisation etc
+% - name, which algorithms we use
+
+Unlike the existing tools and libraries described, our approach is designed to be lightweight, extensible, and user-friendly. Instead of being a comprehensive image processing library or OCR engine, we focus on a lightweight, modular image enhancement pipeline, focused on printed and handwritten text, written entirely in C++ with only \href{https://www.cimg.eu/}{CImg} as a dependency, which is itself is lightweight and has no further dependencies \cite{cimg}. Image Text Enhancer (ITE) has a lightweight build footprint, requiring only three build dependencies: OpenMP, X11, and JPEG. It can be imported as a library and also as a CLI executable---with 1.7 MiB on Linux.
+
+Compared to OpenCV and ImageMagick, our work is characterised by its deliberate focus on document enhancement and compactness. Unlike Leptonica, our pipeline is specialised in the post-processing of scanned documents and unlike Unpaper, our binary including dependencies is $\approx$50$\times$ smaller.
+In addition, our licensing model (MIT-0 and CeCILL-C) permits use in research and commercial applications. By combining minimal dependencies, a modular architecture, portability through C++ and OpenMP, and a commercially usable licence, our pipeline fills a gap in the current landscape.
+
+We present our library, describe optimsiation choices for our pipeline and address the question and address challenges in the optimisation of a document enhancement pipeline. We then evaluate the performance gains through various experiments. In a separate proof of concept, we show that our approach can be compiled for WASM and integrated into a \underline{\href{https://ite.daniel-motz.de}{web application}}. % todo: decide whether to remove the WASM PoC
+
+\subsection{Outline}
+\label{sec:outline}
+
+In section \ref{sec:pipeline}, we introduce the pipeline that we implement and optimise. In section \ref{sec:optimisation}, we describe the optimisation techniques used. These are evaluated in section \ref{sec:experiments}, where we compare the performance of the pipeline under different settings to the baseline implementation. Finally, we provide an outlook on possible future work in section \ref{sec:future-work}. 
+
+\section{Pipeline}
+\label{sec:pipeline}
+  
+The pipeline is designed to be modular, enabling users to activate, deactivate and configure each stage as required, both through the CLI and the library. Some stages can intentionally not be disabled. These exceptions are marked in algorithm \ref{alg:enhance} with an \textbf{asterisk}. 
+
+\begin{algorithm}
+  \caption{Image Text Enhancer Pipeline}
+  \label{alg:enhance}
+  \begin{enumerate}
+  \item Grayscale Conversion\textbf{*}
+  \item Deskew
+  \item Contrast Enhancement
+  \item Denoise: (Adaptive) Gaussian and Median Blur
+  \item Binarisation\textbf{*}: Otsu, Sauvola, Bataineh
+  \item Morphological Operations
+  \item Colour passthrough
+\end{enumerate}
+\end{algorithm}
+
+The user can choose between different algorithms for certain stages---as these have different effects on the result, users can select the algorithm best suited to their application. For instance, Bataineh's adaptive binarisation method with automatic window adjustment \cite{adaptive_thresholding_methods_bataineh_2011} is helpful when binarising historical, handwritten documents with uneven writing and lighting, whereas Otsu's method \cite{Otsu1979} is a good choice for binarising typewritten documents with uniform font and lighting.
+The pipeline options and standard configuration of the pipeline are documented in the help print of the CLI application---the user only adds the input and output file.
+\begin{verbatim}
+      ./ite -i music-sheet.jpg -o enhanced.jpg
+\end{verbatim}
+The standard configuration delivers good results for most use cases and is based on recommendations by the authors. This means that the pipeline can be applied immediately. However, users can also customise the configurations to optimise the pipeline and improve their specific results.
+
+We provide a command-line application that can be used independently of a program to access the pipeline. This enables the pipeline to be configured and used directly via the command line. 
+
+\section{Optimisations}
+\label{sec:optimisation}
+
+
+\begin{comment}
+  - Grayscale: parallel for, for pixel processing loop
+  - Grayscale: pointer swapping instead of copying the image for each step -> no memory tests were conducted
+
+  - Deskewing: replaced "rotate and project" method with a "radon transform". Instead of moving pixels, we extract foreground coordinates and mathematically project them
+  - Deskewing: logic split: split detection and application. Angle is detected once and then applied to the gray and color image
+  - Deskewing: total runtime reduced from ~95ms to ~7ms
+
+  - Contrast Enhancement: parallel for unsing thread-local buffers to avoid false sharing/locking
+  - Contrast Enhancement: precalculate the linear strecht formula and save in Lookup-Table. main loop performs O(1) lookup insted of floating point calculations
+  - Contrast Enhancement: replacing if/else branching in pixel loop with std::min clamping, alowing the compiler to auto-vectorize using SIMD -> no assembly checks were done
+
+  - Adaptive Gaussian Blur: removed std::vector allocations inside hot loop and using "ping-pong" strategie where image acted as destination buffer, swapping pointers at the end
+  - Adaptive Median Filter: moving of buffer allocations outside of the pixel loop
+  
+  - CORE Utilites: returning pre-allocated buffers instead of heavy objects
+
+  - Batainhe Binarisation: using integral images to calculate balck and red pixels instead of iterating over the complete window for each pixel -> reduced from windowsize * window size to 4 operations per pixel -> reduzierung von O(N \cdot W^2) zu O(N) 
+  - Bataineh Binarisation: total runtime reduced from ~340ms to ~20ms
+  - Sauvola Binarisation: branchless lookup
+  - Suavola Binarisation: removing of the entire 8-bit image to "CImg<double>" twice. No uses the lightweigt fused vector builder
+
+  - Morphological Operations: decomposing the 2d squre kernel operation intwo two 1d kernel operations (horizontal and vertical) -> reducing the complexity from O(K^2) to O(2K)
+  - Morphological Operations: implementation of "sliding Window Min/max" algorithm using a monotonic queue -> calculation for any windowd size in amortized O(1) constant time
+\end{comment}
+
+We hypothesise that the baseline implementation fails to scale linearly with problem size, although such scaling would be desirable for image processing workloads. We therefore concentrated on identifying low-hanging fruits at the level of high-level algorithmic design, for example by selecting more efficient algorithms for specific tasks, while aiming to adhere to best practices such as avoiding false sharing and writing code amenable to auto-vectorisation. For the purposes of the paper, we focus on the stages, whose optimisations had the biggest effect. The full list of applied optimisations is documented in the project's repository. % todo: add Optimizations.txt to the git repository.
+
+\subsection{Deskew}
+Instead of using a "rotate-and-project" approach, which repeatedly rotates the image to find an appropriate angle, we applied the Radon transform, which gives an acceptable rotation after the first application. Also, we removed an overlook, where the deskew operation was applied to the grayscale and colour image, if the colour passthrough option was enabled.  % todo: explain why Radon transform gives an acceptable solution if I want to
+
+\subsection{Bataineh}
+The main feature and bottleneck of the Bataineh algorithm is the adaptive sliding window, which takes into account the number of pixels from three categories---background, foreground and confusion \cite{adaptive_thresholding_methods_bataineh_2011}. This requires summing over areas of the image with masks reflecting these categories. The baseline approach was to sum using a nested for loop for each window. The optimised variant uses two integral images for background and confusion pixels, yielding a significant complexity reduction. We estimate our baseline implementation with $O(n \cdot w^2)$---where $n$ is the number of pixels and $w$ the window size---while the improved implementation is in $O(n)$.
+
+%\subsection{Grayscale}
+% Grayscale was already parallelised. Fix Optimizations.txt in this regard. Seemingly, only swapping was introduced, which yielded 40% time reduction... wth?
+% todo: decide if I want to leave this in.
+
+% todo: wieso sind die Filter besser geworden? Das hatte ich eigentlich schon so implementiert, was Mher jetzt schreibt, dachte ich.
+
+\subsection{Contrast Enhancement}
+
+The contrast enhancement stage simply linearises the histogram. The baseline implementation was not parallelised, which was the first optimisation. Also, the lookup-table is pre-computed, which allows for auto-vectorisation in the application of the lookup-table to the image. Similarly, the Sauvola binarisation method, uses a branchless lookup in the optimised variant.
+
+\subsection{Morphology}
+The pipeline only supports dilation and erosion, which can both be realised by linear filters. The baseline implementation used four nested for-loops\footnote{for colour images it is five, as it is done for each channel, but our approach is only used on binary images} for iterating the image and scanning the neighbourhood. Since the filter is separable, it is divided into a horizontal and vertical pass. Instead of scanning the neighbourhood, a queue is used to compute the min/max of a given 1D window in amortised $O(1)$.
+
+% todo: why is the morphology worse then?
+% todo: isn't the vertical pass really bad in regards to cache line use?
+
+\section{Experiments}
+\label{sec:experiments}
+
+To evaluate the performance of the pipeline with the optimisations, various experiments are conducted and the results are compared with the baseline implementation. The experiments examine the runtime when processing images of different sizes with and without parallelisation.
+
+The experiments assess three aspects: (1) single-threaded and multi-threaded runtime scaling, (2) strong-scaling behaviour and (3) profiling. The plot and profiling data is accessible \underline{\href{https://github.com/MherMnatsakanyan03/image_text_enhancer/tree/paper/paper/graphics}{online}}.
+
+\subsection{Setup}
+\label{sec:experimental-setup}
+\begin{comment}
+  Wir werden die performance (Laufzeit) der Pipeline anhand verschiedener Einstellungen testen. Bspw. unterschiediche Anzahl an Threads, verschieden große Bilder, verschiedene Kombinationen von Methoden.
+  OS: WSL on Windows 11 (ist version relevant?)
+  Hardware:
+    i5 14600kf
+    32gb ram
+    affinity so wie im benchmark (0-7)
+    desktop pc, ohne energiespaarmodus, ohne weitere apps im hintergrund
+    auch lüfter an, damit keine temperatur throttles passieren könnten
+hab nicht geschaut ob nur ausschließlich p-cores verwendet wurden, aber das wäre meine vermutung
+\end{comment}
+
+All stages of the pipeline are enabled, with Bataineh binarisation and the adaptive Gaussian and adaptive median filters selected.
+% in den alten Benchmarks war adaptive gaussian, adaptive median und simple median an...
+% todo: either redo benches without simple median or add it back here! It makes a lot of differrence in the strong scaling benchmark.
+
+For our measurements, we use a machine with an AMD Ryzen 9950X3D 16-core processor (32 hyperthreads) running WSL2 with Ubuntu 24.04.1 LTS with 64 GB of RAM\footnote{It is clear that this comes with a performance penalty, however we can expect an even additive penalty across our conducted tests. See \underline{\href{https://www.phoronix.com/review/windows-11-wsl2-2025/2}{this}} blog post which tested the penalty on very similar hardware.}. The profiling benchmarks were conducted on native Ubuntu 24.04.1 LTS. Each core has a base frequency of 4.3 GHz, with boost frequency of around 5.5 GHz. Care has been taken to limit the number of background processes, so as not to affect performance.
+
+We selected a small but plausible set of document images spanning both document type and resolution. The benchmark includes textual documents of various sizes and degrees of detail. We will refer to the images in terms of their width in pixels, i.e. 1K or 16K (for details, see \href{https://github.com/MherMnatsakanyan03/image_text_enhancer/tree/main/resources/test_images}{the repository}). %(see Table \ref{tab:optimised-runtime-8cores} for details). 
+These choices aim to capture common document-enhancement scenarios while also testing scalability to very large inputs.
+
+The pipeline was configured to apply the following operations: deskew, adaptive gaussian, simple median filter, adaptive median filter, Bataineh binarisation, despeckle, dilation, erosion and color pass. All these stages were also timed individually. The benchmarks do not report the time necessary for loading and writing the image to and from disk.
+
+\subsection{Results}
+\label{sec:results}
+
+Figure \ref{fig:runtime-scaling-combined} shows runtime versus image resolution for the baseline and optimised implementations. The optimised implementation scales almost linear, surpassing the baseline. For $c_1, c_2 < 1.7 \cdot 10^{-5}$
+
+\begin{align*}
+  t_{\text{baseline}} &\propto c_1 \cdot s^{1.660} \\
+  t_{\text{optimised}} &\propto c_2 \cdot s^{1.071}
+\end{align*}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    title={Runtime scaling: single-threaded vs.\ multithreaded},
+    xlabel={Number of pixels (Megapixel)},
+    ylabel={Runtime (ms)},
+    xmin=0.5, xmax=140,
+    ymin=20,
+    grid=major,
+    width=\columnwidth,
+    height=7cm,
+    table/col sep=comma,
+    legend to name=runtimelegend,
+    legend columns=2,
+    legend cell align=left,
+  ]
+
+  % 1 core, baseline
+  \addplot[
+    color=teal!60,
+    mark=asterisk,
+    mark options={solid},
+    dashed,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=south west,
+      xshift=2pt,
+      yshift=2pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_1_main.csv};
+  \addlegendentry{baseline, 1 core}
+
+  % 1 core, optimised
+  \addplot[
+    color=orange!60,
+    mark=asterisk,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=north east,
+      xshift=-2pt,
+      yshift=-2pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_1_optimized.csv};
+  \addlegendentry{optimised, 1 core}
+
+  % 8 cores, baseline
+  \addplot[
+    color=teal!100,
+    mark=diamond,
+    mark options={solid},
+    dashed,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=west,
+      xshift=2pt,
+      yshift=0pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_8_main.csv};
+  \addlegendentry{baseline, 8 cores}
+
+  % 8 cores, optimised
+  \addplot[
+    color=orange!100,
+    mark=diamond,
+    thick,
+    point meta=explicit,
+    visualization depends on={\thisrow{trials} \as \trialcount},
+    nodes near coords={
+      \pgfmathparse{\trialcount==1000 ? "" : int(\trialcount)}
+      \ifx\pgfmathresult\empty\else n=\pgfmathresult\fi
+    },
+    every node near coord/.append style={
+      font=\scriptsize,
+      text=gray!70,
+      fill=white,
+      fill opacity=0.8,
+      text opacity=1,
+      inner sep=1pt,
+      rounded corners=1pt,
+      anchor=east,
+      xshift=-2pt,
+      yshift=0pt
+    }
+  ] table[
+    x expr=\thisrow{total_pixels}/1000000,
+    y=avg_ms,
+    meta=trials
+  ] {graphics/bench_8_optimized.csv};
+  \addlegendentry{optimised, 8 cores}
+
+  \end{axis}
+\end{tikzpicture}
+
+\vspace{0.4em}
+\pgfplotslegendfromname{runtimelegend}
+
+\caption{Runtime as a function of image size for the baseline and optimised implementations in single-threaded and 8-core execution. Dashed lines indicate 1-core measurements, solid lines indicate 8-core measurements. Labels are shown only for measurements whose sample count differs from the standard case of 1000 repetitions. For clarity, all but one documents with image size of $\approx 10^1$ Megapixels were omitted, as the results were representative for each other.}
+\Description{Log-log plot of runtime versus image size in megapixels for baseline and optimised implementations, each shown for single-threaded and 8-core execution. Blue curves correspond to the baseline implementation and red curves to the optimised implementation. Dashed lines show 1-core results and solid lines show 8-core results. A shared legend is placed below the plot.}
+\label{fig:runtime-scaling-combined}
+\end{figure}
+
+% strong scaling
+\begin{figure}[htbp]
+\centering
+
+Strong scaling
+
+\begin{minipage}{0.48\columnwidth}
+\centering
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    log basis x=2,
+    log basis y=2,
+    title={baseline},
+    xlabel={Number of threads},
+    ylabel={Speedup},
+    xmin=1, xmax=32,
+    ymin=1, ymax=32,
+    xtick={1,2,4,8,16,32},
+    grid=major,
+    width=\linewidth,
+    height=6cm,
+    table/col sep=comma,
+    legend columns=3,
+  ]
+
+  % 2K image
+  \addplot[
+    color=orange,
+    mark=asterisk,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_main_2k.csv};
+
+
+  % 8K image
+  \addplot[
+    color=purple,
+    mark=diamond,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_main_8k.csv};
+
+  % Ideal scaling
+  \addplot[
+    color=black,
+    densely dashed,
+    thick
+  ] coordinates {
+    (1,1) (2,2) (4,4) (6,6) (8,8) (10,10)
+    (12,12) (14,14) (16,16) (32,32)
+  };
+
+  \end{axis}
+\end{tikzpicture}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\columnwidth}
+\centering
+\begin{tikzpicture}
+  \begin{axis}[
+    xmode=log,
+    ymode=log,
+    log basis x=2,
+    log basis y=2,
+    title={optimised},
+    xlabel={Number of threads},
+    ylabel={Speedup},
+    xmin=1, xmax=32,
+    ymin=1, ymax=32,
+    xtick={1,2,4,8,16,32},
+    grid=major,
+    width=\linewidth,
+    height=6cm,
+    table/col sep=comma,
+    legend to name=strongscalinglegend,
+    legend columns=3,
+  ]
+
+  % 2K image
+  \addplot[
+    color=orange,
+    mark=asterisk,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_optimized_2k.csv};
+  \addlegendentry{2K image}
+
+  % 8K image
+  \addplot[
+    color=purple,
+    mark=diamond,
+    thick
+  ] table[
+    x=threads,
+    y=speedup
+  ] {graphics/bench_strong_optimized_8k.csv};
+  \addlegendentry{8K image}
+
+  % Ideal scaling
+  \addplot[
+    color=black,
+    densely dashed,
+    thick
+  ] coordinates {
+    (1,1) (2,2) (4,4) (6,6) (8,8) (10,10)
+    (12,12) (14,14) (16,16) (32,32)
+  };
+  \addlegendentry{ideal}
+
+  % 8K image no-copy
+  %\addplot[
+  %  color=green,
+  %  mark=star,
+  %  thick
+  %] table [
+  %  x=threads,
+  %  y=speedup
+  %] {graphics/bench_strong_no-copy_8k.csv};
+  %\addlegendentry{8K w/o copy}
+
+  % 2K image no-copy
+  %\addplot[
+  %  color=green,
+  %  mark=triangle,
+  %  thick
+  %] table [
+  %  x=threads,
+  %  y=speedup
+  %] {graphics/bench_strong_no-copy_2k.csv};
+
+  \end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{0.4em}
+\pgfplotslegendfromname{strongscalinglegend}
+
+\caption{Strong scaling behaviour of the baseline and optimised implementations. Speedup is shown as a function of thread count for two input images (2K and 8K). The dashed black line indicates ideal linear scaling. Each point in the plot represents the mean of 50 trials.}
+\Description{Two side-by-side log-log plots of speedup versus number of threads. The left panel shows the baseline implementation and the right panel shows the optimised implementation. Each panel contains curves for a 2K image and an 8K image, plus a dashed ideal-scaling reference line. A single shared legend is shown below the plots.}
+\label{fig:strong-scaling-main-vs-optimised}
+\end{figure}
+
+The optimisations significantly reduce runtime, especially for larger inputs. The optimised implementation scales nearly linearly, with some overhead, i.e. serial regions. Table \ref{tab:phase-runtime} points to two main improvements: \textbf{Deskew} and \textbf{Binarisation (Bataineh)} which are individually $99\%$ faster. 
+However, the runtime scaling benchmark does not tell us about the use of parallel resources. We therefore use a strong-scaling benchmark on a fixed problem size. We tested 1 to 32 threads. In Figure \ref{fig:strong-scaling-main-vs-optimised} we observe a well-behaved speedup of the baseline implementation, whereas the optimised code scales worse, where a 32-fold thread increase results in roughly 4-fold speedup. This suggests that there are serial regions in the program, that dominate after the optimisations have been applied, or, that the CPU speed is bound by waiting on e.g. main memory. It is also expected, that the scaling is slightly better for images with a larger problem size, namely because unavoidable serial regions like I/O take up less of the program's execution time. % todo: the benchmarks do not include the I/O time. Find an explanation, why the benchmark behaves better on larger images. 
+
+For more information on the bottlenecks, we created a profile using AMDuProf over an 8K image (find detailed profiling reports in the repository). % todo: add them to the repository
+Figure \ref{fig:uprof_baseline} shows the profile plot of the \textbf{baseline implementation}. The plot is dominated by the Bataineh algorithm (the large plateau in the middle), meaning it makes good use of parallel resources---most time is spent on the summing of the area, which is indeed highly parallelised. This is also reflected in Table \ref{tab:phase-runtime}, where the Bataineh binarisation has $95\%$ of total runtime attributed to it. This explains the good strong scaling performance and also why the optimised variant is so much quicker.
+
+The \textbf{optimised profile} shows a different pattern---very few truly parallel regions can be spotted. The plot shows $\approx 27\%$ I/O, which however are not further discussed, as it is excluded in the benchmark, as well as large serial regions and memory allocations inside of pipeline stages, which can be attributed to e.g. allocation of stage-local scratch buffers for the morphological functions, masks for the Bataineh algorithm and even the output image for the binarisation functions. From the profiling and associated Assembly, we estimate that $15\%$ of the total pipeline time (on an 8K image in a single serial profiling run) was spent on such memory operations.
+Another caveat are the CImg library functions---both the gaussian and median filter appear serial, even when forcing CImg to use OpenMP. The single largest impact in this benchmark scenario is the median filter, with $\approx 15.1\%$ serial execution on an 8K image. The theoretical speedup $S_\text{max}$ is limited by the serial regions of the program. Our observed speedup is however $4.76$ (see Figure \ref{fig:strong-scaling-main-vs-optimised}), implying, that these regions are not fully serial.
+\begin{align*}
+  S_\text{max} \approx \frac{1}{0.301} \approx 3.32 <  4.76 \approx \frac{1}{0.21} \approx S_\text{observed}
+\end{align*}
+
+With this hypothesis, we introduced another optimised variant, where the caller allocates scratch and output buffers, meaning they can be reused throughout the pipeline. With this we found a speedup of $6.16$ on an 8K image and 32 threads.
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{graphics/uprof_baseline_16k.png}
+  \includegraphics[width=\linewidth]{graphics/uprof_optimized_16k.png}
+  \caption{AMDuProf profiles of baseline (up) optimised (down) variant---number of threads over time. Profiling conducted with an 8K image and 32 cores on native Ubuntu.}
+  \Description{The AMDuProf Plot shows the time on the x-axis and the number of threads being run on the CPU on the y-axis. The plot shows, that large regions of the optimised variant are not parallel, apart from relatively long I/O phases. In between there are large consecutive serial regions, whereas the baseline variant is almost fully paralle, with a huge plateau in the middle.}
+  \label{fig:uprof_baseline}
+  \label{fig:uprof_optimized}
+\end{figure}
+
+\subsection{Conclusions}
+
+The experiments show that our hypothesis, that algorithmic improvements were important for improving the runtime, is true. Compared with the baseline, the optimised implementation achieves nearly linear runtime growth with image size and reduces total runtime by up to $97.8\%$ on some images. However, the strong-scaling benchmark shows, that the main reason the optimised variant is faster, are the algorithmic optimisations and resulting lower work complexity. Applying the optimisations exposed new ceilings, which are for one memory related and also ineffective use of library functions. Also, the evaluation is incomplete, as only a fraction of e.g. binarisation algorithms were evaluated. Therefore, further work is necessary to make this library production ready.
+
+%2.954 - 1.922 = 1.032
+% approx 15%
+
+% calculate actual number instead of "6"
+
+% roughly 
+% 1.3
+% 1.2
+% .6
+% .5
+% 3.7
+
+% 1.283 load image
+% 1.371 - 1.549 start memmove
+% 1.573 - 1684 vanvliet
+% 1.764 - 1953 memmove avx512
+% 1.987 - 2.1 vanvliet
+% 
+
+% Tabelle mit den Gesamtlaufzeiten fuer die verschiedenen Bilder und Einstellungen
+\begin{comment}  
+\begin{table}[htbp]
+\caption{Runtime of the optimised implementation on 8 cores}
+\label{tab:optimised-runtime-8cores}
+\footnotesize
+\begin{tabularx}{\columnwidth}{l r r r r r}
+\toprule
+\textbf{Test Image} & \textbf{Resolution} & \textbf{Avg.\ (ms)} & \textbf{Min.\ (ms)} & \textbf{Max.\ (ms)} \\
+\midrule
+Text Small 1K          & 1017x597   & 27.335   & 25.893   & 29.935   \\
+Noisy Document 1K      & 1000x767   & 28.962   & 26.844   & 33.553   \\
+Text 2K                & 2048x1202  & 117.292  & 110.540  & 126.753  \\
+Historic Document 2K A & 2290x3511  & 382.879  & 370.715  & 417.984  \\
+Magazine 2K            & 2516x3272  & 401.063  & 385.085  & 418.153  \\
+Text 4K                & 3840x2254  & 451.757  & 438.138  & 474.118  \\
+Historic Document 2K B & 2480x3511  & 541.679  & 515.349  & 579.027  \\
+Text 8K                & 7680x4508  & 1840.552 & 1771.410 & 1975.609 \\
+Text 16K               & 15360x9017 & 9368.822 & 9125.795 & 9946.973 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\end{comment}
+
+\begin{table}[htbp]
+\caption{Comparison of phase runtimes (8K, 8 Cores)}
+\label{tab:phase-runtime}
+\small
+\centering
+\begin{tabular}{l rr r}
+\toprule
+\textbf{Phase} & \textbf{baseline (ms)} & \textbf{optimised (ms)} & \textbf{diff (\%)} \\
+\midrule
+Init \& Copy              & 144.139    & 139.457   & -3.248\% \\
+Grayscale                 & 52.586     & 22.590    & -57.042\% \\
+\textbf{Deskew}           & \textbf{308.601} & \textbf{2.200}   & \textbf{-99.287\%} \\
+Contrast                  & 30.768     & 6.174     & -79.934\% \\
+Adaptive Gaussian         & 250.973    & 262.134   & +4.447\% \\
+Median Blur               & 287.138    & 277.698   & -3.288\% \\
+Adaptive Median           & 883.230    & 499.437   & -43.453\% \\
+\textbf{Binarization} & \textbf{81,352.114} & \textbf{503.254} & \textbf{-99.381\%} \\
+Despeckle                 & 0.002      & 0.002     & 0.000\% \\
+Dilation                  & 46.541     & 58.108    & +24.853\% \\
+Erosion                   & 103.450    & 56.895    & -45.002\% \\
+Color Pass                & 12.556     & 12.598    & +0.335\% \\
+\textbf{Total}            & \textbf{83,472.104} & \textbf{1,840.552} & \textbf{-97.795\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% todo: why does init and copy take so much time?
+
+%\begin{table*}[t]
+%\caption{Detailed runtimes for certain pipeline stages}
+%\label{tab:breakdown}
+%\small
+%\centering
+%\begin{tabular}{l c c c c c c}
+%\toprule
+%\textbf{Phase} & \textbf{1K Small} & \textbf{2K Text} & \textbf{2K Mag.} & \textbf{4K Text} & \textbf{8K Text} \\
+%\midrule
+%Init \& Copy & 1.29  & 4.20  & 61.83  & 65.46  & 241.93  \\
+%Grayscale & 0.60  & 2.95  & 27.68  & 30.95  & 92.45  \\
+%Deskew & 24.22  & 59.89  & 28.90  & 159.41  & 518.54  \\
+%Binarisation & 71.00  & 1.555.57  & 15.999.83  & 15.507.11  & 111,495.99 \\
+%Filter (Sum) & 28.74 & 125.14 & 520.73 & 483.31 & 1.968.43 \\
+%\midrule
+%\textbf{TOTAL} & \textbf{130.58} & \textbf{1,770.14} & \textbf{16,701.17} & \textbf{16,328.08} & \textbf{114,607.07} \\
+%\bottomrule
+%\end{tabular}
+%\end{table*}
+% todo: update detailed runtimes with 9950x3d runtimes
+
+\section{Future Work}
+\label{sec:future-work}
+
+Possible future work is grouped into three dimensions: visual (result) performance improvements, implementation improvements and benchmarking. For one, the visual performance of the library was not systematically evaluated in this paper, as this was not the focus of this lecture. Also, the benchmark was limited to only the Bataineh binarisation algorithm, leaving out the also implemented Otsu and Sauvola, which have very different behaviour. In future work the WASM runtime performance could be evaluated, while also aiming to improve the performance by using intrinsics or rewriting the code further.
+
+%\begin{enumerate}
+%  \item Benchmark the other binarisation algorithms
+%  \item Use heuristics for selecting algorithms, e.g. binarisation
+% \item better deskew
+%  \item runtime experiments on WASM
+%\end{enumerate}
+
+%%
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{literature}
+
+
+\end{document}
+\endinput
+%%
+%% End of file `sample-sigconf.tex'.
